@@ -126,4 +126,45 @@ public class UserController {
         final List<User> users = userService.listAll();
         return Result.success(users);
     }
+
+    /**
+     * 获取所有维修工程师列表 (仅限已登录用户访问)
+     *
+     * @param token 请求头中的 token
+     * @param response 用于设置 403 状态码
+     * @return 维修工程师列表
+     */
+    @GetMapping("/maintainers")
+    public Result getMaintainers(@RequestHeader(value = HEADER_TOKEN, required = false) final String token,
+                                 final HttpServletResponse response) {
+        log.info("接收到获取维修工列表请求");
+
+        if (token == null) {
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return Result.error("未登录");
+        }
+
+        try {
+            final Claims claims = JwtUtils.parseToken(token);
+            final Integer currentUserRole = claims.get(CLAIM_ROLE, Integer.class);
+
+            if (currentUserRole == null) {
+                response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                return Result.error("权限不足");
+            }
+        } catch (final Exception e) {
+            log.error("Token 解析失败或过期", e);
+            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+            return Result.error("未登录");
+        }
+
+        final List<User> users = userService.listAll();
+        final List<User> maintainers = new java.util.ArrayList<>();
+        for (final User u : users) {
+            if (u.getRole() != null && u.getRole() == 1) {
+                maintainers.add(u);
+            }
+        }
+        return Result.success(maintainers);
+    }
 }

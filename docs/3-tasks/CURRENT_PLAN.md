@@ -8,11 +8,11 @@
 
 ## Backlog
 
+## Done
+
 `docs/3-tasks/features/TASK-006-frontend-isolation/`
 - spec.md ✅ Ready
-- tasks.md -> Not started
-
-## Done
+- tasks.md ✅ 100% Complete
 
 `docs/3-tasks/features/TASK-001-db-schema-for-rbac/`
 - spec.md ✅ Ready
@@ -46,6 +46,4 @@
 - [ ] Implementation (13 tasks)
 
 ### TASK-006: 前端数据隔离与操作隔离
-- [ ] Implementation (9 tasks)
-
-
+- [x] Implementation (9 tasks)

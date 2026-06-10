@@ -67,7 +67,7 @@ const routes = [
         meta: {
             title: '设备调拨记录',
             requiresAuth: true,
-            roles: [1, 2, 3]
+            roles: [2, 3]
         }
     },
     {
@@ -77,7 +77,7 @@ const routes = [
         meta: {
             title: '设备报废记录',
             requiresAuth: true,
-            roles: [1, 2, 3]
+            roles: [2, 3]
         }
     },
     {
@@ -86,7 +86,7 @@ const routes = [
         component: () => import('../views/Category.vue'),
         meta: {
             requiresAuth: true,
-            roles: [1, 2, 3]
+            roles: [2, 3]
         }
     },
     {
@@ -95,7 +95,7 @@ const routes = [
         component: () => import('../views/Department.vue'),
         meta: {
             requiresAuth: true,
-            roles: [1, 2, 3]
+            roles: [2, 3]
         }
     },
     {

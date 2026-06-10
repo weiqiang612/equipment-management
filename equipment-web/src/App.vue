@@ -37,21 +37,21 @@
               <el-menu-item index="/equipment">
                 <i class="el-icon-notebook-2"></i>设备台账
               </el-menu-item>
-              <el-menu-item index="/equipment/transfer">
+              <el-menu-item v-if="role === 2 || role === 3" index="/equipment/transfer">
                 <i class="el-icon-refresh"></i>调拨记录
               </el-menu-item>
               <el-menu-item index="/equipment/maintenance">
                 <i class="el-icon-s-tools"></i>检修记录
               </el-menu-item>
-              <el-menu-item index="/equipment/scrap">
+              <el-menu-item v-if="role === 2 || role === 3" index="/equipment/scrap">
                 <i class="el-icon-delete"></i>报废记录
               </el-menu-item>
             </el-submenu>
 
-            <el-menu-item index="/category">
+            <el-menu-item v-if="role === 2 || role === 3" index="/category">
               <i class="el-icon-menu"></i> <span>分类管理</span>
             </el-menu-item>
-            <el-menu-item index="/department">
+            <el-menu-item v-if="role === 2 || role === 3" index="/department">
               <i class="el-icon-office-building"></i> <span>单位管理</span>
             </el-menu-item>
             <el-menu-item v-if="role === 3" index="/user-manage">

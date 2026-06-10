@@ -1,0 +1,43 @@
+# IDE / Editor
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+*.iws
+*.iml
+*.ipr
+.DS_Store
+
+# Frontend (Vue 2)
+equipment-web/node_modules/
+equipment-web/dist/
+equipment-web/.env.local
+equipment-web/.env.*.local
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Backend (Spring Boot)
+equipment_system_management/target/
+equipment_system_management/build/
+equipment_system_management/application-*.yml
+equipment_system_management/application-*.properties
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+HELP.md
+
+# Log files
+logs/
+
+# Claude / Agent tools
+.claude/
+*.bak

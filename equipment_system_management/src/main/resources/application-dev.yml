@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/equipment_management_system
+    username: root
+    password: 123456
+# 备份数据库功能配置信息
+project:
+  db-backup:
+    path: D:/backup/equipment
+    host: localhost
+    user: root
+    password: 123456
+    database: equipment_management_system

@@ -47,7 +47,7 @@
       "使用该 Token 请求 POST /system/db/backup 接口",
       "Verify: 接口返回 HTTP 状态码 403，返回 JSON 内容为 {\"code\":0,\"msg\":\"权限不足\",\"data\":null}"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-002",
@@ -58,7 +58,7 @@
       "使用该 Token 请求 POST /equipments 接口（添加设备）或 DELETE /equipments/E001（删除设备）",
       "Verify: 接口返回 HTTP 状态码 403，且内容为权限不足"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-003",
@@ -69,7 +69,7 @@
       "使用资产管理员账号（role=2）登录系统，发送请求调拨该设备 POST /equipments/transfer/E003",
       "Verify: 接口请求被拦截，返回 200 或业务错误 400，msg 提示 '该设备已报废，禁止进行此操作'"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-004",
@@ -79,7 +79,7 @@
       "操作员 zhangsan（所属单位 D001）登录系统，发送请求 GET /equipments 检索列表",
       "Verify: 返回的设备数据中，所有设备保管人 custodian 均为 zhangsan，或保管人为 NULL 且 unit_code 均为 D001，绝无 custodian=lisi 且部门非 D001 的设备"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-005",
@@ -90,7 +90,7 @@
       "资产管理员（role=2）将 E001 调拨到新部门 D002",
       "Verify: 调拨成功后，查询 E001 的详情，发现 unit_code 变更为 D002，但 custodian 字段自动变成了 NULL"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-006",
@@ -103,7 +103,7 @@
       "传入指派参数 maint_person_id 为 2 (对应用户 role=1 维修工)",
       "Verify: 指派成功，数据库表中 1001 记录的 maint_person_id 正确存为 2，且 maint_status 流转为 1 (维修中)"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-007",
@@ -114,7 +114,7 @@
       "资产管理员请求删除 D001 接口：DELETE /departments/D001",
       "Verify: 接口成功拦截，返回业务友好提示 '该部门下仍有设备，无法删除'"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-008",
@@ -125,7 +125,7 @@
       "系统管理员请求删除 zhangsan 接口：DELETE /users/zhangsan",
       "Verify: 接口拦截，返回业务提示 '该员工名下仍有保管资产，无法删除该账户'"
     ],
-    "passes": false
+    "passes": true
   }
 ]
 ```

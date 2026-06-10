@@ -182,7 +182,7 @@ export default {
 /* 左侧裁切插图 */
 .login-left {
   width: 462px;
-  height: 100%;
+  height: 658px;
   background-image: url('~@/assets/login_bg.png');
   background-size: cover;
   background-position: center;
@@ -192,7 +192,7 @@ export default {
 /* 右侧白底表单 */
 .login-right {
   width: 461px;
-  height: 100%;
+  height: 658px;
   padding: 60px 48px;
   box-sizing: border-box;
   display: flex;

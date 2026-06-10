@@ -92,7 +92,7 @@
       </el-form>
     </div>
     <!-- 新增按钮 -->
-    <el-button type="primary" @click="handleAdd">新增设备</el-button>
+    <el-button v-if="role !== 3" type="primary" @click="handleAdd">新增设备</el-button>
     <!-- 设备表格 -->
     <el-table :data="equipmentList" border style="margin-top: 20px">
       <el-table-column prop="equipId" label="设备编号" />
@@ -129,8 +129,7 @@
                 }}
               </div>
               <div>
-                <b>当前净值：</b
-                ><span style="color: #f56c6c; font-weight: bold"
+                <b>当前净值：</b><span style="color: #f56c6c; font-weight: bold"
                   >￥{{ Number(currentDep.netValue).toFixed(2) }}</span
                 >
               </div>
@@ -144,42 +143,51 @@
           </el-popover>
         </template>
       </el-table-column>
-      <el-table-column label="操作" align="center" width="220">
+      <el-table-column v-if="role !== 3" label="操作" align="center" width="220">
         <template slot-scope="scope">
-          <el-button size="mini" type="primary" @click="handleEdit(scope.row)"
-            >编辑</el-button
-          >
-
-          <el-dropdown style="margin-left: 10px" trigger="click">
-            <el-button size="mini" type="info">
-              更多<i class="el-icon-arrow-down el-icon--right"></i>
-            </el-button>
-            <el-dropdown-menu slot="dropdown">
-              <el-dropdown-item
-                :disabled="scope.row.status !== '在用'"
-                @click.native="handleMaintenance(scope.row)"
-                >维修</el-dropdown-item
-              >
-              <el-dropdown-item
-                :disabled="scope.row.status !== '在用'"
-                @click.native="handleTransfer(scope.row)"
-                >调拨</el-dropdown-item
-              >
-              <el-dropdown-item
-                :disabled="scope.row.status === '报废'"
-                @click.native="handleScrap(scope.row)"
-                >报废</el-dropdown-item
-              >
-
-              <el-dropdown-item
-                icon="el-icon-delete"
-                style="color: #f56c6c"
-                divided
-                @click.native="handleDelete(scope.row)"
-                >删除设备</el-dropdown-item
-              >
-            </el-dropdown-menu>
-          </el-dropdown>
+          <!-- 资产管理员(2) 可见完整的编辑和下拉菜单 -->
+          <template v-if="role === 2">
+            <el-button size="mini" type="primary" @click="handleEdit(scope.row)">编辑</el-button>
+            <el-dropdown style="margin-left: 10px" trigger="click">
+              <el-button size="mini" type="info">
+                更多<i class="el-icon-arrow-down el-icon--right"></i>
+              </el-button>
+              <el-dropdown-menu slot="dropdown">
+                <el-dropdown-item
+                  :disabled="scope.row.status !== '在用'"
+                  @click.native="handleMaintenance(scope.row)"
+                  >维修</el-dropdown-item
+                >
+                <el-dropdown-item
+                  :disabled="scope.row.status !== '在用'"
+                  @click.native="handleTransfer(scope.row)"
+                  >调拨</el-dropdown-item
+                >
+                <el-dropdown-item
+                  :disabled="scope.row.status === '报废'"
+                  @click.native="handleScrap(scope.row)"
+                  >报废</el-dropdown-item
+                >
+                <el-dropdown-item
+                  icon="el-icon-delete"
+                  style="color: #f56c6c"
+                  divided
+                  @click.native="handleDelete(scope.row)"
+                  >删除设备</el-dropdown-item
+                >
+              </el-dropdown-menu>
+            </el-dropdown>
+          </template>
+          <!-- 操作员(0) 或 维修工(1) 仅可见“维修”按钮以供报修登记 -->
+          <template v-else-if="role === 0 || role === 1">
+            <el-button
+              size="mini"
+              type="warning"
+              :disabled="scope.row.status !== '在用'"
+              @click="handleMaintenance(scope.row)"
+              >维修</el-button
+            >
+          </template>
         </template>
       </el-table-column>
     </el-table>
@@ -287,7 +295,14 @@
           />
         </el-form-item>
         <el-form-item label="检修人">
-          <el-input v-model="maintForm.maintPerson" />
+          <el-select v-model="maintForm.maintPerson" placeholder="请选择检修人" style="width: 100%">
+            <el-option
+              v-for="item in maintainers"
+              :key="item.id"
+              :label="item.realName"
+              :value="item.realName"
+            />
+          </el-select>
         </el-form-item>
       </el-form>
       <div slot="footer">
@@ -390,6 +405,7 @@ import {
   getEquipmentsForExport,
   getCalculateAccumulated,
 } from "@/api/equipment";
+import { getMaintainers } from "@/api/user";
 import { addTransfer } from "@/api/transfer";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -397,6 +413,9 @@ import { saveAs } from "file-saver";
 export default {
   data() {
     return {
+      role: null,
+      realName: "",
+      maintainers: [], // 存储维修工列表
       equipmentList: [], // 设备列表数据
       deptOptions: [], // 单位下拉列表
       categoryOptions: [], // 分类下拉列表
@@ -407,7 +426,7 @@ export default {
         accumulated: 0,
         netValue: 0,
         isFullyDepreciated: false,
-      }, // 存储当前点击的折旧信息
+      }, // 存储当前点击 of 折旧信息
       depLoading: false, // 折旧信息加载状态
       // 表单对象字段需与后端实体类及数据库字段对应
       form: {
@@ -471,9 +490,22 @@ export default {
     },
   },
   created() {
+    const roleStr = localStorage.getItem("role");
+    this.role = roleStr !== null ? parseInt(roleStr, 10) : null;
+    this.realName = localStorage.getItem("realName") || "";
     this.initAllData();
+    this.fetchMaintainers();
   },
   methods: {
+    // 获取维修工程师列表
+    async fetchMaintainers() {
+      try {
+        const res = await getMaintainers();
+        this.maintainers = res || [];
+      } catch (error) {
+        console.error("获取维修工列表失败", error);
+      }
+    },
     // 并发请求所有必要数据进行联调
     async initAllData() {
       try {
@@ -544,8 +576,12 @@ export default {
         this.$message.warning("请填写检修内容");
         return;
       }
+      if (!this.maintForm.maintPerson) {
+        this.$message.warning("请选择检修人");
+        return;
+      }
       try {
-        const res = await maintenanceEquip(
+        await maintenanceEquip(
           this.maintForm.equipId,
           this.maintForm
         );
@@ -622,6 +658,8 @@ export default {
         maintCost: 0,
         maintPerson: "",
       };
+      // 打开弹窗前重新拉取一下最新维修工列表，保证实时性
+      this.fetchMaintainers();
       // 2. 显示弹窗（maintDialogVisible 需要在 data 中定义）
       this.maintDialogVisible = true;
     },

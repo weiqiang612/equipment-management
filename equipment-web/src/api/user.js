@@ -34,3 +34,11 @@ export function updateUserRole(data) {
     data
   })
 }
+
+// 5. 获取所有维修工程师列表 (GET /users/maintainers)
+export function getMaintainers() {
+  return request({
+    url: '/users/maintainers',
+    method: 'get'
+  })
+}

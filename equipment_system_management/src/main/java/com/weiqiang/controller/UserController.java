@@ -69,4 +69,21 @@ public class UserController {
         log.info("接收到删除用户请求，用户ID: {}", id);
         return userService.deleteUser(id);
     }
+
+    /**
+     * 获取所有维修工程师列表 (已登录用户均可访问)
+     */
+    @GetMapping("/maintainers")
+    public Result getMaintainers() {
+        log.info("接收到获取维修工列表请求");
+        final List<User> users = userService.listAll();
+        final List<User> maintainers = new java.util.ArrayList<>();
+        for (final User u : users) {
+            if (u.getRole() != null && u.getRole() == 1) {
+                maintainers.add(u);
+            }
+        }
+        return Result.success(maintainers);
+    }
+    }
 }

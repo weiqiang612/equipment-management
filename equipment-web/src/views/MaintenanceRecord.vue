@@ -4,6 +4,7 @@
       <div slot="header" class="clearfix">
         <span style="font-weight: bold">设备检修记录管理</span>
         <el-button
+          v-if="role === 2"
           type="primary"
           icon="el-icon-plus"
           size="small"
@@ -40,15 +41,19 @@
           </template>
         </el-table-column>
         <el-table-column prop="maintPerson" label="检修人" width="100" />
-        <el-table-column label="操作" align="center" width="160">
+        <el-table-column v-if="role !== 3" label="操作" align="center" width="160">
           <template slot-scope="scope">
+            <!-- 维修工(1)只能修改自己负责的名下工单，资产管理员(2)可以修改所有 -->
             <el-button
+              v-if="role === 2 || (role === 1 && scope.row.maintPerson === realName)"
               size="mini"
               type="primary"
               @click="handleEdit(scope.row)"
               >修改</el-button
             >
+            <!-- 只有资产管理员(2)可以删除 -->
             <el-button
+              v-if="role === 2"
               size="mini"
               type="danger"
               @click="confirmDelete(scope.row)"
@@ -111,7 +116,14 @@
         </el-form-item>
 
         <el-form-item label="检修人" prop="maintPerson">
-          <el-input v-model="form.maintPerson" />
+          <el-select v-model="form.maintPerson" placeholder="请选择检修人" style="width: 100%">
+            <el-option
+              v-for="item in maintainers"
+              :key="item.id"
+              :label="item.realName"
+              :value="item.realName"
+            />
+          </el-select>
         </el-form-item>
 
         <el-form-item label="检修内容" prop="maintContent">
@@ -137,10 +149,14 @@ import {
   deleteMaintenance,
 } from "@/api/MaintenanceRecord";
 import { getEquipments } from "@/api/equipment";
+import { getMaintainers } from "@/api/user";
 
 export default {
   data() {
     return {
+      role: null,
+      realName: "",
+      maintainers: [], // 存储维修工列表
       loading: false,
       submitLoading: false,
       tableData: [],
@@ -153,7 +169,7 @@ export default {
         maintDate: "",
         maintContent: "",
         maintCost: 0,
-        maintPerson: "管理员",
+        maintPerson: "",
       },
       rules: {
         equipId: [{ required: true, message: "请选择设备", trigger: "change" }],
@@ -162,6 +178,9 @@ export default {
         ],
         maintContent: [
           { required: true, message: "请输入检修内容", trigger: "blur" },
+        ],
+        maintPerson: [
+          { required: true, message: "请选择检修人", trigger: "change" },
         ],
       },
     };
@@ -172,9 +191,21 @@ export default {
     },
   },
   created() {
+    const roleStr = localStorage.getItem("role");
+    this.role = roleStr !== null ? parseInt(roleStr, 10) : null;
+    this.realName = localStorage.getItem("realName") || "";
     this.loadList();
+    this.fetchMaintainers();
   },
   methods: {
+    async fetchMaintainers() {
+      try {
+        const res = await getMaintainers();
+        this.maintainers = res || [];
+      } catch (error) {
+        console.error("获取维修工列表失败", error);
+      }
+    },
     async loadList() {
       this.loading = true;
       try {
@@ -188,17 +219,19 @@ export default {
       this.isEdit = false;
       this.dialogVisible = true;
       try {
-        // 加载“在用”和“检修中”的设备供补录选择
+        // 加载“在用”和“检修中”设备供补录选择
         const res = await getEquipments({ pageSize: 1000 });
         this.equipOptions = res.rows || res || [];
       } catch (error) {
         this.$message.error("加载设备列表失败");
       }
       this.form.maintDate = new Date().toISOString().split("T")[0];
+      this.fetchMaintainers();
     },
     handleEdit(row) {
       this.isEdit = true;
       this.form = { ...row };
+      this.fetchMaintainers();
       this.dialogVisible = true;
     },
     async submitForm() {
@@ -242,7 +275,7 @@ export default {
         maintDate: "",
         maintContent: "",
         maintCost: 0,
-        maintPerson: "管理员",
+        maintPerson: "",
       };
     },
   },

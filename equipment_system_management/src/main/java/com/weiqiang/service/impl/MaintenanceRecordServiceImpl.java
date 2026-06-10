@@ -124,9 +124,15 @@ public class MaintenanceRecordServiceImpl implements MaintenanceRecordService {
             
         } else if (oldRecord.getMaintStatus() == 1) {
             // 分支 B: 登记维保结果 (状态 1 -> 2)
-            // 校验 B1: 只有维修工(1)或资产管理员(2)可以登记维保结果
+            // 校验 B1: 只有维修工(1)或资产管理员(2)可以登记维保结果，且维修工只能登记分配给自己的工单
             if (currentRole == null || (currentRole != 1 && currentRole != 2)) {
                 throw new BusinessException("操作失败：只有维修工或资产管理员可以登记维修结果！");
+            }
+            if (currentRole == 1) {
+                Integer currentUserId = BaseContext.getCurrentId();
+                if (oldRecord.getMaintPersonId() == null || !oldRecord.getMaintPersonId().equals(currentUserId)) {
+                    throw new BusinessException("操作失败：您没有权限登记他人的维保工单！");
+                }
             }
             
             // 校验 B2: 关联设备必须处于'维修'状态

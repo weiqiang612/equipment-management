@@ -49,11 +49,13 @@ public class WorkflowSecurityTests {
     private String op1Token;
     private String op2Token;
     private String maintToken;
+    private String maintToken2;
     private String mgrToken;
 
     private Integer op1Id;
     private Integer op2Id;
     private Integer maintId;
+    private Integer maintId2;
     private Integer mgrId;
 
     @BeforeEach
@@ -86,12 +88,14 @@ public class WorkflowSecurityTests {
         registerTestUser(OP1_USERNAME, "测试操作员1");
         registerTestUser(OP2_USERNAME, "测试操作员2");
         registerTestUser(MAINT_USERNAME, "测试维修工");
+        registerTestUser("test_maint2", "测试维修工2");
         registerTestUser(MGR_USERNAME, "测试资产管理员");
 
         // 5. 分配正确角色
         op1Id = userDao.getByUsername(OP1_USERNAME).getId();
         op2Id = userDao.getByUsername(OP2_USERNAME).getId();
         maintId = userDao.getByUsername(MAINT_USERNAME).getId();
+        maintId2 = userDao.getByUsername("test_maint2").getId();
         mgrId = userDao.getByUsername(MGR_USERNAME).getId();
 
         // 操作员默认 role=0，更新部门
@@ -100,6 +104,7 @@ public class WorkflowSecurityTests {
 
         // 维修工 role=1
         userDao.update("UPDATE sys_user SET role = 1, unit_code = 'D98' WHERE id = ?", maintId);
+        userDao.update("UPDATE sys_user SET role = 1, unit_code = 'D98' WHERE id = ?", maintId2);
         // 资产管理员 role=2
         userDao.update("UPDATE sys_user SET role = 2, unit_code = 'D98' WHERE id = ?", mgrId);
 
@@ -107,6 +112,7 @@ public class WorkflowSecurityTests {
         op1Token = loginTestUser(OP1_USERNAME);
         op2Token = loginTestUser(OP2_USERNAME);
         maintToken = loginTestUser(MAINT_USERNAME);
+        maintToken2 = loginTestUser("test_maint2");
         mgrToken = loginTestUser(MGR_USERNAME);
     }
 
@@ -296,7 +302,16 @@ public class WorkflowSecurityTests {
         completeRec.setMaintCost(new BigDecimal("100.00"));
         completeRec.setMaintPerson("测试维修工");
 
-        // 维修工程师(1) 登记维修结果 -> 预期成功，工单流转为 2，设备改回 '在用'
+        // A. 另一未被指派的维修工(role=1) 尝试登记维修结果 -> 预期拦截并提示
+        mockMvc.perform(put("/maintenanceRecords/" + maintId)
+                        .header("token", maintToken2)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(completeRec)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("操作失败：您没有权限登记他人的维保工单！"));
+
+        // B. 正确被指派的维修工(1) 登记维修结果 -> 预期成功，工单流转为 2，设备改回 '在用'
         mockMvc.perform(put("/maintenanceRecords/" + maintId)
                         .header("token", maintToken)
                         .contentType(MediaType.APPLICATION_JSON)

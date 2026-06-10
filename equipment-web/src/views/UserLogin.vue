@@ -171,9 +171,11 @@ export default {
 
 .login-card {
   display: flex;
+  align-items: stretch;
   width: 923px;
   height: 658px;
-  background-color: #ffffff;
+  max-height: 658px;
+  background-color: transparent;
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
   overflow: hidden;
@@ -182,27 +184,31 @@ export default {
 /* 左侧裁切插图 */
 .login-left {
   width: 462px;
-  height: 658px;
+  height: 100%;
   background-image: url('~@/assets/login_bg.png');
-  background-size: cover;
-  background-position: center;
+  background-size: 100% calc(100% + 9px); /* 纵向拉伸9像素 */
+  background-position: center top; /* 靠顶对齐，将底部的9px视觉假背景挤出可视范围 */
   background-repeat: no-repeat;
+  background-color: #edf2f6;
+  border-radius: 12px 0 0 12px;
 }
 
 /* 右侧白底表单 */
 .login-right {
   width: 461px;
-  height: 658px;
-  padding: 60px 48px;
+  height: 100%;
+  padding: 42px 48px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  background-color: #ffffff;
+  border-radius: 0 12px 12px 0;
 }
 
 /* 品牌标志 */
 .brand-header {
-  margin-bottom: 30px;
+  margin-bottom: 20px;
 }
 
 .brand-title {
@@ -225,7 +231,7 @@ export default {
   font-size: 20px;
   font-weight: 700;
   color: #1c2e35;
-  margin: 0 0 25px 0;
+  margin: 0 0 15px 0;
 }
 
 /* 密码项 Label Wrapper */
@@ -261,7 +267,7 @@ export default {
 }
 
 .login-form :deep(.el-form-item) {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
 }
 
 .login-form :deep(.el-input__inner) {
@@ -283,7 +289,7 @@ export default {
 }
 
 .submit-item {
-  margin-top: 32px;
+  margin-top: 24px;
 }
 
 /* 按钮样式还原 */

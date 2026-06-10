@@ -6,27 +6,27 @@
 
 ## Done
 
-`docs/3-tasks/features/TASK-006-frontend-isolation/`
+`docs/4-tasks/features/TASK-006-frontend-isolation/`
 - spec.md ✅ Ready
 - tasks.md ✅ 100% Complete
 
-`docs/3-tasks/features/TASK-005-backend-rbac-workflow/`
+`docs/4-tasks/features/TASK-005-backend-rbac-workflow/`
 - spec.md ✅ Ready
 - tasks.md ✅ 100% Complete
 
-`docs/3-tasks/features/TASK-001-db-schema-for-rbac/`
+`docs/4-tasks/features/TASK-001-db-schema-for-rbac/`
 - spec.md ✅ Ready
 - tasks.md ✅ 100% Complete
 
-`docs/3-tasks/features/TASK-002-backend-auth-and-api/`
+`docs/4-tasks/features/TASK-002-backend-auth-and-api/`
 - spec.md ✅ Ready
 - tasks.md ✅ 100% Complete
 
-`docs/3-tasks/features/TASK-003-frontend-auth-and-menu-rbac/`
+`docs/4-tasks/features/TASK-003-frontend-auth-and-menu-rbac/`
 - spec.md ✅ Ready
 - tasks.md ✅ 100% Complete
 
-`docs/3-tasks/features/TASK-004-pixel-perfect-login-register/`
+`docs/4-tasks/features/TASK-004-pixel-perfect-login-register/`
 - spec.md ✅ Ready
 - tasks.md ✅ 100% Complete
 

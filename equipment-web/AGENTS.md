@@ -29,10 +29,11 @@ Check `.env.development` and `.env.production` for base URL overrides.
 - Clean up event listeners in `beforeDestroy`
 
 ## Active Task & Workflow
-- **当前活跃任务**：仅执行 [TASK-003-frontend-auth-and-menu-rbac](file:///d:/project/equipment-management/docs/3-tasks/features/TASK-003-frontend-auth-and-menu-rbac/) 特征下的任务。禁止修改后端 `equipment_system_management` 目录下的任何代码。
-- **接口契约标准**：前端发起的 Axios 请求 URL、Header、参数及接收的响应格式，必须 100% 严格对齐 [api_contract.md](file:///d:/project/equipment-management/docs/1-standards/api_contract.md) 中的设计规范。
+- **当前活跃任务**：仅执行 [TASK-003-frontend-auth-and-menu-rbac](file:///d:/project/equipment-management/docs/4-tasks/features/TASK-003-frontend-auth-and-menu-rbac/) 特征下的任务。禁止修改后端 `equipment_system_management` 目录下的任何代码。
+- **接口契约标准**：前端发起的 Axios 请求 URL、Header、参数及接收的响应格式，必须 100% 严格对齐 [api_contract.md](file:///d:/project/equipment-management/docs/2-designs/api_contract.md) 中的设计规范。
 - **任务状态维护**：完成任务列表中的每一项原子操作后，及时在对应的 `tasks.md` 和 `spec.md` 中记录通过状态。
 
 ## See also
-- `../docs/2-constraints/never-do.md`
-- `../docs/2-constraints/ask-first.md`
+- `../docs/3-constraints/never-do.md`
+- `../docs/3-constraints/ask-first.md`
+- `../docs/3-constraints/always-do.md`

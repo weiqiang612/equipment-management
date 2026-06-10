@@ -35,10 +35,11 @@ com.weiqiang/
 - No `var` — explicit types everywhere
 
 ## Active Task & Workflow
-- **当前活跃任务**：仅执行 [TASK-002-backend-auth-and-api](file:///d:/project/equipment-management/docs/3-tasks/features/TASK-002-backend-auth-and-api/) 特征下的任务。禁止修改前端 `equipment-web` 目录下的任何代码。
-- **接口契约标准**：Controller 层接收和返回数据包格式，必须 100% 严格对齐 [api_contract.md](file:///d:/project/equipment-management/docs/1-standards/api_contract.md) 中约定的路径和报文。
+- **当前活跃任务**：仅执行 [TASK-002-backend-auth-and-api](file:///d:/project/equipment-management/docs/4-tasks/features/TASK-002-backend-auth-and-api/) 特征下的任务。禁止修改前端 `equipment-web` 目录下的任何代码。
+- **接口契约标准**：Controller 层接收和返回数据包格式，必须 100% 严格对齐 [api_contract.md](file:///d:/project/equipment-management/docs/2-designs/api_contract.md) 中约定的路径和报文。
 - **任务状态维护**：完成任务列表中的每一项原子操作后，及时在对应的 `tasks.md` 和 `spec.md` 中记录通过状态。
 
 ## See also
-- `../docs/2-constraints/never-do.md`
-- `../docs/2-constraints/ask-first.md`
+- `../docs/3-constraints/never-do.md`
+- `../docs/3-constraints/ask-first.md`
+- `../docs/3-constraints/always-do.md`

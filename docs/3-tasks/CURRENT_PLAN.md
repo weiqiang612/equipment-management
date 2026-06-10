@@ -2,15 +2,11 @@
 
 ## Active
 
-`docs/3-tasks/features/TASK-005-backend-rbac-workflow/`
+`docs/3-tasks/features/TASK-006-frontend-isolation/`
 - spec.md ✅ Ready
 - tasks.md -> Not started
 
 ## Backlog
-
-`docs/3-tasks/features/TASK-006-frontend-isolation/`
-- spec.md ✅ Ready
-- tasks.md -> Not started
 
 ## Done
 
@@ -30,6 +26,10 @@
 - spec.md ✅ Ready
 - tasks.md ✅ 100% Complete
 
+`docs/3-tasks/features/TASK-005-backend-rbac-workflow/`
+- spec.md ✅ Ready
+- tasks.md ✅ 100% Complete
+
 ### TASK-001: DB Schema for RBAC Roles
 - [x] Implementation (8 tasks)
 
@@ -43,9 +43,7 @@
 - [x] Implementation (9 tasks)
 
 ### TASK-005: 后端权限控制与状态流转校验
-- [ ] Implementation (13 tasks)
+- [x] Implementation (13 tasks)
 
 ### TASK-006: 前端数据隔离与操作隔离
 - [ ] Implementation (9 tasks)
-
-

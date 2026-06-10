@@ -1,6 +1,7 @@
 package com.weiqiang.service.impl;
 
 import com.weiqiang.dao.UserDao;
+import com.weiqiang.exception.BusinessException;
 import com.weiqiang.pojo.Result;
 import com.weiqiang.pojo.User;
 import com.weiqiang.service.UserService;
@@ -29,9 +30,8 @@ public class UserServiceImpl implements UserService {
 
     private final UserDao userDao;
 
-    // 常量定义，避免魔法值
     private static final int DEFAULT_ROLE = 0;
-    private static final int CLAIMS_MAP_CAPACITY = 5; // (3 expected / 0.75) + 1 = 5
+    private static final int CLAIMS_MAP_CAPACITY = 5;
 
     @Override
     public Result login(final String username, final String password) {
@@ -39,21 +39,18 @@ public class UserServiceImpl implements UserService {
             return Result.error("用户名或密码不能为空");
         }
 
-        // 1. 查询用户
         final User dbUser = userDao.getByUsername(username);
         if (dbUser == null) {
             log.warn("登录失败：用户 {} 不存在", username);
             return Result.error("用户名或密码错误");
         }
 
-        // 2. 对比密码 (MD5 哈希比较)
         final String md5Password = DigestUtils.md5DigestAsHex(password.getBytes(StandardCharsets.UTF_8));
         if (!Objects.equals(dbUser.getPassword(), md5Password)) {
             log.warn("登录失败：用户 {} 密码不匹配", username);
             return Result.error("用户名或密码错误");
         }
 
-        // 3. 生成 JWT Token，设置自定义 Claims
         final Map<String, Object> claims = new HashMap<>(CLAIMS_MAP_CAPACITY);
         claims.put("id", dbUser.getId());
         claims.put("username", dbUser.getUsername());
@@ -72,27 +69,21 @@ public class UserServiceImpl implements UserService {
             return Result.error("用户名和密码不能为空");
         }
 
-        // 1. 防重校验
         final User dbUser = userDao.getByUsername(user.getUsername());
         if (dbUser != null) {
             log.warn("注册失败：用户名 {} 已存在", user.getUsername());
             return Result.error("用户名已存在");
         }
 
-        // 2. 密码 MD5 转换
         final String rawPassword = user.getPassword();
         final String md5Password = DigestUtils.md5DigestAsHex(rawPassword.getBytes(StandardCharsets.UTF_8));
         user.setPassword(md5Password);
-
-        // 3. 强制角色默认为 0 (设备操作员)
         user.setRole(DEFAULT_ROLE);
 
-        // 4. 设置时间属性
         final LocalDateTime now = LocalDateTime.now();
         user.setCreateTime(now);
         user.setUpdateTime(now);
 
-        // 5. 写入数据库
         final int rows = userDao.insert(user);
         if (rows > 0) {
             log.info("用户 {} 注册成功，默认分配角色为操作员", user.getUsername());
@@ -110,7 +101,6 @@ public class UserServiceImpl implements UserService {
             return Result.error("用户ID或角色值不能为空");
         }
 
-        // 校验角色范围合法性 (0-3)
         if (role < 0 || role > 3) {
             return Result.error("非法的角色值");
         }
@@ -127,5 +117,43 @@ public class UserServiceImpl implements UserService {
     @Override
     public List<User> listAll() {
         return userDao.listAll();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Result deleteUser(final Integer id) {
+        if (id == null) {
+            return Result.error("用户ID不能为空");
+        }
+        
+        final User user = userDao.getById(id);
+        if (user == null) {
+            return Result.error("用户不存在");
+        }
+
+        // 1. 级联校验保管的设备 (custodian 为当前用户名)
+        final String checkEquipSql = "SELECT COUNT(*) FROM equipment WHERE custodian = ?";
+        final Long equipCount = (Long) userDao.singleSelect(checkEquipSql, user.getUsername());
+        if (equipCount != null && equipCount > 0) {
+            log.warn("级联校验拦截：用户 {} 尚有关联的保管设备，拒绝删除", user.getUsername());
+            throw new BusinessException("操作失败：该用户尚有关联保管的设备，无法删除！");
+        }
+
+        // 2. 级联校验未完结工单 (作为报修人且工单状态 != 2，或作为被指派人且工单状态 != 2)
+        final String checkMaintSql = "SELECT COUNT(*) FROM maintenance_record WHERE (reporter = ? OR maint_person_id = ?) AND maint_status != 2";
+        final Long maintCount = (Long) userDao.singleSelect(checkMaintSql, user.getUsername(), id);
+        if (maintCount != null && maintCount > 0) {
+            log.warn("级联校验拦截：用户 {} 尚有未完结的维保工单，拒绝删除", user.getUsername());
+            throw new BusinessException("操作失败：该用户尚有未完结的检修工单，无法删除！");
+        }
+
+        // 3. 校验通过，执行逻辑删除或物理删除
+        final String deleteSql = "DELETE FROM sys_user WHERE id = ?";
+        final int rows = userDao.update(deleteSql, id);
+        if (rows > 0) {
+            log.info("删除用户成功，用户ID: {}, 用户名: {}", id, user.getUsername());
+            return Result.success();
+        }
+        return Result.error("删除用户失败");
     }
 }

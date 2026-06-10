@@ -1,5 +1,6 @@
 package com.weiqiang.controller;
 
+import com.weiqiang.anno.RequiresRoles;
 import com.weiqiang.pojo.Department;
 import com.weiqiang.pojo.Result;
 import com.weiqiang.service.DepartmentService;
@@ -10,11 +11,8 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * @author 袁志刚
- * @version 1.0
- * 对部门增删改查操作
+ * 部门管理控制器
  */
-
 @Slf4j
 @RestController
 @RequestMapping("/departments")
@@ -39,9 +37,9 @@ public class DepartmentController {
         return department != null ? Result.success(department) : Result.error("未查询到该部门");
     }
 
-
     // 增加部门
     @PostMapping
+    @RequiresRoles(2)
     public Result addDept(@RequestBody Department department) {
         int i = departmentService.addDept(department);
         return i > 0 ? Result.success() : Result.error("插入单位失败!");
@@ -49,16 +47,18 @@ public class DepartmentController {
 
     // 根据ID更新部门
     @PutMapping("/{unitCode}")
+    @RequiresRoles(2)
     public Result updateDept(@RequestBody Department department,
                              @PathVariable("unitCode") String unitCode) {
-        int i = departmentService.updateDept(department,unitCode);
+        int i = departmentService.updateDept(department, unitCode);
         return i > 0 ? Result.success() : Result.error("更新单位失败!");
     }
+
     // 删除部门
     @DeleteMapping("/{unitCode}")
+    @RequiresRoles(2)
     public Result deleteDept(@PathVariable("unitCode") String unitCode) {
         int i = departmentService.deleteDept(unitCode);
         return i > 0 ? Result.success() : Result.error("删除单位失败!");
     }
-
 }

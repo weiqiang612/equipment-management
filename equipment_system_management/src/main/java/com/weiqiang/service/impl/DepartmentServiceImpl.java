@@ -1,6 +1,8 @@
 package com.weiqiang.service.impl;
 
 import com.weiqiang.dao.DepartmentDao;
+import com.weiqiang.dao.EquipmentDao;
+import com.weiqiang.exception.BusinessException;
 import com.weiqiang.pojo.Department;
 import com.weiqiang.service.DepartmentService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -9,17 +11,17 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
- * @author 袁志刚
- * @version 1.0
+ * 部门服务实现类
  */
-
 @Service
 public class DepartmentServiceImpl implements DepartmentService {
 
     @Autowired
     private DepartmentDao departmentDao;
 
-    // 查询所有单位信息
+    @Autowired
+    private EquipmentDao equipmentDao;
+
     @Override
     public List<Department> getDepts() {
         return departmentDao.getDepts();
@@ -30,20 +32,23 @@ public class DepartmentServiceImpl implements DepartmentService {
         return departmentDao.addDept(department);
     }
 
-    // 删除单位
     @Override
     public int deleteDept(String unitCode) {
+        // 前置校验：该部门下若有关联的设备，禁止删除
+        Long count = equipmentDao.getEquipmentsNum(null, unitCode, null, null, null, null);
+        if (count != null && count > 0) {
+            throw new BusinessException("操作失败：该部门下有关联设备，无法删除！");
+        }
         return departmentDao.deleteDept(unitCode);
     }
 
-    // 根据 unitCode 查询部门
     @Override
     public Department getDeptById(String unitCode) {
         return departmentDao.getDeptById(unitCode);
     }
 
     @Override
-    public int updateDept(Department department,String unitCode) {
-        return departmentDao.updateDept(department,unitCode);
+    public int updateDept(Department department, String unitCode) {
+        return departmentDao.updateDept(department, unitCode);
     }
 }

@@ -8,12 +8,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 
 /**
- * @author 袁志刚
- * @version 1.0
+ * 调拨记录数据访问对象
  */
-
 @Repository
 public class TransferRecordDao extends BasicDao<TransferRecord> {
+
     public List<TransferRecord> getTransferRecords() {
         String sql = "SELECT transfer_id transferId, t.equip_id equipId,equip_name equipName, " +
                 " out_unit_code outUnitCode, d1.unit_name outUnitName, " +
@@ -27,7 +26,7 @@ public class TransferRecordDao extends BasicDao<TransferRecord> {
                 " department d2 ON t.in_unit_code = d2.unit_code " +
                 "ORDER BY " +
                 " t.transfer_date DESC ";
-        return mutiSelect(sql,TransferRecord.class,null);
+        return mutiSelect(sql, TransferRecord.class, null);
     }
 
     public TransferRecord getTransferRecordById(Integer transferId) {
@@ -44,24 +43,17 @@ public class TransferRecordDao extends BasicDao<TransferRecord> {
                 " WHERE transfer_id = ? " +
                 " ORDER BY " +
                 " t.transfer_date DESC ";
-        return selectOne(sql, TransferRecord.class,transferId);
+        return selectOne(sql, TransferRecord.class, transferId);
     }
-/*
-
-    调拨 两步操作，先将设备部门改了 之后在调拨表中插入一条记录
-    UPDATE equipment SET unit_code = 'D01' WHERE equip_id = 'E2024015';
-
-    INSERT INTO transfer_record (equip_id, out_unit_code, in_unit_code, transfer_date, change_type, operator, reason) VALUES
-    ('E2024015', 'D03', 'D01', '2024-12-01', '部门调拨', '管理员A', '教学办公需要')
-*/
 
     public boolean transferEquip(String equipId, TransferRecord transferRecord) {
-        String sql1 = "UPDATE equipment SET unit_code = ? WHERE equip_id = ?";
+        // 调拨时自动将设备的 custodian 清空为 NULL
+        String sql1 = "UPDATE equipment SET unit_code = ?, custodian = NULL WHERE equip_id = ?";
         List<Object> params1 = new ArrayList<>();
         params1.add(transferRecord.getInUnitCode());
         params1.add(equipId);
-        String sql2 = "INSERT INTO transfer_record (equip_id, out_unit_code, in_unit_code, transfer_date, change_type, operator, reason) VALUES  " +
-                "    (?, ?, ?, ?, ?, ?, ?)";
+        
+        String sql2 = "INSERT INTO transfer_record (equip_id, out_unit_code, in_unit_code, transfer_date, change_type, operator, reason) VALUES (?, ?, ?, ?, ?, ?, ?)";
         List<Object> params2 = new ArrayList<>();
         params2.add(equipId);
         params2.add(transferRecord.getOutUnitCode());
@@ -70,21 +62,22 @@ public class TransferRecordDao extends BasicDao<TransferRecord> {
         params2.add(transferRecord.getChangeType());
         params2.add(transferRecord.getOperator());
         params2.add(transferRecord.getReason());
+        
         LinkedHashMap<String, List<Object>> sqlTasks = new LinkedHashMap<>();
-        sqlTasks.put(sql1,params1);
-        sqlTasks.put(sql2,params2);
+        sqlTasks.put(sql1, params1);
+        sqlTasks.put(sql2, params2);
         return updateWithTransaction(sqlTasks);
     }
 
-    public int updateTransferRecord(Integer transferId,TransferRecord transferRecord) {
+    public int updateTransferRecord(Integer transferId, TransferRecord transferRecord) {
         String sql = "UPDATE transfer_record SET transfer_date = ?," +
                 "change_type = ?,operator = ?,reason = ? WHERE transfer_id = ?";
-        return update(sql,transferRecord.getTransferDate(),transferRecord.getChangeType(),
-                transferRecord.getOperator(),transferRecord.getReason(),transferId);
+        return update(sql, transferRecord.getTransferDate(), transferRecord.getChangeType(),
+                transferRecord.getOperator(), transferRecord.getReason(), transferId);
     }
 
     // 将设备单位信息改回原单位代码 并从表中删除
-    public boolean deleteTransferRecord(Integer transferId,String equipId,String outUnitCode) {
+    public boolean deleteTransferRecord(Integer transferId, String equipId, String outUnitCode) {
         String sql1 = "UPDATE equipment SET unit_code = ? WHERE equip_id = ?";
         List<Object> params1 = new ArrayList<>();
         params1.add(outUnitCode);
@@ -93,8 +86,8 @@ public class TransferRecordDao extends BasicDao<TransferRecord> {
         List<Object> params2 = new ArrayList<>();
         params2.add(transferId);
         LinkedHashMap<String, List<Object>> sqlTasks = new LinkedHashMap<>();
-        sqlTasks.put(sql1,params1);
-        sqlTasks.put(sql2,params2);
+        sqlTasks.put(sql1, params1);
+        sqlTasks.put(sql2, params2);
         return updateWithTransaction(sqlTasks);
     }
 }

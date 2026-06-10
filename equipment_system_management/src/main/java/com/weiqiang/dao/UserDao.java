@@ -20,8 +20,20 @@ public class UserDao extends BasicDao<User> {
      */
     public User getByUsername(final String username) {
         final String sql = "SELECT id, username, password, real_name AS realName, role, " +
-                "create_time AS createTime, update_time AS updateTime FROM sys_user WHERE username = ?";
+                "create_time AS createTime, update_time AS updateTime, unit_code AS unitCode FROM sys_user WHERE username = ?";
         return selectOne(sql, User.class, username);
+    }
+
+    /**
+     * 根据用户ID获取用户信息
+     *
+     * @param id 用户ID
+     * @return 用户信息，未找到返回 null
+     */
+    public User getById(final Integer id) {
+        final String sql = "SELECT id, username, password, real_name AS realName, role, " +
+                "create_time AS createTime, update_time AS updateTime, unit_code AS unitCode FROM sys_user WHERE id = ?";
+        return selectOne(sql, User.class, id);
     }
 
     /**
@@ -31,15 +43,16 @@ public class UserDao extends BasicDao<User> {
      * @return 影响行数
      */
     public int insert(final User user) {
-        final String sql = "INSERT INTO sys_user (username, password, real_name, role, create_time, update_time) " +
-                "VALUES (?, ?, ?, ?, ?, ?)";
+        final String sql = "INSERT INTO sys_user (username, password, real_name, role, create_time, update_time, unit_code) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?)";
         return update(sql,
                 user.getUsername(),
                 user.getPassword(),
                 user.getRealName(),
                 user.getRole(),
                 user.getCreateTime(),
-                user.getUpdateTime());
+                user.getUpdateTime(),
+                user.getUnitCode());
     }
 
     /**
@@ -61,7 +74,7 @@ public class UserDao extends BasicDao<User> {
      */
     public List<User> listAll() {
         final String sql = "SELECT id, username, password, real_name AS realName, role, " +
-                "create_time AS createTime, update_time AS updateTime FROM sys_user";
+                "create_time AS createTime, update_time AS updateTime, unit_code AS unitCode FROM sys_user";
         return mutiSelect(sql, User.class, (Object[]) null);
     }
 }

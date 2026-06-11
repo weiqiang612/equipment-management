@@ -260,18 +260,18 @@
         <el-button type="primary" @click="submitForm">确定</el-button>
       </div>
     </el-dialog>
-    <!-- 检修弹窗 -->
+    <!-- 报修弹窗 -->
     <el-dialog
-      title="设备检修登记"
+      title="设备报修申请"
       :visible.sync="maintDialogVisible"
       width="500px"
       append-to-body
     >
-      <el-form :model="maintForm" label-width="100px" size="small">
+      <el-form :model="maintForm" ref="maintForm" :rules="maintRules" label-width="100px" size="small">
         <el-form-item label="设备编号">
           <el-input v-model="maintForm.equipId" disabled />
         </el-form-item>
-        <el-form-item label="检修日期">
+        <el-form-item label="报修日期" prop="maintDate">
           <el-date-picker
             v-model="maintForm.maintDate"
             type="date"
@@ -279,35 +279,18 @@
             style="width: 100%"
           />
         </el-form-item>
-        <el-form-item label="检修内容">
+        <el-form-item label="故障描述" prop="faultDescription">
           <el-input
             type="textarea"
-            v-model="maintForm.maintContent"
-            placeholder="请输入本次检修的具体内容"
+            v-model="maintForm.faultDescription"
+            :rows="3"
+            placeholder="请输入设备具体的故障描述"
           />
-        </el-form-item>
-        <el-form-item label="检修费用">
-          <el-input-number
-            v-model="maintForm.maintCost"
-            :precision="2"
-            :min="0"
-            style="width: 100%"
-          />
-        </el-form-item>
-        <el-form-item label="检修人">
-          <el-select v-model="maintForm.maintPerson" placeholder="请选择检修人" style="width: 100%">
-            <el-option
-              v-for="item in maintainers"
-              :key="item.id"
-              :label="item.realName"
-              :value="item.realName"
-            />
-          </el-select>
         </el-form-item>
       </el-form>
       <div slot="footer">
         <el-button @click="maintDialogVisible = false">取 消</el-button>
-        <el-button type="primary" @click="submitMaint">提交记录</el-button>
+        <el-button type="primary" @click="submitMaint">提交申请</el-button>
       </div>
     </el-dialog>
     <!-- 报废记录弹窗 -->
@@ -402,13 +385,11 @@ import {
   getCategoryList,
   maintenanceEquip,
   scrapEquipment,
-  getEquipmentsForExport,
   getCalculateAccumulated,
 } from "@/api/equipment";
 import { getMaintainers } from "@/api/user";
 import { addTransfer } from "@/api/transfer";
 import * as XLSX from "xlsx";
-import { saveAs } from "file-saver";
 
 export default {
   data() {
@@ -462,6 +443,15 @@ export default {
         maintContent: "",
         maintCost: 0,
         maintPerson: "",
+        faultDescription: "",
+      },
+      maintRules: {
+        maintDate: [
+          { required: true, message: "请选择日期", trigger: "change" },
+        ],
+        faultDescription: [
+          { required: true, message: "请输入故障描述", trigger: "blur" },
+        ],
       },
       scrapDialogVisible: false, // 控制报废弹窗
       scrapForm: {
@@ -572,27 +562,21 @@ export default {
     },
     // Equipment.vue 中的 submitMaint 优化版
     async submitMaint() {
-      if (!this.maintForm.maintContent) {
-        this.$message.warning("请填写检修内容");
-        return;
-      }
-      if (!this.maintForm.maintPerson) {
-        this.$message.warning("请选择检修人");
-        return;
-      }
-      try {
-        await maintenanceEquip(
-          this.maintForm.equipId,
-          this.maintForm
-        );
-        // 这里要注意：如果你的 Axios 拦截器直接返回了数据，则 res 为真
-        this.$message.success("检修登记成功，设备状态已更新");
-        this.maintDialogVisible = false;
-        this.fetchEquipmentList();
-      } catch (error) {
-        // 错误会被 request.js 拦截并弹窗，这里只需要停止加载动画或处理局部逻辑
-        console.error("提交检修失败", error);
-      }
+      this.$refs.maintForm.validate(async (valid) => {
+        if (!valid) return;
+        const { equipId } = this.maintForm;
+        try {
+          await maintenanceEquip(
+            equipId,
+            this.maintForm
+          );
+          this.$message.success("设备报修申请成功");
+          this.maintDialogVisible = false;
+          this.fetchEquipmentList();
+        } catch (error) {
+          console.error("提交检修失败", error);
+        }
+      });
     },
     handleDelete(row) {
       this.$confirm("确定删除该设备及所有关联信息吗？", "警告", {
@@ -657,11 +641,15 @@ export default {
         maintContent: "",
         maintCost: 0,
         maintPerson: "",
+        faultDescription: "",
       };
-      // 打开弹窗前重新拉取一下最新维修工列表，保证实时性
-      this.fetchMaintainers();
       // 2. 显示弹窗（maintDialogVisible 需要在 data 中定义）
       this.maintDialogVisible = true;
+      this.$nextTick(() => {
+        if (this.$refs.maintForm) {
+          this.$refs.maintForm.clearValidate();
+        }
+      });
     },
     // 2. 触发报废弹窗 [参考 handleMaintenance 逻辑]
     handleScrap(row) {

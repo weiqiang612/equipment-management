@@ -2,9 +2,17 @@
 
 ## Active
 
+`docs/4-tasks/features/TASK-008-equipment-claim-workflow/`
+- spec.md ✅ Ready
+- tasks.md -> Not started
+
 ## Backlog
 
 ## Done
+
+`docs/4-tasks/features/TASK-007-frontend-maint-scrap-fix/`
+- spec.md ✅ Ready
+- tasks.md ✅ 100% Complete
 
 `docs/4-tasks/features/TASK-006-frontend-isolation/`
 - spec.md ✅ Ready
@@ -47,3 +55,10 @@
 
 ### TASK-006: 前端数据隔离与操作隔离
 - [x] Implementation (9 tasks)
+
+### TASK-007: 前端维保数据流与报废表单交互修复
+- [x] Implementation (7 tasks)
+
+### TASK-008: 设备领用与审批工作流
+- [ ] Implementation (14 tasks)
+

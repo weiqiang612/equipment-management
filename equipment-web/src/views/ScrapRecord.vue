@@ -45,7 +45,7 @@
       :visible.sync="dialogVisible"
       width="500px"
     >
-      <el-form :model="form" ref="scrapForm" label-width="100px" size="small">
+      <el-form :model="form" ref="scrapForm" :rules="rules" label-width="100px" size="small">
         <el-form-item v-if="!isEdit" label="选择设备" prop="equipId">
           <el-select
             v-model="form.equipId"
@@ -65,7 +65,7 @@
         <el-form-item v-else label="设备编号">
           <el-input v-model="form.equipId" disabled />
         </el-form-item>
-        <el-form-item label="报废日期">
+        <el-form-item label="报废日期" prop="scrapDate">
           <el-date-picker
             v-model="form.scrapDate"
             type="date"
@@ -73,7 +73,7 @@
             style="width: 100%"
           />
         </el-form-item>
-        <el-form-item label="报废原因">
+        <el-form-item label="报废原因" prop="reason">
           <el-input
             type="textarea"
             v-model="form.reason"
@@ -81,7 +81,7 @@
             placeholder="请输入详细原因"
           />
         </el-form-item>
-        <el-form-item label="审批人">
+        <el-form-item label="审批人" prop="approver">
           <el-input v-model="form.approver" placeholder="请输入审批人姓名" />
         </el-form-item>
       </el-form>
@@ -116,6 +116,18 @@ export default {
         scrapDate: "",
         reason: "",
         approver: "",
+      },
+      rules: {
+        equipId: [{ required: true, message: "请选择设备", trigger: "change" }],
+        scrapDate: [
+          { required: true, message: "请选择日期", trigger: "change" },
+        ],
+        reason: [
+          { required: true, message: "请输入报废原因", trigger: "blur" },
+        ],
+        approver: [
+          { required: true, message: "请输入审批人姓名", trigger: "blur" },
+        ],
       },
     };
   },
@@ -172,17 +184,16 @@ export default {
     },
     // 3. 提交表单后的逻辑处理
     async submitForm() {
-      this.$refs.postForm.validate(async (valid) => {
-        // 假设你给 el-form 加了 ref="postForm"
+      this.$refs.scrapForm.validate(async (valid) => {
         if (!valid) return;
-
+        const { scrapNo, equipId } = this.form;
         try {
           if (this.isEdit) {
-            await updateScrapRecord(this.form.scrapNo, this.form);
+            await updateScrapRecord(scrapNo, this.form);
             this.$message.success("修改成功");
           } else {
             // 报废补录调用 equipment.js 中的接口
-            await scrapEquipment(this.form.equipId, this.form);
+            await scrapEquipment(equipId, this.form);
             this.$message.success("报废补录成功");
           }
           this.dialogVisible = false;
@@ -210,8 +221,8 @@ export default {
         reason: "",
         approver: "管理员",
       };
-      if (this.$refs.postForm) {
-        this.$refs.postForm.resetFields();
+      if (this.$refs.scrapForm) {
+        this.$refs.scrapForm.resetFields();
       }
     },
   },

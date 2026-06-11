@@ -115,13 +115,13 @@
           />
         </el-form-item>
 
-        <el-form-item label="检修人" prop="maintPerson">
-          <el-select v-model="form.maintPerson" placeholder="请选择检修人" style="width: 100%">
+        <el-form-item label="检修人" prop="maintPersonId">
+          <el-select v-model="form.maintPersonId" placeholder="请选择检修人" style="width: 100%" @change="handleMaintainerChange">
             <el-option
               v-for="item in maintainers"
               :key="item.id"
               :label="item.realName"
-              :value="item.realName"
+              :value="item.id"
             />
           </el-select>
         </el-form-item>
@@ -170,6 +170,7 @@ export default {
         maintContent: "",
         maintCost: 0,
         maintPerson: "",
+        maintPersonId: null,
       },
       rules: {
         equipId: [{ required: true, message: "请选择设备", trigger: "change" }],
@@ -177,9 +178,18 @@ export default {
           { required: true, message: "请选择日期", trigger: "change" },
         ],
         maintContent: [
-          { required: true, message: "请输入检修内容", trigger: "blur" },
+          {
+            validator: (rule, value, callback) => {
+              if (this.form.maintStatus !== 0 && !value) {
+                callback(new Error("请输入检修内容"));
+              } else {
+                callback();
+              }
+            },
+            trigger: "blur",
+          },
         ],
-        maintPerson: [
+        maintPersonId: [
           { required: true, message: "请选择检修人", trigger: "change" },
         ],
       },
@@ -204,6 +214,15 @@ export default {
         this.maintainers = res || [];
       } catch (error) {
         console.error("获取维修工列表失败", error);
+      }
+    },
+    handleMaintainerChange(val) {
+      const maintainer = this.maintainers.find(item => item.id === val);
+      if (maintainer) {
+        const { realName } = maintainer;
+        this.form.maintPerson = realName;
+      } else {
+        this.form.maintPerson = "";
       }
     },
     async loadList() {
@@ -238,13 +257,14 @@ export default {
       this.$refs.maintForm.validate(async (valid) => {
         if (!valid) return;
         this.submitLoading = true;
+        const { maintId, equipId } = this.form;
         try {
           if (this.isEdit) {
-            await updateMaintenance(this.form.maintId, this.form);
+            await updateMaintenance(maintId, this.form);
             this.$message.success("修改成功");
           } else {
             // 补录：对应后端 @PostMapping("/{equipId}")
-            await addMaintenance(this.form.equipId, this.form);
+            await addMaintenance(equipId, this.form);
             this.$message.success("新增成功");
           }
           this.dialogVisible = false;
@@ -276,6 +296,7 @@ export default {
         maintContent: "",
         maintCost: 0,
         maintPerson: "",
+        maintPersonId: null,
       };
     },
   },

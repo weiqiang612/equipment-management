@@ -17,11 +17,18 @@
         <el-table-column prop="username" label="用户名" min-width="120"></el-table-column>
         <el-table-column prop="realName" label="真实姓名" min-width="120"></el-table-column>
         
-        <el-table-column label="系统角色" width="160" align="center">
+        <el-table-column label="系统角色" width="140" align="center">
           <template slot-scope="scope">
             <el-tag :type="getRoleTagType(scope.row.role)">
               {{ formatRole(scope.row.role) }}
             </el-tag>
+          </template>
+        </el-table-column>
+
+        <el-table-column label="所属单位" min-width="140" align="center">
+          <template slot-scope="scope">
+            <el-tag v-if="scope.row.role === 3" type="info">全局角色</el-tag>
+            <span v-else>{{ getDeptName(scope.row.unitCode) }}</span>
           </template>
         </el-table-column>
 
@@ -37,7 +44,7 @@
           </template>
         </el-table-column>
 
-        <el-table-column label="角色分配操作" width="220" align="center">
+        <el-table-column label="角色分配操作" width="160" align="center">
           <template slot-scope="scope">
             <!-- 限制不能修改自己（防止管理员把自己权限改成操作员导致无法管理） -->
             <el-select
@@ -56,6 +63,25 @@
             </el-select>
           </template>
         </el-table-column>
+
+        <el-table-column label="单位分配操作" width="160" align="center">
+          <template slot-scope="scope">
+            <el-select
+              v-model="scope.row.unitCode"
+              :disabled="scope.row.role === 3 || scope.row.username === currentUsername"
+              placeholder="分配单位"
+              size="small"
+              @change="handleDeptChange(scope.row)"
+            >
+              <el-option
+                v-for="item in departments"
+                :key="item.unitCode"
+                :label="item.unitName"
+                :value="item.unitCode"
+              ></el-option>
+            </el-select>
+          </template>
+        </el-table-column>
       </el-table>
     </el-card>
   </div>
@@ -63,12 +89,14 @@
 
 <script>
 import { getUsers, updateUserRole } from '@/api/user'
+import { getDepts } from '@/api/department'
 
 export default {
   name: 'UserManage',
   data() {
     return {
       users: [],
+      departments: [],
       loading: false,
       currentUsername: localStorage.getItem('username') || '',
       roleOptions: [
@@ -81,6 +109,7 @@ export default {
   },
   created() {
     this.fetchUsers()
+    this.fetchDepartments()
   },
   methods: {
     // 获取所有用户列表
@@ -102,6 +131,20 @@ export default {
           this.loading = false
         })
     },
+    // 获取所有部门列表
+    fetchDepartments() {
+      getDepts()
+        .then(data => {
+          this.departments = data || []
+        })
+        .catch(() => {})
+    },
+    // 根据单位代码映射单位名称
+    getDeptName(unitCode) {
+      if (!unitCode) return '未分配'
+      const dept = this.departments.find(d => d.unitCode === unitCode)
+      return dept ? dept.unitName : unitCode
+    },
     // 处理修改用户角色
     handleRoleChange(row) {
       this.$confirm(`确定要将用户 "${row.username}" 的角色修改为 "${this.formatRole(row.role)}" 吗?`, '提示', {
@@ -111,8 +154,9 @@ export default {
       })
         .then(() => {
           this.loading = true
-          // 提交 PUT 请求到后端，请求体携带 id 与 role 字段
-          updateUserRole({ id: row.id, role: row.role })
+          // 提交 PUT 请求到后端，角色为管理员时单位自动重置为空
+          const unitCode = row.role === 3 ? null : row.unitCode
+          updateUserRole({ id: row.id, role: row.role, unitCode })
             .then(() => {
               this.$message({
                 type: 'success',
@@ -128,6 +172,32 @@ export default {
         })
         .catch(() => {
           // 取消修改，重新拉取还原下拉框的值
+          this.fetchUsers()
+        })
+    },
+    // 处理修改用户所属单位
+    handleDeptChange(row) {
+      this.$confirm(`确定要将用户 "${row.username}" 的所属单位修改为 "${this.getDeptName(row.unitCode)}" 吗?`, '提示', {
+        confirmButtonText: '确定',
+        cancelButtonText: '取消',
+        type: 'warning'
+      })
+        .then(() => {
+          this.loading = true
+          updateUserRole({ id: row.id, role: row.role, unitCode: row.unitCode })
+            .then(() => {
+              this.$message({
+                type: 'success',
+                message: '所属单位修改成功!'
+              })
+              this.fetchUsers()
+            })
+            .catch(() => {
+              this.loading = false
+              this.fetchUsers()
+            })
+        })
+        .catch(() => {
           this.fetchUsers()
         })
     },

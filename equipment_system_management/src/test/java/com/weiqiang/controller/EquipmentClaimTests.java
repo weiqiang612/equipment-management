@@ -100,6 +100,7 @@ public class EquipmentClaimTests {
         user.setUsername(username);
         user.setPassword("password123");
         user.setRealName(realName);
+        user.setUnitCode("D98");
         mockMvc.perform(post("/users/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(user)))

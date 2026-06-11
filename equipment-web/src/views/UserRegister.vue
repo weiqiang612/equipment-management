@@ -54,6 +54,22 @@
             ></el-input>
           </el-form-item>
 
+          <el-form-item label="Department" prop="unitCode">
+            <el-select
+              v-model="registerForm.unitCode"
+              placeholder="Select your department"
+              style="width: 100%"
+              clearable
+            >
+              <el-option
+                v-for="item in departments"
+                :key="item.unitCode"
+                :label="item.unitName"
+                :value="item.unitCode"
+              ></el-option>
+            </el-select>
+          </el-form-item>
+
           <el-form-item class="submit-item">
             <el-button
               :loading="loading"
@@ -72,6 +88,7 @@
 
 <script>
 import { register } from '@/api/user'
+import { getDepts } from '@/api/department'
 
 export default {
   name: 'UserRegister',
@@ -87,10 +104,12 @@ export default {
     }
 
     return {
+      departments: [],
       registerForm: {
         username: '',
         password: '',
-        confirmPassword: ''
+        confirmPassword: '',
+        unitCode: ''
       },
       registerRules: {
         username: [
@@ -103,12 +122,26 @@ export default {
         ],
         confirmPassword: [
           { required: true, validator: validatePass2, trigger: 'blur' }
+        ],
+        unitCode: [
+          { required: true, message: 'Please select your department', trigger: 'change' }
         ]
       },
       loading: false
     }
   },
+  created() {
+    this.fetchDepartments()
+  },
   methods: {
+    // 获取所有部门列表
+    fetchDepartments() {
+      getDepts()
+        .then(data => {
+          this.departments = data || []
+        })
+        .catch(() => {})
+    },
     handleRegister() {
       this.$refs.registerForm.validate(valid => {
         if (!valid) {
@@ -116,10 +149,10 @@ export default {
         }
         this.loading = true
         // 设计稿无 realName，我们将 realName 默认传入和 username 相同以匹配后端参数校验
-        const { username, password } = this.registerForm
+        const { username, password, unitCode } = this.registerForm
         const realName = username
         
-        register({ username, realName, password })
+        register({ username, realName, password, unitCode })
           .then(() => {
             this.loading = false
             this.$message({

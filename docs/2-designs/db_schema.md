@@ -16,8 +16,8 @@
 
 ### 2.2 用户与权限模块
 *   **系统用户表 (sys_user)**
-    *   关系模式：用户(<u>id</u>, username, password, real_name, role, create_time, update_time)
-    *   *注：`username` 字段设为唯一索引。*
+    *   关系模式：用户(<u>id</u>, username, password, real_name, role, *unit_code*, create_time, update_time)
+    *   *注：`username` 字段设为唯一索引，`unit_code` 逻辑关联单位表 `department.unit_code`。*
 
 ### 2.3 设备核心与业务记录模块
 *   **设备信息表 (equipment)**
@@ -107,10 +107,12 @@ CREATE TABLE `sys_user` (
   `password` varchar(100) NOT NULL COMMENT '登录密码(MD5)',
   `real_name` varchar(50) DEFAULT NULL COMMENT '真实姓名',
   `role` tinyint(4) NOT NULL DEFAULT '0' COMMENT '角色: 0-设备操作员, 1-维修工程师, 2-资产管理员, 3-系统管理员',
+  `unit_code` varchar(20) DEFAULT NULL COMMENT '所属单位代码',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_username` (`username`)
+  UNIQUE KEY `uk_username` (`username`),
+  CONSTRAINT `sys_user_ibfk_1` FOREIGN KEY (`unit_code`) REFERENCES `department` (`unit_code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统用户表';
 
 -- 4. 设备信息表 (含保管人)
@@ -164,9 +166,11 @@ CREATE TABLE `maintenance_record` (
   `reporter` varchar(50) DEFAULT NULL COMMENT '报修人用户名(关联 sys_user.username)',
   `fault_description` text COMMENT '故障描述(操作员报修填写)',
   `maint_status` tinyint(4) NOT NULL DEFAULT '0' COMMENT '工单状态: 0-待指派, 1-维修中, 2-已完成',
+  `maint_person_id` int(11) DEFAULT NULL COMMENT '指定维保工用户ID',
   PRIMARY KEY (`maint_id`),
   KEY `idx_maint_equip` (`equip_id`),
-  CONSTRAINT `maintenance_record_ibfk_1` FOREIGN KEY (`equip_id`) REFERENCES `equipment` (`equip_id`)
+  CONSTRAINT `maintenance_record_ibfk_1` FOREIGN KEY (`equip_id`) REFERENCES `equipment` (`equip_id`),
+  CONSTRAINT `fk_maint_user` FOREIGN KEY (`maint_person_id`) REFERENCES `sys_user` (`id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='设备检修信息表';
 
 -- 7. 设备报废信息表

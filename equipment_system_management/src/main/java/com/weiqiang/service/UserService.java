@@ -21,9 +21,9 @@ public interface UserService {
     Result register(final User user);
 
     /**
-     * 修改用户角色
+     * 修改用户角色与所属单位
      */
-    Result updateRole(final Integer id, final Integer role);
+    Result updateRole(final Integer id, final Integer role, final String unitCode);
 
     /**
      * 获取所有用户列表

@@ -56,15 +56,16 @@ public class UserDao extends BasicDao<User> {
     }
 
     /**
-     * 更新用户角色
+     * 更新用户角色与所属单位
      *
      * @param id 用户ID
      * @param role 新角色值
+     * @param unitCode 新所属单位代码
      * @return 影响行数
      */
-    public int updateRole(final Integer id, final Integer role) {
-        final String sql = "UPDATE sys_user SET role = ?, update_time = NOW() WHERE id = ?";
-        return update(sql, role, id);
+    public int updateRoleAndDept(final Integer id, final Integer role, final String unitCode) {
+        final String sql = "UPDATE sys_user SET role = ?, unit_code = ?, update_time = NOW() WHERE id = ?";
+        return update(sql, role, unitCode, id);
     }
 
     /**

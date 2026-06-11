@@ -2,11 +2,15 @@
 
 ## Active
 
-- 无 (All active features complete)
+
 
 ## Backlog
 
 ## Done
+
+`docs/4-tasks/features/TASK-009-user-role-dept-fix/`
+- spec.md ✅ Ready
+- tasks.md ✅ 100% Complete
 
 `docs/4-tasks/features/TASK-008-equipment-claim-workflow/`
 - spec.md ✅ Ready

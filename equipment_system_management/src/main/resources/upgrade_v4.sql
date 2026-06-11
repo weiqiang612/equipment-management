@@ -1,0 +1,2 @@
+-- 升级脚本 v4 (TASK-009 用户角色与所属单位管理修复)
+-- 说明：sys_user 表的 unit_code 字段在 upgrade_v2.sql 中已添加，此处仅作为任务脚本记录，不执行重复 ALTER 操作。

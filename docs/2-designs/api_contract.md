@@ -62,7 +62,8 @@
     {
       "username": "new_user_1",
       "realName": "张三",
-      "password": "plain_text_password"
+      "password": "plain_text_password",
+      "unitCode": "D001"    // 所属单位代码 (必填)
     }
     ```
 *   **响应示例**：
@@ -142,7 +143,8 @@
     ```json
     {
       "id": 1,       // 目标用户的自增主键 ID
-      "role": 2      // 目标分配的角色编号 (0-操作员, 1-工程师, 2-资产管理员, 3-系统管理员)
+      "role": 2,      // 目标分配的角色编号 (0-操作员, 1-工程师, 2-资产管理员, 3-系统管理员)
+      "unitCode": "D001" // 所属单位代码 (当 role=3 时可传 null/不传，其他角色为必填)
     }
     ```
 *   **响应示例**：

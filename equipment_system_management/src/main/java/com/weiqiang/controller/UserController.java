@@ -3,6 +3,7 @@ package com.weiqiang.controller;
 import com.weiqiang.anno.RequiresRoles;
 import com.weiqiang.pojo.Result;
 import com.weiqiang.pojo.User;
+import com.weiqiang.pojo.UserVO;
 import com.weiqiang.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,19 +46,27 @@ public class UserController {
     @PutMapping("/role")
     @RequiresRoles(3)
     public Result updateRole(@RequestBody final User user) {
-        log.info("修改用户角色请求，目标用户ID: {}, 期望修改的角色: {}", user.getId(), user.getRole());
-        return userService.updateRole(user.getId(), user.getRole());
+        log.info("修改用户角色与单位请求，目标用户ID: {}, 期望修改的角色: {}, 所属单位: {}", 
+                 user.getId(), user.getRole(), user.getUnitCode());
+        return userService.updateRole(user.getId(), user.getRole(), user.getUnitCode());
     }
 
     /**
-     * 获取用户列表接口（仅限系统管理员 role=3 访问）
+     * 获取用户列表接口（仅限资产管理员和系统管理员访问）
      */
     @GetMapping
     @RequiresRoles({2, 3})
     public Result getUsers() {
         log.info("接收到获取用户列表请求");
         final List<User> users = userService.listAll();
-        return Result.success(users);
+        final List<UserVO> userVOs = new java.util.ArrayList<>();
+        for (final User u : users) {
+            userVOs.add(new UserVO(
+                u.getId(), u.getUsername(), u.getRealName(), u.getRole(),
+                u.getCreateTime(), u.getUpdateTime(), u.getUnitCode()
+            ));
+        }
+        return Result.success(userVOs);
     }
 
     /**
@@ -77,10 +86,13 @@ public class UserController {
     public Result getMaintainers() {
         log.info("接收到获取维修工列表请求");
         final List<User> users = userService.listAll();
-        final List<User> maintainers = new java.util.ArrayList<>();
+        final List<UserVO> maintainers = new java.util.ArrayList<>();
         for (final User u : users) {
             if (u.getRole() != null && u.getRole() == 1) {
-                maintainers.add(u);
+                maintainers.add(new UserVO(
+                    u.getId(), u.getUsername(), u.getRealName(), u.getRole(),
+                    u.getCreateTime(), u.getUpdateTime(), u.getUnitCode()
+                ));
             }
         }
         return Result.success(maintainers);

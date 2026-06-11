@@ -85,11 +85,12 @@ public class UserControllerTests {
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data").isArray());
 
-        // 5. 注册新用户
+        // 5. 注册新用户 (添加单位 DEPT001)
         final User registerUser = new User();
         registerUser.setUsername(TEST_USERNAME);
         registerUser.setPassword(TEST_PASSWORD);
         registerUser.setRealName("测试新用户");
+        registerUser.setUnitCode("DEPT001");
 
         mockMvc.perform(post("/users/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -135,10 +136,11 @@ public class UserControllerTests {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value("权限不足"));
 
-        // 10. 以 admin 的 Token 修改上述新用户的角色为 1 (维修工程师)，预期操作成功
+        // 10. 以 admin 的 Token 修改上述新用户的角色为 1 (维修工程师) 并绑定单位，预期操作成功
         final User roleUpdateUser = new User();
         roleUpdateUser.setId(dbUser.getId());
         roleUpdateUser.setRole(1);
+        roleUpdateUser.setUnitCode("DEPT001");
 
         mockMvc.perform(put("/users/role")
                         .header("token", adminToken)
@@ -147,9 +149,10 @@ public class UserControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(1));
 
-        // 验证数据库角色确实变为了 1
+        // 验证数据库角色确实变为了 1 且单位变为了 DEPT001
         final User dbUserUpdated = userDao.getByUsername(TEST_USERNAME);
         assertEquals(1, dbUserUpdated.getRole());
+        assertEquals("DEPT001", dbUserUpdated.getUnitCode());
 
         // 11. 以普通操作员/工程师角色 Token 修改自己或其他用户的角色，预期被拦截返回 403
         mockMvc.perform(put("/users/role")
@@ -159,5 +162,69 @@ public class UserControllerTests {
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value("权限不足"));
+
+        // 12. [新增AC测试] 自助注册不填单位，预期失败并提示 '所属单位不能为空'
+        final User noDeptRegisterUser = new User();
+        noDeptRegisterUser.setUsername("test_no_dept");
+        noDeptRegisterUser.setPassword("myPassword123");
+        noDeptRegisterUser.setRealName("无单位用户");
+        // 不设置 unitCode
+        mockMvc.perform(post("/users/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(noDeptRegisterUser)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("所属单位不能为空"));
+
+        // 13. [新增AC测试] 修改角色为系统管理员 (role=3)，预期其所属单位自动重置为 NULL
+        final User toAdminUser = new User();
+        toAdminUser.setId(dbUser.getId());
+        toAdminUser.setRole(3);
+        toAdminUser.setUnitCode("DEPT002"); // 即使传了值，后端也应该自动清空
+
+        mockMvc.perform(put("/users/role")
+                        .header("token", adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(toAdminUser)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        final User dbUserAdmin = userDao.getById(dbUser.getId());
+        assertEquals(3, dbUserAdmin.getRole());
+        assertNull(dbUserAdmin.getUnitCode());
+
+        // 14. [新增AC测试] 部门变更且名下有设备时的强阻断拦截
+        // 先还原该用户为操作员 (role=0)，分配到 DEPT001 部门
+        final User backToOpUser = new User();
+        backToOpUser.setId(dbUser.getId());
+        backToOpUser.setRole(0);
+        backToOpUser.setUnitCode("DEPT001");
+        mockMvc.perform(put("/users/role")
+                        .header("token", adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(backToOpUser)))
+                .andExpect(status().isOk());
+
+        // 将设备 'EQ2024001' 临时指派给该新账号作为保管人
+        userDao.update("UPDATE equipment SET custodian = ? WHERE equip_id = 'EQ2024001'", TEST_USERNAME);
+
+        try {
+            // 尝试变更部门为 DEPT002，期待强阻断
+            final User blockUpdateUser = new User();
+            blockUpdateUser.setId(dbUser.getId());
+            blockUpdateUser.setRole(0);
+            blockUpdateUser.setUnitCode("DEPT002");
+
+            mockMvc.perform(put("/users/role")
+                            .header("token", adminToken)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(blockUpdateUser)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.code").value(0))
+                    .andExpect(jsonPath("$.msg").value("操作失败：该用户尚有未清退的保管设备，请先去设备管理处退还或交接设备！"));
+        } finally {
+            // 恢复设备 EQ2024001 保管关系，避免污染
+            userDao.update("UPDATE equipment SET custodian = NULL WHERE equip_id = 'EQ2024001'");
+        }
     }
 }

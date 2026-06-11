@@ -31,9 +31,15 @@ public class UserServiceImpl implements UserService {
     private final UserDao userDao;
     private final com.weiqiang.dao.EquipmentDao equipmentDao;
     private final com.weiqiang.dao.EquipmentClaimDao equipmentClaimDao;
+    private final com.weiqiang.dao.DepartmentDao departmentDao;
 
     private static final int DEFAULT_ROLE = 0;
     private static final int CLAIMS_MAP_CAPACITY = 5;
+
+    // 角色及系统状态常量定义
+    private static final int ROLE_ADMIN = 3;
+    private static final int CLAIM_STATUS_RETURNED = 4;
+    private static final int MAINT_STATUS_COMPLETED = 2;
 
     @Override
     public Result login(final String username, final String password) {
@@ -71,6 +77,14 @@ public class UserServiceImpl implements UserService {
             return Result.error("用户名和密码不能为空");
         }
 
+        // 强制校验所属单位
+        if (!StringUtils.hasText(user.getUnitCode())) {
+            return Result.error("所属单位不能为空");
+        }
+        if (departmentDao.getDeptById(user.getUnitCode()) == null) {
+            return Result.error("指定的所属单位不存在");
+        }
+
         final User dbUser = userDao.getByUsername(user.getUsername());
         if (dbUser != null) {
             log.warn("注册失败：用户名 {} 已存在", user.getUsername());
@@ -88,7 +102,7 @@ public class UserServiceImpl implements UserService {
 
         final int rows = userDao.insert(user);
         if (rows > 0) {
-            log.info("用户 {} 注册成功，默认分配角色为操作员", user.getUsername());
+            log.info("用户 {} 注册成功，关联单位: {}，默认分配角色为操作员", user.getUsername(), user.getUnitCode());
             return Result.success();
         } else {
             log.error("用户 {} 注册时数据库插入记录失败", user.getUsername());
@@ -98,22 +112,55 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Result updateRole(final Integer id, final Integer role) {
+    public Result updateRole(final Integer id, final Integer role, final String unitCode) {
         if (id == null || role == null) {
             return Result.error("用户ID或角色值不能为空");
         }
 
-        if (role < 0 || role > 3) {
+        if (role < DEFAULT_ROLE || role > ROLE_ADMIN) {
             return Result.error("非法的角色值");
         }
 
-        final int rows = userDao.updateRole(id, role);
+        // 1. 获取原用户信息
+        final User oldUser = userDao.getById(id);
+        if (oldUser == null) {
+            log.warn("修改用户角色失败：未找到ID为 {} 的用户", id);
+            return Result.error("修改用户角色失败，用户不存在");
+        }
+
+        // 2. 校验所属单位 unitCode 并确定最终值
+        String finalUnitCode = unitCode;
+        if (role == ROLE_ADMIN) {
+            // 系统管理员强制定为全局，不关联单位
+            finalUnitCode = null;
+        } else {
+            // 其他角色强制要求分配单位
+            if (!StringUtils.hasText(unitCode)) {
+                return Result.error("该角色必须绑定所属单位");
+            }
+            if (departmentDao.getDeptById(unitCode) == null) {
+                return Result.error("指定的所属单位不存在");
+            }
+        }
+
+        // 3. 强阻断校验：如果部门发生变更，且名下有未归还的保管设备，则拦截
+        final boolean isDeptChanged = !Objects.equals(oldUser.getUnitCode(), finalUnitCode);
+        if (isDeptChanged) {
+            final String checkEquipSql = "SELECT COUNT(*) FROM equipment WHERE custodian = ?";
+            final Long equipCount = (Long) userDao.singleSelect(checkEquipSql, oldUser.getUsername());
+            if (equipCount != null && equipCount > 0) {
+                log.warn("部门变更拦截：用户 {} 尚有 {} 台未清退保管设备，拒绝修改单位", oldUser.getUsername(), equipCount);
+                throw new BusinessException("操作失败：该用户尚有未清退的保管设备，请先去设备管理处退还或交接设备！");
+            }
+        }
+
+        // 4. 更新角色与所属单位
+        final int rows = userDao.updateRoleAndDept(id, role, finalUnitCode);
         if (rows > 0) {
-            log.info("修改用户角色成功，用户ID: {}, 新角色: {}", id, role);
+            log.info("修改用户角色与所属单位成功，用户ID: {}, 角色: {}, 单位: {}", id, role, finalUnitCode);
             return Result.success();
         }
-        log.warn("修改用户角色失败：未找到ID为 {} 的用户", id);
-        return Result.error("修改用户角色失败，用户不存在");
+        return Result.error("修改用户角色与所属单位失败");
     }
 
     @Override
@@ -145,15 +192,15 @@ public class UserServiceImpl implements UserService {
                 claim.setEquipId(eq.getEquipId());
                 claim.setApplicant(user.getUsername());
                 claim.setApprover(null);
-                claim.setStatus(4); // 已退还
+                claim.setStatus(CLAIM_STATUS_RETURNED); // 已退还
                 claim.setRemark("用户被删除导致保管关系自动清退");
                 equipmentClaimDao.addClaim(claim);
             }
         }
 
         // 2. 级联校验未完结工单 (作为报修人且工单状态 != 2，或作为被指派人且工单状态 != 2)
-        final String checkMaintSql = "SELECT COUNT(*) FROM maintenance_record WHERE (reporter = ? OR maint_person_id = ?) AND maint_status != 2";
-        final Long maintCount = (Long) userDao.singleSelect(checkMaintSql, user.getUsername(), id);
+        final String checkMaintSql = "SELECT COUNT(*) FROM maintenance_record WHERE (reporter = ? OR maint_person_id = ?) AND maint_status != ?";
+        final Long maintCount = (Long) userDao.singleSelect(checkMaintSql, user.getUsername(), id, MAINT_STATUS_COMPLETED);
         if (maintCount != null && maintCount > 0) {
             log.warn("级联校验拦截：用户 {} 尚有未完结的维保工单，拒绝删除", user.getUsername());
             throw new BusinessException("操作失败：该用户尚有未完结的检修工单，无法删除！");

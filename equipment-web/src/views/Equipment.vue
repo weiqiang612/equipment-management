@@ -92,7 +92,7 @@
       </el-form>
     </div>
     <!-- 新增按钮 -->
-    <el-button v-if="role !== 3" type="primary" @click="handleAdd">新增设备</el-button>
+    <el-button v-if="role === 2 || role === 3" type="primary" @click="handleAdd">新增设备</el-button>
     <!-- 设备表格 -->
     <el-table :data="equipmentList" border style="margin-top: 20px">
       <el-table-column prop="equipId" label="设备编号" />
@@ -109,6 +109,11 @@
       <el-table-column prop="originalValue" label="原值" />
       <el-table-column prop="categoryName" label="分类名称" />
       <el-table-column prop="unitName" label="单位名称" />
+      <el-table-column prop="custodian" label="保管人" width="100">
+        <template slot-scope="scope">
+          <span>{{ scope.row.custodian || '无' }}</span>
+        </template>
+      </el-table-column>
       <el-table-column label="资产价值" align="center" width="100">
         <template slot-scope="scope">
           <el-popover
@@ -143,10 +148,10 @@
           </el-popover>
         </template>
       </el-table-column>
-      <el-table-column v-if="role !== 3" label="操作" align="center" width="220">
+      <el-table-column label="操作" align="center" width="240">
         <template slot-scope="scope">
-          <!-- 资产管理员(2) 可见完整的编辑和下拉菜单 -->
-          <template v-if="role === 2">
+          <!-- 资产管理员(2) 或 系统管理员(3) 可见完整的编辑和下拉菜单 -->
+          <template v-if="role === 2 || role === 3">
             <el-button size="mini" type="primary" @click="handleEdit(scope.row)">编辑</el-button>
             <el-dropdown style="margin-left: 10px" trigger="click">
               <el-button size="mini" type="info">
@@ -178,8 +183,22 @@
               </el-dropdown-menu>
             </el-dropdown>
           </template>
-          <!-- 操作员(0) 或 维修工(1) 仅可见“维修”按钮以供报修登记 -->
+          <!-- 操作员(0) 或 维修工(1) -->
           <template v-else-if="role === 0 || role === 1">
+            <el-button
+              v-if="role === 0 && !scope.row.custodian && scope.row.status === '在用'"
+              size="mini"
+              type="primary"
+              @click="handleClaimApply(scope.row)"
+              >申请领用</el-button
+            >
+            <el-button
+              v-if="role === 0 && scope.row.custodian === username"
+              size="mini"
+              type="danger"
+              @click="handleClaimReturn(scope.row)"
+              >退还</el-button
+            >
             <el-button
               size="mini"
               type="warning"
@@ -253,6 +272,16 @@
         </el-form-item>
         <el-form-item label="原值">
           <el-input-number v-model="form.originalValue" :min="0" />
+        </el-form-item>
+        <el-form-item v-if="isEdit" label="当前保管人">
+          <el-select v-model="form.custodian" placeholder="请选择保管人" clearable style="width: 100%">
+            <el-option
+              v-for="item in operatorOptions"
+              :key="item.username"
+              :label="item.realName ? `${item.realName} (${item.username})` : item.username"
+              :value="item.username"
+            />
+          </el-select>
         </el-form-item>
       </el-form>
       <div slot="footer">
@@ -372,6 +401,58 @@
         >
       </div>
     </el-dialog>
+
+    <!-- 领用申请弹窗 -->
+    <el-dialog
+      title="申请领用设备"
+      :visible.sync="claimDialogVisible"
+      width="450px"
+      append-to-body
+    >
+      <el-form :model="claimForm" label-width="80px" size="small">
+        <el-form-item label="设备编号">
+          <span>{{ claimForm.equipId }}</span>
+        </el-form-item>
+        <el-form-item label="领用原因" required>
+          <el-input
+            type="textarea"
+            v-model="claimForm.remark"
+            placeholder="请输入领用原因"
+            :rows="3"
+          />
+        </el-form-item>
+      </el-form>
+      <div slot="footer">
+        <el-button @click="claimDialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="submitClaimApply">确 定</el-button>
+      </div>
+    </el-dialog>
+
+    <!-- 退还设备弹窗 -->
+    <el-dialog
+      title="退还设备备注"
+      :visible.sync="returnDialogVisible"
+      width="450px"
+      append-to-body
+    >
+      <el-form :model="returnForm" label-width="80px" size="small">
+        <el-form-item label="设备编号">
+          <span>{{ returnForm.equipId }}</span>
+        </el-form-item>
+        <el-form-item label="退还原因">
+          <el-input
+            type="textarea"
+            v-model="returnForm.remark"
+            placeholder="请输入退还原因/备注 (选填)"
+            :rows="3"
+          />
+        </el-form-item>
+      </el-form>
+      <div slot="footer">
+        <el-button @click="returnDialogVisible = false">取 消</el-button>
+        <el-button type="primary" @click="submitClaimReturn">确 定</el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
@@ -387,8 +468,9 @@ import {
   scrapEquipment,
   getCalculateAccumulated,
 } from "@/api/equipment";
-import { getMaintainers } from "@/api/user";
+import { getMaintainers, getUsers } from "@/api/user";
 import { addTransfer } from "@/api/transfer";
+import { applyClaim, returnEquipment } from "@/api/claim";
 import * as XLSX from "xlsx";
 
 export default {
@@ -396,12 +478,24 @@ export default {
     return {
       role: null,
       realName: "",
+      username: "", // 当前用户名
+      users: [], // 用户列表，用于管理员指派时筛选本部门操作员
       maintainers: [], // 存储维修工列表
       equipmentList: [], // 设备列表数据
       deptOptions: [], // 单位下拉列表
       categoryOptions: [], // 分类下拉列表
       dialogVisible: false,
       isEdit: false,
+      claimDialogVisible: false, // 领用弹窗控制
+      claimForm: {
+        equipId: "",
+        remark: ""
+      },
+      returnDialogVisible: false, // 退还弹窗控制
+      returnForm: {
+        equipId: "",
+        remark: ""
+      },
       currentDep: {
         monthlyDepreciation: 0,
         accumulated: 0,
@@ -421,6 +515,7 @@ export default {
         categoryId: "", // 对应分类表的分类编码 (外键)
         categoryName: "", // 分类名称
         unitName: "", // 单位名称
+        custodian: "" // 当前保管人
       },
       total: 0,
       dateRange: [],
@@ -478,15 +573,74 @@ export default {
     dialogTitle() {
       return this.isEdit ? "修改设备" : "新增设备";
     },
+    operatorOptions() {
+      // 过滤出本部门 (unitCode 相同) 的操作员 (role === 0)
+      return this.users.filter(u => u.role === 0 && u.unitCode === this.form.unitCode);
+    }
   },
   created() {
     const roleStr = localStorage.getItem("role");
     this.role = roleStr !== null ? parseInt(roleStr, 10) : null;
     this.realName = localStorage.getItem("realName") || "";
+    this.username = localStorage.getItem("username") || "";
     this.initAllData();
     this.fetchMaintainers();
+    if (this.role === 2 || this.role === 3) {
+      this.fetchUsers();
+    }
   },
   methods: {
+    // 获取所有用户列表
+    async fetchUsers() {
+      try {
+        const res = await getUsers();
+        this.users = res || [];
+      } catch (error) {
+        console.error("获取用户列表失败", error);
+      }
+    },
+    // 申请领用操作
+    handleClaimApply(row) {
+      this.claimForm = {
+        equipId: row.equipId,
+        remark: ""
+      };
+      this.claimDialogVisible = true;
+    },
+    // 提交领用申请
+    async submitClaimApply() {
+      if (!this.claimForm.remark) {
+        this.$message.warning("请输入领用原因");
+        return;
+      }
+      try {
+        await applyClaim(this.claimForm);
+        this.$message.success("设备领用申请提交成功，请等待审批");
+        this.claimDialogVisible = false;
+        this.fetchEquipmentList();
+      } catch (error) {
+        console.error("提交领用申请失败", error);
+      }
+    },
+    // 退还设备操作
+    handleClaimReturn(row) {
+      this.returnForm = {
+        equipId: row.equipId,
+        remark: ""
+      };
+      this.returnDialogVisible = true;
+    },
+    // 提交退还
+    async submitClaimReturn() {
+      try {
+        await returnEquipment(this.returnForm);
+        this.$message.success("设备退还成功");
+        this.returnDialogVisible = false;
+        this.fetchEquipmentList();
+      } catch (error) {
+        console.error("设备退还失败", error);
+      }
+    },
     // 获取维修工程师列表
     async fetchMaintainers() {
       try {

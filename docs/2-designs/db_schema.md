@@ -39,6 +39,12 @@
 *   **设备报废信息表 (scrap_record)**
     *   关系模式：报废(<u>*equip_id*</u>, scrap_no, scrap_date, approver, reason)
     *   *外键说明*：`equip_id` 参照设备表 `equipment.equip_id`，此处既是主码也是外码，体现 `1:1` 关系。
+*   **设备领用与审批记录表 (t_equipment_claim)**
+    *   关系模式：领用(<u>claim_id</u>, *equip_id*, *applicant*, *approver*, status, remark, create_time, update_time)
+    *   *外键说明*：
+        *   `equip_id` 逻辑参照设备表 `equipment.equip_id`
+        *   `applicant` 逻辑参照用户表 `sys_user.username` (申请人/原保管人)
+        *   `approver` 逻辑参照用户表 `sys_user.username` (审批人/指派人)
 
 ---
 
@@ -66,6 +72,7 @@
     *   `idx_equip_status` (on `equipment.status`)：优化管理员状态筛选。
     *   `idx_transfer_equip` / `idx_transfer_date`：加速调拨流水的检索与排序。
     *   `idx_maint_equip` / `idx_scrap_equip`：优化维保记录和报废单的读取性能。
+    *   `idx_claim_equip` / `idx_claim_applicant` / `idx_claim_status`：加速设备领用申请记录的匹配和查询。
 
 ---
 
@@ -173,4 +180,20 @@ CREATE TABLE `scrap_record` (
   UNIQUE KEY `scrap_no` (`scrap_no`),
   CONSTRAINT `scrap_record_ibfk_1` FOREIGN KEY (`equip_id`) REFERENCES `equipment` (`equip_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='设备报废信息表';
+
+-- 8. 设备领用与审批记录表
+CREATE TABLE `t_equipment_claim` (
+  `claim_id` int(11) NOT NULL AUTO_INCREMENT COMMENT '领用申请单号',
+  `equip_id` varchar(20) NOT NULL COMMENT '设备编号',
+  `applicant` varchar(50) NOT NULL COMMENT '申请人/保管人用户名(关联 sys_user.username)',
+  `approver` varchar(50) DEFAULT NULL COMMENT '审批人/指派人用户名(关联 sys_user.username)',
+  `status` tinyint(4) NOT NULL DEFAULT '0' COMMENT '领用状态: 0-待审批, 1-已同意, 2-已拒绝, 3-已撤回, 4-已退还, 5-直接分配',
+  `remark` varchar(500) DEFAULT NULL COMMENT '领用原因/审批意见/退还备注/直接分配备注',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`claim_id`),
+  KEY `idx_claim_equip` (`equip_id`),
+  KEY `idx_claim_applicant` (`applicant`),
+  KEY `idx_claim_status` (`status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='设备领用与审批记录表';
 ```

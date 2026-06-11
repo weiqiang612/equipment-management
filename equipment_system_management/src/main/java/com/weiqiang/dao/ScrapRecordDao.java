@@ -27,10 +27,8 @@ public class ScrapRecordDao extends BasicDao<ScrapRecord> {
     INSERT INTO scrap_record (equip_id, scrap_no, scrap_date, approver, reason) VALUES
     ('E2024014', 'SCRAP-2025-001', '2025-12-10', '资产处老王', '硬件老化无法修复');
     */
-    // 报废操作，涉及到事务
-    // 先将设备设为报废状态，再将记录添加到报废表中
-    public boolean scrapEquip(String equipId, ScrapRecord scrapRecord) {
-        String sql1 = "UPDATE equipment SET `status` = '报废' WHERE equip_id = ?";
+    public boolean scrapEquip(String equipId, ScrapRecord scrapRecord, String oldCustodian) {
+        String sql1 = "UPDATE equipment SET `status` = '报废', `custodian` = NULL WHERE equip_id = ?";
         String sql2 = "INSERT INTO scrap_record (equip_id, scrap_no, scrap_date, approver, reason) VALUES " +
                 "    (?, ?, ?, ?, ?)";
         ArrayList<Object> params1 = new ArrayList<>();
@@ -45,6 +43,18 @@ public class ScrapRecordDao extends BasicDao<ScrapRecord> {
         LinkedHashMap<String, List<Object>> sqlTasks = new LinkedHashMap<>();
         sqlTasks.put(sql1, params1);
         sqlTasks.put(sql2, params2);
+
+        if (oldCustodian != null && !oldCustodian.trim().isEmpty()) {
+            String sql3 = "INSERT INTO t_equipment_claim (equip_id, applicant, approver, status, remark) VALUES (?, ?, ?, ?, ?)";
+            List<Object> params3 = new ArrayList<>();
+            params3.add(equipId);
+            params3.add(oldCustodian);
+            params3.add(scrapRecord.getApprover());
+            params3.add(4); // 已退还
+            params3.add("设备报废导致保管关系清退");
+            sqlTasks.put(sql3, params3);
+        }
+
         return updateWithTransaction(sqlTasks);
     }
 

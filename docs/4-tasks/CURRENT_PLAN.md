@@ -2,13 +2,15 @@
 
 ## Active
 
-`docs/4-tasks/features/TASK-008-equipment-claim-workflow/`
-- spec.md ✅ Ready
-- tasks.md -> Not started
+- 无 (All active features complete)
 
 ## Backlog
 
 ## Done
+
+`docs/4-tasks/features/TASK-008-equipment-claim-workflow/`
+- spec.md ✅ Ready
+- tasks.md ✅ 100% Complete
 
 `docs/4-tasks/features/TASK-007-frontend-maint-scrap-fix/`
 - spec.md ✅ Ready
@@ -60,5 +62,5 @@
 - [x] Implementation (7 tasks)
 
 ### TASK-008: 设备领用与审批工作流
-- [ ] Implementation (14 tasks)
+- [x] Implementation (14 tasks)
 

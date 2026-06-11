@@ -21,6 +21,10 @@
               <i class="el-icon-notebook-2"></i>
               <span slot="title">我的设备</span>
             </el-menu-item>
+            <el-menu-item index="/equipment/claim">
+              <i class="el-icon-document"></i>
+              <span slot="title">领用记录</span>
+            </el-menu-item>
             <el-menu-item index="/equipment/maintenance">
               <i class="el-icon-s-tools"></i>
               <span slot="title">报修申请</span>
@@ -36,6 +40,9 @@
               </template>
               <el-menu-item index="/equipment">
                 <i class="el-icon-notebook-2"></i>设备台账
+              </el-menu-item>
+              <el-menu-item v-if="role === 2 || role === 3" index="/equipment/claim">
+                <i class="el-icon-document-copy"></i>领用审批
               </el-menu-item>
               <el-menu-item v-if="role === 2 || role === 3" index="/equipment/transfer">
                 <i class="el-icon-refresh"></i>调拨记录

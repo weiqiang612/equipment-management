@@ -29,6 +29,8 @@ import java.util.Objects;
 public class UserServiceImpl implements UserService {
 
     private final UserDao userDao;
+    private final com.weiqiang.dao.EquipmentDao equipmentDao;
+    private final com.weiqiang.dao.EquipmentClaimDao equipmentClaimDao;
 
     private static final int DEFAULT_ROLE = 0;
     private static final int CLAIMS_MAP_CAPACITY = 5;
@@ -131,12 +133,22 @@ public class UserServiceImpl implements UserService {
             return Result.error("用户不存在");
         }
 
-        // 1. 级联校验保管的设备 (custodian 为当前用户名)
-        final String checkEquipSql = "SELECT COUNT(*) FROM equipment WHERE custodian = ?";
-        final Long equipCount = (Long) userDao.singleSelect(checkEquipSql, user.getUsername());
-        if (equipCount != null && equipCount > 0) {
-            log.warn("级联校验拦截：用户 {} 尚有关联的保管设备，拒绝删除", user.getUsername());
-            throw new BusinessException("操作失败：该用户尚有关联保管的设备，无法删除！");
+        // 1. 级联清退保管的设备并写审计日志（去除保管阻断）
+        List<com.weiqiang.pojo.Equipment> equipmentList = equipmentDao.mutiSelect(
+                "SELECT equip_id equipId, custodian FROM equipment WHERE custodian = ?",
+                com.weiqiang.pojo.Equipment.class, user.getUsername());
+
+        if (equipmentList != null && !equipmentList.isEmpty()) {
+            userDao.update("UPDATE equipment SET custodian = NULL WHERE custodian = ?", user.getUsername());
+            for (com.weiqiang.pojo.Equipment eq : equipmentList) {
+                com.weiqiang.pojo.EquipmentClaim claim = new com.weiqiang.pojo.EquipmentClaim();
+                claim.setEquipId(eq.getEquipId());
+                claim.setApplicant(user.getUsername());
+                claim.setApprover(null);
+                claim.setStatus(4); // 已退还
+                claim.setRemark("用户被删除导致保管关系自动清退");
+                equipmentClaimDao.addClaim(claim);
+            }
         }
 
         // 2. 级联校验未完结工单 (作为报修人且工单状态 != 2，或作为被指派人且工单状态 != 2)

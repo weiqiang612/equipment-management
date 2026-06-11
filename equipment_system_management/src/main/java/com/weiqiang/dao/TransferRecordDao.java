@@ -46,7 +46,7 @@ public class TransferRecordDao extends BasicDao<TransferRecord> {
         return selectOne(sql, TransferRecord.class, transferId);
     }
 
-    public boolean transferEquip(String equipId, TransferRecord transferRecord) {
+    public boolean transferEquip(String equipId, TransferRecord transferRecord, String oldCustodian) {
         // 调拨时自动将设备的 custodian 清空为 NULL
         String sql1 = "UPDATE equipment SET unit_code = ?, custodian = NULL WHERE equip_id = ?";
         List<Object> params1 = new ArrayList<>();
@@ -66,6 +66,18 @@ public class TransferRecordDao extends BasicDao<TransferRecord> {
         LinkedHashMap<String, List<Object>> sqlTasks = new LinkedHashMap<>();
         sqlTasks.put(sql1, params1);
         sqlTasks.put(sql2, params2);
+
+        if (oldCustodian != null && !oldCustodian.trim().isEmpty()) {
+            String sql3 = "INSERT INTO t_equipment_claim (equip_id, applicant, approver, status, remark) VALUES (?, ?, ?, ?, ?)";
+            List<Object> params3 = new ArrayList<>();
+            params3.add(equipId);
+            params3.add(oldCustodian);
+            params3.add(transferRecord.getOperator());
+            params3.add(4); // 已退还
+            params3.add("设备调拨导致保管关系清退");
+            sqlTasks.put(sql3, params3);
+        }
+        
         return updateWithTransaction(sqlTasks);
     }
 

@@ -6,7 +6,7 @@ import com.weiqiang.exception.BusinessException;
 import com.weiqiang.pojo.Equipment;
 import com.weiqiang.pojo.ScrapRecord;
 import com.weiqiang.service.ScrapRecordService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -17,13 +17,11 @@ import java.util.List;
  * 报废记录服务实现类
  */
 @Service
+@RequiredArgsConstructor
 public class ScrapRecordServiceImpl implements ScrapRecordService {
 
-    @Autowired
-    private ScrapRecordDao scrapRecordDao;
-
-    @Autowired
-    private EquipmentDao equipmentDao;
+    private final ScrapRecordDao scrapRecordDao;
+    private final EquipmentDao equipmentDao;
 
     @Override
     public List<ScrapRecord> getScrapRecords() {
@@ -47,7 +45,9 @@ public class ScrapRecordServiceImpl implements ScrapRecordService {
         scrapRecord.setScrapNo(generatedNo);
         scrapRecord.setEquipId(equipId);
 
-        return scrapRecordDao.scrapEquip(equipId, scrapRecord);
+        String oldCustodian = equipment.getCustodian();
+
+        return scrapRecordDao.scrapEquip(equipId, scrapRecord, oldCustodian);
     }
 
     @Override

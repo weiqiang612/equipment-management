@@ -6,7 +6,7 @@ import com.weiqiang.pojo.Equipment;
 import com.weiqiang.pojo.EquipmentDepreciationVO;
 import com.weiqiang.pojo.PageBean;
 import com.weiqiang.service.EquipmentService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -21,10 +21,11 @@ import java.util.stream.Collectors;
  * 设备管理服务实现类
  */
 @Service
+@RequiredArgsConstructor
 public class EquipmentServiceImpl implements EquipmentService {
 
-    @Autowired
-    private EquipmentDao equipmentDao;
+    private final EquipmentDao equipmentDao;
+    private final com.weiqiang.dao.EquipmentClaimDao equipmentClaimDao;
 
     @Override
     public List<Equipment> getEquipments() {
@@ -60,6 +61,7 @@ public class EquipmentServiceImpl implements EquipmentService {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public int updateEquipment(Equipment equipment) {
         // 防报废穿透：已报废的设备禁止编辑
         Equipment oldEquip = equipmentDao.getEquipmentById(equipment.getEquipId());
@@ -69,7 +71,37 @@ public class EquipmentServiceImpl implements EquipmentService {
         if ("报废".equals(oldEquip.getStatus())) {
             throw new BusinessException("该设备已报废，禁止进行此操作");
         }
-        return equipmentDao.updateEquipment(equipment);
+
+        String oldCustodian = oldEquip.getCustodian();
+        String newCustodian = equipment.getCustodian();
+
+        int rows = equipmentDao.updateEquipment(equipment);
+
+        if (rows > 0) {
+            boolean oldIsEmpty = oldCustodian == null || oldCustodian.trim().isEmpty();
+            boolean newIsEmpty = newCustodian == null || newCustodian.trim().isEmpty();
+
+            if (!oldIsEmpty && newIsEmpty) {
+                // 有主 -> NULL: 写入 status=4 (已退还) 审计日志
+                com.weiqiang.pojo.EquipmentClaim audit = new com.weiqiang.pojo.EquipmentClaim();
+                audit.setEquipId(equipment.getEquipId());
+                audit.setApplicant(oldCustodian);
+                audit.setApprover(com.weiqiang.utils.BaseContext.getCurrentName());
+                audit.setStatus(com.weiqiang.pojo.EquipmentClaim.STATUS_RETURNED);
+                audit.setRemark("管理员取消分配");
+                equipmentClaimDao.addClaim(audit);
+            } else if (newCustodian != null && !newCustodian.trim().isEmpty() && !newCustodian.equals(oldCustodian)) {
+                // 无主 -> 有人，或者换人: 写入 status=5 (直接分配) 审计日志
+                com.weiqiang.pojo.EquipmentClaim audit = new com.weiqiang.pojo.EquipmentClaim();
+                audit.setEquipId(equipment.getEquipId());
+                audit.setApplicant(newCustodian);
+                audit.setApprover(com.weiqiang.utils.BaseContext.getCurrentName());
+                audit.setStatus(com.weiqiang.pojo.EquipmentClaim.STATUS_DIRECT);
+                audit.setRemark("管理员直接分配");
+                equipmentClaimDao.addClaim(audit);
+            }
+        }
+        return rows;
     }
 
     @Override

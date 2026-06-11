@@ -162,3 +162,144 @@
           "data": null
         }
         ```
+
+---
+
+### 5. 提交领用申请 (Apply Equipment Claim)
+
+供操作员或管理员对本部门内无保管人的空闲设备发起领用申请。
+
+*   **请求路径**：`POST /claims/apply`
+*   **请求头**：
+    *   `Content-Type: application/json`
+    *   `token: <JWT_TOKEN_STRING>`
+*   **请求体 (RequestBody - JSON)**：
+    ```json
+    {
+      "equipId": "E001",
+      "remark": "日常研发使用"
+    }
+    ```
+*   **响应示例**：
+    *   **成功 (Result.code = 1)**：
+        ```json
+        {
+          "code": 1,
+          "msg": "success",
+          "data": null
+        }
+        ```
+
+---
+
+### 6. 撤回领用申请 (Cancel Equipment Claim)
+
+供申请人自主撤回处于“待审批”状态的领用申请。
+
+*   **请求路径**：`PUT /claims/{claimId}/cancel`
+*   **请求头**：
+    *   `token: <JWT_TOKEN_STRING>`
+*   **响应示例**：
+    *   **成功 (Result.code = 1)**：
+        ```json
+        {
+          "code": 1,
+          "msg": "success",
+          "data": null
+        }
+        ```
+
+---
+
+### 7. 审批领用申请 (Approve Equipment Claim)
+
+供资产管理员/系统管理员审批本部门操作员发起的领用申请。
+
+*   **请求路径**：`PUT /claims/{claimId}/approve`
+*   **请求头**：
+    *   `Content-Type: application/json`
+    *   `token: <JWT_TOKEN_STRING>`
+*   **请求体 (RequestBody - JSON)**：
+    ```json
+    {
+      "action": 1,    // 审批动作：1-同意, 2-拒绝
+      "remark": "同意领用"  // 审批意见
+    }
+    ```
+*   **响应示例**：
+    *   **成功 (Result.code = 1)**：
+        ```json
+        {
+          "code": 1,
+          "msg": "success",
+          "data": null
+        }
+        ```
+
+---
+
+### 8. 主动退还设备 (Return Equipment)
+
+供保管人本人主动归还已领用的设备，将其保管人重置为空。
+
+*   **请求路径**：`POST /claims/return`
+*   **请求头**：
+    *   `Content-Type: application/json`
+    *   `token: <JWT_TOKEN_STRING>`
+*   **请求体 (RequestBody - JSON)**：
+    ```json
+    {
+      "equipId": "E001",
+      "remark": "项目结束退还"
+    }
+    ```
+*   **响应示例**：
+    *   **成功 (Result.code = 1)**：
+        ```json
+        {
+          "code": 1,
+          "msg": "success",
+          "data": null
+        }
+        ```
+
+---
+
+### 9. 查询领用记录列表 (Get Claim List)
+
+分页查询领用申请/历史审计列表。操作员仅能看到自己的记录，管理员能看到本部门的全部记录。
+
+*   **请求路径**：`GET /claims`
+*   **请求头**：
+    *   `token: <JWT_TOKEN_STRING>`
+*   **请求参数**：
+    *   `equipId` (可选，设备编号筛选)
+    *   `status` (可选，状态筛选)
+    *   `page` (默认 1)
+    *   `pageSize` (默认 10)
+*   **响应示例**：
+    *   **成功 (Result.code = 1)**：
+        ```json
+        {
+          "code": 1,
+          "msg": "success",
+          "data": {
+            "total": 1,
+            "rows": [
+              {
+                "claimId": 1,
+                "equipId": "E001",
+                "applicant": "operator1",
+                "approver": "manager1",
+                "status": 1,
+                "remark": "同意领用",
+                "createTime": "2026-06-11 10:00:00",
+                "updateTime": "2026-06-11 10:05:00",
+                "equipName": "研发笔记本",
+                "applicantRealName": "张三",
+                "approverRealName": "李四"
+              }
+            ]
+          }
+        }
+        ```

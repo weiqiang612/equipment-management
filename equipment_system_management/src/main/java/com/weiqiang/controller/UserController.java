@@ -53,7 +53,7 @@ public class UserController {
      * 获取用户列表接口（仅限系统管理员 role=3 访问）
      */
     @GetMapping
-    @RequiresRoles(3)
+    @RequiresRoles({2, 3})
     public Result getUsers() {
         log.info("接收到获取用户列表请求");
         final List<User> users = userService.listAll();

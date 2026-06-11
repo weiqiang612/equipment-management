@@ -65,9 +65,11 @@ public class WorkflowSecurityTests {
         userDao.update("DELETE FROM transfer_record WHERE equip_id LIKE 'TE%'");
         userDao.update("DELETE FROM scrap_record WHERE equip_id LIKE 'TE%'");
         userDao.update("DELETE FROM equipment WHERE equip_id LIKE 'TE%'");
-        userDao.update("DELETE FROM sys_user WHERE username LIKE 'test_%'");
+        userDao.update("UPDATE sys_user SET unit_code = NULL WHERE unit_code IN ('D98', 'D99')");
+        userDao.update("DELETE FROM sys_user WHERE username LIKE 'test_%' OR username LIKE 'claim_%'");
         userDao.update("DELETE FROM department WHERE unit_code IN ('D98', 'D99')");
         userDao.update("DELETE FROM category WHERE category_id = 'C99'");
+        userDao.update("DELETE FROM t_equipment_claim WHERE equip_id LIKE 'TE%'");
 
         // 2. 初始化部门与分类数据
         userDao.update("INSERT INTO department (unit_code, unit_name, manager) VALUES ('D98', '测试单位A', '负责人A'), ('D99', '测试单位B', '负责人B')");
@@ -342,14 +344,6 @@ public class WorkflowSecurityTests {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value("操作失败：该部门下有关联设备，无法删除！"));
 
-        // C. 删除用户 test_op1 (管理员权限，即 DELETE /users/{id})
-        // 因为 test_op1 名下保管有设备 TE002 -> 预期阻断
-        mockMvc.perform(delete("/users/" + op1Id)
-                        .header("token", adminToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.msg").value("操作失败：该用户尚有关联保管的设备，无法删除！"));
-
         // ----------------------------------------------------
         // [7] 数据隔离列表过滤校验
         // ----------------------------------------------------
@@ -387,5 +381,25 @@ public class WorkflowSecurityTests {
         assertTrue(content.contains("TE001"));
         assertTrue(content.contains("TE002"));
         assertFalse(content.contains("TE003"));
+
+        // ----------------------------------------------------
+        // [8] 保管人级联删除及审计清退校验
+        // ----------------------------------------------------
+        // C. 删除用户 test_op1 (管理员权限，即 DELETE /users/{id})
+        // 因为 test_op1 名下保管有设备 TE002 -> 预期成功删除（新需求：级联清空保管人并写审计日志）
+        mockMvc.perform(delete("/users/" + op1Id)
+                        .header("token", adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        // 验证 TE002 的保管人被自动置为 NULL
+        final String checkCustodianSql = "SELECT custodian FROM equipment WHERE equip_id = 'TE002'";
+        final String custodianAfterDelete = (String) userDao.singleSelect(checkCustodianSql);
+        assertTrue(custodianAfterDelete == null || custodianAfterDelete.trim().isEmpty());
+
+        // 验证 t_equipment_claim 里是否写了退还审计日志
+        final String checkClaimSql = "SELECT count(*) FROM t_equipment_claim WHERE equip_id = 'TE002' AND status = 4 AND applicant = 'test_op1' AND remark = '用户被删除导致保管关系自动清退'";
+        final Long claimCount = (Long) userDao.singleSelect(checkClaimSql);
+        assertEquals(1L, claimCount);
     }
 }

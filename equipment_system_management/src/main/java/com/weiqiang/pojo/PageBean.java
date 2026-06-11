@@ -14,7 +14,7 @@ import java.util.List;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class PageBean {
+public class PageBean<T> {
     private Long total; // 分页查询返回的记录总条数
-    private List<Equipment> rows; // 分页查询返回的数据
+    private List<T> rows; // 分页查询返回的数据
 }

@@ -6,7 +6,7 @@ import com.weiqiang.exception.BusinessException;
 import com.weiqiang.pojo.Equipment;
 import com.weiqiang.pojo.TransferRecord;
 import com.weiqiang.service.TransferRecordService;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -15,13 +15,11 @@ import java.util.List;
  * 调拨记录服务实现类
  */
 @Service
+@RequiredArgsConstructor
 public class TransferRecordServiceImpl implements TransferRecordService {
 
-    @Autowired
-    private TransferRecordDao transferRecordDao;
-
-    @Autowired
-    private EquipmentDao equipmentDao;
+    private final TransferRecordDao transferRecordDao;
+    private final EquipmentDao equipmentDao;
 
     @Override
     public List<TransferRecord> getTransferRecords() {
@@ -49,7 +47,9 @@ public class TransferRecordServiceImpl implements TransferRecordService {
             throw new BusinessException("不可以从本部门调到本部门！");
         }
 
-        return transferRecordDao.transferEquip(equipId, transferRecord);
+        String oldCustodian = equipment.getCustodian();
+
+        return transferRecordDao.transferEquip(equipId, transferRecord, oldCustodian);
     }
 
     @Override

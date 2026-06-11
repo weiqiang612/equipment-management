@@ -61,6 +61,16 @@ const routes = [
         }
     },
     {
+        path: '/equipment/claim',
+        name: 'EquipmentClaim',
+        component: () => import('../views/EquipmentClaim.vue'),
+        meta: {
+            title: '设备领用与审批',
+            requiresAuth: true,
+            roles: [0, 2, 3]
+        }
+    },
+    {
         path: '/equipment/transfer',
         name: 'Transfer',
         component: () => import('../views/TransferRecord.vue'),

@@ -67,8 +67,6 @@ export const getCalculateAccumulated = (equipId) => request({
 })
 
 // 导出带有折旧信息的设备列表（不带分页参数）
-export const getEquipmentsForExport = (params) => request({
-    url: '/equipments/export',
-    method: 'get',
-    params
-})
+export const getExportEquipments = (params) => {
+    return request.get('/equipments/export', { params })
+}

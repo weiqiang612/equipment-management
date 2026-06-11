@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * 报废记录服务实现类
@@ -41,7 +42,9 @@ public class ScrapRecordServiceImpl implements ScrapRecordService {
         }
 
         // 生成报废单号
-        String generatedNo = "BF" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yy-MM-dd-HH-ss"));
+        String ts = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMddHHmmssSSS"));
+        String rand = UUID.randomUUID().toString().replaceAll("-", "").substring(0, 4).toUpperCase();
+        String generatedNo = "BF" + ts + rand;
         scrapRecord.setScrapNo(generatedNo);
         scrapRecord.setEquipId(equipId);
 

@@ -1,0 +1,36 @@
+- generic [ref=e6]:
+  - generic [ref=e7]:
+    - heading "EquipTrack" [level=1] [ref=e8]
+    - paragraph [ref=e9]: Enterprise Equipment Management
+  - heading "Log In to Your Account" [level=2] [ref=e10]
+  - generic [ref=e11]:
+    - generic [ref=e12]:
+      - generic [ref=e13]: Username
+      - generic [ref=e15]:
+        - textbox "Enter your username" [ref=e16]: admin
+        - generic [ref=e18]: 
+    - generic [ref=e19]:
+      - generic [ref=e21]:
+        - generic [ref=e22]: Password
+        - link "Forgot Password?" [ref=e23] [cursor=pointer]:
+          - /url: javascript:void(0)
+      - generic [ref=e24]:
+        - generic [ref=e25]:
+          - textbox "Enter your password" [active] [ref=e26]: "123456"
+          - generic [ref=e28]: 
+          - generic:
+            - generic [ref=e37]:
+              - generic [ref=e47] [cursor=pointer]: 
+              - generic [ref=e48] [cursor=pointer]: 
+            - text: 
+        - generic [ref=e46]: Please enter your password
+    - generic [ref=e30]:
+      - button " Log In" [disabled]:
+        - generic: 
+        - text: Log In
+  - generic [ref=e32]:
+    - link "Sign Up" [ref=e33] [cursor=pointer]:
+      - /url: "#/register"
+    - text: "|"
+    - link "Need Help?" [ref=e34] [cursor=pointer]:
+      - /url: javascript:void(0)

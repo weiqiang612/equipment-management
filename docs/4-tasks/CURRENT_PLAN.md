@@ -2,11 +2,13 @@
 
 ## Active
 
-
-
 ## Backlog
 
 ## Done
+
+`docs/4-tasks/features/TASK-010-code-review-fixes/`
+- spec.md ✅ Ready
+- tasks.md ✅ 100% Complete
 
 `docs/4-tasks/features/TASK-009-user-role-dept-fix/`
 - spec.md ✅ Ready
@@ -68,3 +70,5 @@
 ### TASK-008: 设备领用与审批工作流
 - [x] Implementation (14 tasks)
 
+### TASK-010: 代码审计问题修复
+- [x] Implementation (7 tasks)

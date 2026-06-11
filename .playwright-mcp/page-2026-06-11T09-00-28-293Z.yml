@@ -1,0 +1,454 @@
+- generic [ref=e58]:
+  - complementary [ref=e59]:
+    - menubar [ref=e60]:
+      - menuitem " 设备资产管理 " [expanded] [ref=e61]:
+        - generic [ref=e62] [cursor=pointer]:
+          - generic [ref=e63]: 
+          - text: 设备资产管理
+          - generic [ref=e64]: 
+        - menu [ref=e65]:
+          - menuitem " 设备台账" [ref=e66] [cursor=pointer]:
+            - generic [ref=e67]: 
+            - text: 设备台账
+          - menuitem " 领用审批" [ref=e68] [cursor=pointer]:
+            - generic [ref=e69]: 
+            - text: 领用审批
+          - menuitem " 调拨记录" [ref=e70] [cursor=pointer]:
+            - generic [ref=e71]: 
+            - text: 调拨记录
+          - menuitem " 检修记录" [ref=e72] [cursor=pointer]:
+            - generic [ref=e73]: 
+            - text: 检修记录
+          - menuitem " 报废记录" [ref=e74] [cursor=pointer]:
+            - generic [ref=e75]: 
+            - text: 报废记录
+      - menuitem " 分类管理" [ref=e76] [cursor=pointer]:
+        - generic [ref=e77]: 
+        - text: 分类管理
+      - menuitem " 单位管理" [ref=e78] [cursor=pointer]:
+        - generic [ref=e79]: 
+        - text: 单位管理
+      - menuitem " 用户权限管理" [ref=e80] [cursor=pointer]:
+        - generic [ref=e81]: 
+        - text: 用户权限管理
+      - menuitem " 备份与恢复" [ref=e82] [cursor=pointer]:
+        - generic [ref=e83]: 
+        - text: 备份与恢复
+  - generic [ref=e84]:
+    - generic [ref=e85]:
+      - strong [ref=e86]: 设备管理系统
+      - generic [ref=e87]:
+        - generic [ref=e88]:
+          - text: 欢迎您，超级管理员系统
+          - generic [ref=e89]: 系统管理员
+        - button " 退出登录" [ref=e90] [cursor=pointer]:
+          - generic [ref=e91]: 
+          - text: 退出登录
+    - main [ref=e92]:
+      - generic [ref=e93]:
+        - generic [ref=e95]:
+          - generic [ref=e96]:
+            - generic [ref=e97]: 编号/名称
+            - textbox "模糊查询" [ref=e100]
+          - generic [ref=e101]:
+            - generic [ref=e102]: 单位
+            - generic [ref=e105]:
+              - textbox "请选择" [ref=e106] [cursor=pointer]
+              - generic [ref=e108] [cursor=pointer]: 
+          - generic [ref=e109]:
+            - generic [ref=e110]: 分类
+            - generic [ref=e113]:
+              - textbox "请选择" [ref=e114] [cursor=pointer]
+              - generic [ref=e116] [cursor=pointer]: 
+          - generic [ref=e117]:
+            - generic [ref=e118]: 状态
+            - generic [ref=e121]:
+              - textbox "状态" [ref=e122] [cursor=pointer]
+              - generic [ref=e124] [cursor=pointer]: 
+          - generic [ref=e125]:
+            - generic [ref=e126]: 日期
+            - generic [ref=e128]:
+              - generic [ref=e129]: 
+              - textbox "开始" [ref=e130]
+              - generic [ref=e131]: "-"
+              - textbox "结束" [ref=e132]
+          - generic [ref=e135]:
+            - button " 查询" [ref=e136] [cursor=pointer]:
+              - generic [ref=e137]: 
+              - text: 查询
+            - button " 重置" [ref=e138] [cursor=pointer]:
+              - generic [ref=e139]: 
+              - text: 重置
+          - button " 导出明细表" [ref=e142] [cursor=pointer]:
+            - generic [ref=e143]: 
+            - text: 导出明细表
+        - button "新增设备" [ref=e144] [cursor=pointer]
+        - generic [ref=e145]:
+          - table [ref=e147]:
+            - rowgroup [ref=e160]:
+              - row "设备编号 设备名称 状态 规格型号 购入日期 原值 分类名称 单位名称 保管人 资产价值 操作" [ref=e161]:
+                - columnheader "设备编号" [ref=e162]:
+                  - generic [ref=e163]: 设备编号
+                - columnheader "设备名称" [ref=e164]:
+                  - generic [ref=e165]: 设备名称
+                - columnheader "状态" [ref=e166]:
+                  - generic [ref=e167]: 状态
+                - columnheader "规格型号" [ref=e168]:
+                  - generic [ref=e169]: 规格型号
+                - columnheader "购入日期" [ref=e170]:
+                  - generic [ref=e171]: 购入日期
+                - columnheader "原值" [ref=e172]:
+                  - generic [ref=e173]: 原值
+                - columnheader "分类名称" [ref=e174]:
+                  - generic [ref=e175]: 分类名称
+                - columnheader "单位名称" [ref=e176]:
+                  - generic [ref=e177]: 单位名称
+                - columnheader "保管人" [ref=e178]:
+                  - generic [ref=e179]: 保管人
+                - columnheader "资产价值" [ref=e180]:
+                  - generic [ref=e181]: 资产价值
+                - columnheader "操作" [ref=e182]:
+                  - generic [ref=e183]: 操作
+          - table [ref=e185]:
+            - rowgroup [ref=e198]:
+              - row "TE003 测试设备3 在用 Model-Z 2026-06-11 30000 测试分类 测试单位B test_op2  查看价值 编辑 更多 " [ref=e199]:
+                - cell "TE003" [ref=e200]:
+                  - generic [ref=e201]: TE003
+                - cell "测试设备3" [ref=e202]:
+                  - generic [ref=e203]: 测试设备3
+                - cell "在用" [ref=e204]:
+                  - generic [ref=e206]: 在用
+                - cell "Model-Z" [ref=e207]:
+                  - generic [ref=e208]: Model-Z
+                - cell "2026-06-11" [ref=e209]:
+                  - generic [ref=e210]: 2026-06-11
+                - cell "30000" [ref=e211]:
+                  - generic [ref=e212]: "30000"
+                - cell "测试分类" [ref=e213]:
+                  - generic [ref=e214]: 测试分类
+                - cell "测试单位B" [ref=e215]:
+                  - generic [ref=e216]: 测试单位B
+                - cell "test_op2" [ref=e217]:
+                  - generic [ref=e218]: test_op2
+                - cell " 查看价值" [ref=e219]:
+                  - button " 查看价值" [ref=e223] [cursor=pointer]:
+                    - generic [ref=e224]: 
+                    - text: 查看价值
+                - cell "编辑 更多 " [ref=e225]:
+                  - generic [ref=e226]:
+                    - button "编辑" [ref=e227] [cursor=pointer]
+                    - generic [ref=e228]:
+                      - button "更多 " [ref=e229] [cursor=pointer]:
+                        - generic [ref=e230]:
+                          - text: 更多
+                          - generic [ref=e231]: 
+                      - text: 
+              - row "TE001 测试设备1 报废 Model-X 2026-06-11 10000 测试分类 测试单位A 无  查看价值 编辑 更多 " [ref=e232]:
+                - cell "TE001" [ref=e233]:
+                  - generic [ref=e234]: TE001
+                - cell "测试设备1" [ref=e235]:
+                  - generic [ref=e236]: 测试设备1
+                - cell "报废" [ref=e237]:
+                  - generic [ref=e239]: 报废
+                - cell "Model-X" [ref=e240]:
+                  - generic [ref=e241]: Model-X
+                - cell "2026-06-11" [ref=e242]:
+                  - generic [ref=e243]: 2026-06-11
+                - cell "10000" [ref=e244]:
+                  - generic [ref=e245]: "10000"
+                - cell "测试分类" [ref=e246]:
+                  - generic [ref=e247]: 测试分类
+                - cell "测试单位A" [ref=e248]:
+                  - generic [ref=e249]: 测试单位A
+                - cell "无" [ref=e250]:
+                  - generic [ref=e251]: 无
+                - cell " 查看价值" [ref=e252]:
+                  - button " 查看价值" [ref=e256] [cursor=pointer]:
+                    - generic [ref=e257]: 
+                    - text: 查看价值
+                - cell "编辑 更多 " [ref=e258]:
+                  - generic [ref=e259]:
+                    - button "编辑" [ref=e260] [cursor=pointer]
+                    - generic [ref=e261]:
+                      - button "更多 " [ref=e262] [cursor=pointer]:
+                        - generic [ref=e263]:
+                          - text: 更多
+                          - generic [ref=e264]: 
+                      - text: 
+              - row "TE002 测试设备2 在用 Model-Y 2026-06-11 20000 测试分类 测试单位A 无  查看价值 编辑 更多 " [ref=e265]:
+                - cell "TE002" [ref=e266]:
+                  - generic [ref=e267]: TE002
+                - cell "测试设备2" [ref=e268]:
+                  - generic [ref=e269]: 测试设备2
+                - cell "在用" [ref=e270]:
+                  - generic [ref=e272]: 在用
+                - cell "Model-Y" [ref=e273]:
+                  - generic [ref=e274]: Model-Y
+                - cell "2026-06-11" [ref=e275]:
+                  - generic [ref=e276]: 2026-06-11
+                - cell "20000" [ref=e277]:
+                  - generic [ref=e278]: "20000"
+                - cell "测试分类" [ref=e279]:
+                  - generic [ref=e280]: 测试分类
+                - cell "测试单位A" [ref=e281]:
+                  - generic [ref=e282]: 测试单位A
+                - cell "无" [ref=e283]:
+                  - generic [ref=e284]: 无
+                - cell " 查看价值" [ref=e285]:
+                  - button " 查看价值" [ref=e289] [cursor=pointer]:
+                    - generic [ref=e290]: 
+                    - text: 查看价值
+                - cell "编辑 更多 " [ref=e291]:
+                  - generic [ref=e292]:
+                    - button "编辑" [ref=e293] [cursor=pointer]
+                    - generic [ref=e294]:
+                      - button "更多 " [ref=e295] [cursor=pointer]:
+                        - generic [ref=e296]:
+                          - text: 更多
+                          - generic [ref=e297]: 
+                      - text: 
+              - row "EQ2024005 工业级3D打印机 在用 Formlabs L3 2024-04-12 45000 检测实验仪器 研发中心 无  查看价值 编辑 更多 " [ref=e298]:
+                - cell "EQ2024005" [ref=e299]:
+                  - generic [ref=e300]: EQ2024005
+                - cell "工业级3D打印机" [ref=e301]:
+                  - generic [ref=e302]: 工业级3D打印机
+                - cell "在用" [ref=e303]:
+                  - generic [ref=e305]: 在用
+                - cell "Formlabs L3" [ref=e306]:
+                  - generic [ref=e307]: Formlabs L3
+                - cell "2024-04-12" [ref=e308]:
+                  - generic [ref=e309]: 2024-04-12
+                - cell "45000" [ref=e310]:
+                  - generic [ref=e311]: "45000"
+                - cell "检测实验仪器" [ref=e312]:
+                  - generic [ref=e313]: 检测实验仪器
+                - cell "研发中心" [ref=e314]:
+                  - generic [ref=e315]: 研发中心
+                - cell "无" [ref=e316]:
+                  - generic [ref=e317]: 无
+                - cell " 查看价值" [ref=e318]:
+                  - button " 查看价值" [ref=e322] [cursor=pointer]:
+                    - generic [ref=e323]: 
+                    - text: 查看价值
+                - cell "编辑 更多 " [ref=e324]:
+                  - generic [ref=e325]:
+                    - button "编辑" [ref=e326] [cursor=pointer]
+                    - generic [ref=e327]:
+                      - button "更多 " [ref=e328] [cursor=pointer]:
+                        - generic [ref=e329]:
+                          - text: 更多
+                          - generic [ref=e330]: 
+                      - text: 
+              - row "EQ2024003 佳能数码复印机 在用 iR-ADV C3520 2024-03-20 28000 打印复印设备 行政管理部 无  查看价值 编辑 更多 " [ref=e331]:
+                - cell "EQ2024003" [ref=e332]:
+                  - generic [ref=e333]: EQ2024003
+                - cell "佳能数码复印机" [ref=e334]:
+                  - generic [ref=e335]: 佳能数码复印机
+                - cell "在用" [ref=e336]:
+                  - generic [ref=e338]: 在用
+                - cell "iR-ADV C3520" [ref=e339]:
+                  - generic [ref=e340]: iR-ADV C3520
+                - cell "2024-03-20" [ref=e341]:
+                  - generic [ref=e342]: 2024-03-20
+                - cell "28000" [ref=e343]:
+                  - generic [ref=e344]: "28000"
+                - cell "打印复印设备" [ref=e345]:
+                  - generic [ref=e346]: 打印复印设备
+                - cell "行政管理部" [ref=e347]:
+                  - generic [ref=e348]: 行政管理部
+                - cell "无" [ref=e349]:
+                  - generic [ref=e350]: 无
+                - cell " 查看价值" [ref=e351]:
+                  - button " 查看价值" [ref=e355] [cursor=pointer]:
+                    - generic [ref=e356]: 
+                    - text: 查看价值
+                - cell "编辑 更多 " [ref=e357]:
+                  - generic [ref=e358]:
+                    - button "编辑" [ref=e359] [cursor=pointer]
+                    - generic [ref=e360]:
+                      - button "更多 " [ref=e361] [cursor=pointer]:
+                        - generic [ref=e362]:
+                          - text: 更多
+                          - generic [ref=e363]: 
+                      - text: 
+              - row "EQ2024002 联想图形工作站 在用 ThinkStation P3 2024-02-15 15600 通用办公电脑 信息中心 无  查看价值 编辑 更多 " [ref=e364]:
+                - cell "EQ2024002" [ref=e365]:
+                  - generic [ref=e366]: EQ2024002
+                - cell "联想图形工作站" [ref=e367]:
+                  - generic [ref=e368]: 联想图形工作站
+                - cell "在用" [ref=e369]:
+                  - generic [ref=e371]: 在用
+                - cell "ThinkStation P3" [ref=e372]:
+                  - generic [ref=e373]: ThinkStation P3
+                - cell "2024-02-15" [ref=e374]:
+                  - generic [ref=e375]: 2024-02-15
+                - cell "15600" [ref=e376]:
+                  - generic [ref=e377]: "15600"
+                - cell "通用办公电脑" [ref=e378]:
+                  - generic [ref=e379]: 通用办公电脑
+                - cell "信息中心" [ref=e380]:
+                  - generic [ref=e381]: 信息中心
+                - cell "无" [ref=e382]:
+                  - generic [ref=e383]: 无
+                - cell " 查看价值" [ref=e384]:
+                  - button " 查看价值" [ref=e388] [cursor=pointer]:
+                    - generic [ref=e389]: 
+                    - text: 查看价值
+                - cell "编辑 更多 " [ref=e390]:
+                  - generic [ref=e391]:
+                    - button "编辑" [ref=e392] [cursor=pointer]
+                    - generic [ref=e393]:
+                      - button "更多 " [ref=e394] [cursor=pointer]:
+                        - generic [ref=e395]:
+                          - text: 更多
+                          - generic [ref=e396]: 
+                      - text: 
+              - row "EQ2024001 华为笔记本电脑 在用 MateBook X Pro 2024-01-10 9800 通用办公电脑 行政管理部 无  查看价值 编辑 更多 " [ref=e397]:
+                - cell "EQ2024001" [ref=e398]:
+                  - generic [ref=e399]: EQ2024001
+                - cell "华为笔记本电脑" [ref=e400]:
+                  - generic [ref=e401]: 华为笔记本电脑
+                - cell "在用" [ref=e402]:
+                  - generic [ref=e404]: 在用
+                - cell "MateBook X Pro" [ref=e405]:
+                  - generic [ref=e406]: MateBook X Pro
+                - cell "2024-01-10" [ref=e407]:
+                  - generic [ref=e408]: 2024-01-10
+                - cell "9800" [ref=e409]:
+                  - generic [ref=e410]: "9800"
+                - cell "通用办公电脑" [ref=e411]:
+                  - generic [ref=e412]: 通用办公电脑
+                - cell "行政管理部" [ref=e413]:
+                  - generic [ref=e414]: 行政管理部
+                - cell "无" [ref=e415]:
+                  - generic [ref=e416]: 无
+                - cell " 查看价值" [ref=e417]:
+                  - button " 查看价值" [ref=e421] [cursor=pointer]:
+                    - generic [ref=e422]: 
+                    - text: 查看价值
+                - cell "编辑 更多 " [ref=e423]:
+                  - generic [ref=e424]:
+                    - button "编辑" [ref=e425] [cursor=pointer]
+                    - generic [ref=e426]:
+                      - button "更多 " [ref=e427] [cursor=pointer]:
+                        - generic [ref=e428]:
+                          - text: 更多
+                          - generic [ref=e429]: 
+                      - text: 
+              - row "EQ2024004 精密数控磨床 在用 MK2110 2024-01-05 210000 生产加工机械 生产技术部 无  查看价值 编辑 更多 " [ref=e430]:
+                - cell "EQ2024004" [ref=e431]:
+                  - generic [ref=e432]: EQ2024004
+                - cell "精密数控磨床" [ref=e433]:
+                  - generic [ref=e434]: 精密数控磨床
+                - cell "在用" [ref=e435]:
+                  - generic [ref=e437]: 在用
+                - cell "MK2110" [ref=e438]:
+                  - generic [ref=e439]: MK2110
+                - cell "2024-01-05" [ref=e440]:
+                  - generic [ref=e441]: 2024-01-05
+                - cell "210000" [ref=e442]:
+                  - generic [ref=e443]: "210000"
+                - cell "生产加工机械" [ref=e444]:
+                  - generic [ref=e445]: 生产加工机械
+                - cell "生产技术部" [ref=e446]:
+                  - generic [ref=e447]: 生产技术部
+                - cell "无" [ref=e448]:
+                  - generic [ref=e449]: 无
+                - cell " 查看价值" [ref=e450]:
+                  - button " 查看价值" [ref=e454] [cursor=pointer]:
+                    - generic [ref=e455]: 
+                    - text: 查看价值
+                - cell "编辑 更多 " [ref=e456]:
+                  - generic [ref=e457]:
+                    - button "编辑" [ref=e458] [cursor=pointer]
+                    - generic [ref=e459]:
+                      - button "更多 " [ref=e460] [cursor=pointer]:
+                        - generic [ref=e461]:
+                          - text: 更多
+                          - generic [ref=e462]: 
+                      - text: 
+              - row "EQ2023017 碎纸机 在用 盆景3102 2023-12-01 1200 打印复印设备 行政管理部 无  查看价值 编辑 更多 " [ref=e463]:
+                - cell "EQ2023017" [ref=e464]:
+                  - generic [ref=e465]: EQ2023017
+                - cell "碎纸机" [ref=e466]:
+                  - generic [ref=e467]: 碎纸机
+                - cell "在用" [ref=e468]:
+                  - generic [ref=e470]: 在用
+                - cell "盆景3102" [ref=e471]:
+                  - generic [ref=e472]: 盆景3102
+                - cell "2023-12-01" [ref=e473]:
+                  - generic [ref=e474]: 2023-12-01
+                - cell "1200" [ref=e475]:
+                  - generic [ref=e476]: "1200"
+                - cell "打印复印设备" [ref=e477]:
+                  - generic [ref=e478]: 打印复印设备
+                - cell "行政管理部" [ref=e479]:
+                  - generic [ref=e480]: 行政管理部
+                - cell "无" [ref=e481]:
+                  - generic [ref=e482]: 无
+                - cell " 查看价值" [ref=e483]:
+                  - button " 查看价值" [ref=e487] [cursor=pointer]:
+                    - generic [ref=e488]: 
+                    - text: 查看价值
+                - cell "编辑 更多 " [ref=e489]:
+                  - generic [ref=e490]:
+                    - button "编辑" [ref=e491] [cursor=pointer]
+                    - generic [ref=e492]:
+                      - button "更多 " [ref=e493] [cursor=pointer]:
+                        - generic [ref=e494]:
+                          - text: 更多
+                          - generic [ref=e495]: 
+                      - text: 
+              - row "EQ2023016 DELL服务器 在用 PowerEdge R750 2023-11-11 56000 通用办公电脑 信息中心 无  查看价值 编辑 更多 " [ref=e496]:
+                - cell "EQ2023016" [ref=e497]:
+                  - generic [ref=e498]: EQ2023016
+                - cell "DELL服务器" [ref=e499]:
+                  - generic [ref=e500]: DELL服务器
+                - cell "在用" [ref=e501]:
+                  - generic [ref=e503]: 在用
+                - cell "PowerEdge R750" [ref=e504]:
+                  - generic [ref=e505]: PowerEdge R750
+                - cell "2023-11-11" [ref=e506]:
+                  - generic [ref=e507]: 2023-11-11
+                - cell "56000" [ref=e508]:
+                  - generic [ref=e509]: "56000"
+                - cell "通用办公电脑" [ref=e510]:
+                  - generic [ref=e511]: 通用办公电脑
+                - cell "信息中心" [ref=e512]:
+                  - generic [ref=e513]: 信息中心
+                - cell "无" [ref=e514]:
+                  - generic [ref=e515]: 无
+                - cell " 查看价值" [ref=e516]:
+                  - button " 查看价值" [ref=e520] [cursor=pointer]:
+                    - generic [ref=e521]: 
+                    - text: 查看价值
+                - cell "编辑 更多 " [ref=e522]:
+                  - generic [ref=e523]:
+                    - button "编辑" [ref=e524] [cursor=pointer]
+                    - generic [ref=e525]:
+                      - button "更多 " [ref=e526] [cursor=pointer]:
+                        - generic [ref=e527]:
+                          - text: 更多
+                          - generic [ref=e528]: 
+                      - text: 
+        - generic [ref=e529]:
+          - generic [ref=e530]: 共 51 条
+          - generic [ref=e533]:
+            - textbox "请选择" [ref=e534] [cursor=pointer]: 10条/页
+            - generic [ref=e536] [cursor=pointer]: 
+          - button "" [disabled] [ref=e537]:
+            - generic [ref=e538]: 
+          - list [ref=e539]:
+            - listitem [ref=e540]: "1"
+            - listitem [ref=e541] [cursor=pointer]: "2"
+            - listitem [ref=e542] [cursor=pointer]: "3"
+            - listitem [ref=e543] [cursor=pointer]: "4"
+            - listitem [ref=e544] [cursor=pointer]: "5"
+            - listitem [ref=e545] [cursor=pointer]: "6"
+          - button "" [ref=e546] [cursor=pointer]:
+            - generic [ref=e547]: 
+          - generic [ref=e548]:
+            - text: 前往
+            - spinbutton [ref=e550]: "1"
+            - text: 页
+        - text:      

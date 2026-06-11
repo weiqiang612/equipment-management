@@ -467,6 +467,7 @@ import {
   maintenanceEquip,
   scrapEquipment,
   getCalculateAccumulated,
+  getExportEquipments,
 } from "@/api/equipment";
 import { getMaintainers, getUsers } from "@/api/user";
 import { addTransfer } from "@/api/transfer";
@@ -895,157 +896,78 @@ export default {
       }
     },
     async handleExport() {
-      this.$confirm("确定导出包含折旧状态信息的设备明细报表吗?", "提示", {
-        type: "info",
-      })
+      this.$confirm('确定导出包含折旧状态信息的设备明细报表吗?', '提示', { type: 'info' })
         .then(async () => {
           const loading = this.$loading({
-            text: "正在校验折旧数据并生成报表...",
-            background: "rgba(0, 0, 0, 0.7)",
+            text: '正在生成报表...',
+            background: 'rgba(0, 0, 0, 0.7)',
           });
           try {
-            const res = await getEquipments(this.queryParams);
-            const list = res.rows || []; // 基于你拦截器的返回结构
+            // 调用后端 /equipments/export 接口获取已计算好折旧的数据
+            const res = await getExportEquipments(this.queryParams);
+            const list = res || [];
 
             if (list.length === 0) {
-              this.$message.warning("无数据导出");
+              this.$message.warning('无数据导出');
               return;
             }
 
-            // 1. 准备报表基础信息
-            const unitName =
-              this.deptOptions.find(
-                (d) => d.unitCode === this.queryParams.unitCode
-              )?.unitName || "全部单位";
-            const categoryName =
-              this.categoryOptions.find(
-                (c) => c.categoryId === this.queryParams.categoryId
-              )?.categoryName || "全部分类";
+            const unitName = this.deptOptions.find(d => d.unitCode === this.queryParams.unitCode)?.unitName || '全部单位';
+            const categoryName = this.categoryOptions.find(c => c.categoryId === this.queryParams.categoryId)?.categoryName || '全部分类';
 
             const excelData = [
-              ["设备资产价值及折旧状态明细表"],
-              [
-                `导出时间：${new Date().toLocaleString()}`,
-                "",
-                "",
-                "",
-                `范围：单位[${unitName}] | 分类[${categoryName}]`,
-              ],
-              [
-                "设备编号",
-                "设备名称",
-                "所属单位",
-                "购入日期",
-                "状态",
-                "是否提足折旧",
-                "原值(元)",
-                "累计折旧",
-                "当前净值",
-              ],
+              ['设备资产价值及折旧状态明细表'],
+              [`导出时间：${new Date().toLocaleString()}`, '', '', '', `范围：单位[${unitName}] | 分类[${categoryName}]`],
+              ['设备编号', '设备名称', '所属单位', '购入日期', '状态', '是否提足折旧', '原值(元)', '累计折旧', '当前净值'],
             ];
 
-            let totalOrg = 0,
-              totalAcc = 0,
-              totalNet = 0;
+            let totalOrg = 0, totalAcc = 0, totalNet = 0;
 
-            // 2. 遍历并利用 isFullyDepreciated 字段
-            list.forEach((item) => {
+            list.forEach(item => {
               const original = Number(item.originalValue || 0);
-              const usefulLife = Number(item.usefulLife || 5);
-              const residualRate = Number(item.residualRate || 0.05);
-              const isDepreciated = item.isFullyDepreciated; // 后端返回的布尔值
-
-              // --- 核心财务逻辑修正 ---
-              const totalDepreciable = original * (1 - residualRate); // 应提总额
-              let acc = 0;
-              let net = 0;
-
-              if (isDepreciated) {
-                // 如果已提足折旧：累计折旧 = 应提总额；净值 = 残值
-                acc = totalDepreciable;
-                net = original * residualRate;
-              } else {
-                // 如果未提足：按日期实时计算
-                const start = new Date(item.purchaseDate);
-                const now = new Date();
-                const monthsUsed = Math.max(
-                  0,
-                  (now.getFullYear() - start.getFullYear()) * 12 +
-                    (now.getMonth() - start.getMonth())
-                );
-                const totalMonths = usefulLife * 12;
-                acc =
-                  (totalDepreciable / totalMonths) *
-                  Math.min(monthsUsed, totalMonths);
-                net = original - acc;
-              }
+              const acc = Number(item.accumulated || 0);
+              const net = Number(item.netValue || 0);
+              const isFullyDep = item.isFullyDepreciated || false;
 
               totalOrg += original;
               totalAcc += acc;
               totalNet += net;
 
               excelData.push([
-                item.equipId || "",
-                item.equipName || "",
-                item.unitName || "",
-                item.purchaseDate || "",
-                item.status || "",
-                isDepreciated ? "是 (已提足)" : "否 (计提中)", // 逻辑利用点
+                item.equipId || '',
+                item.equipName || '',
+                item.unitName || '',
+                item.purchaseDate || '',
+                item.status || '',
+                isFullyDep ? '是 (已提足)' : '否 (计提中)',
                 original.toFixed(2),
                 acc.toFixed(2),
                 net.toFixed(2),
               ]);
             });
 
-            // 3. 添加合计行
-            excelData.push([
-              "合计",
-              "",
-              "",
-              "",
-              "",
-              "",
-              totalOrg.toFixed(2),
-              totalAcc.toFixed(2),
-              totalNet.toFixed(2),
-            ]);
+            excelData.push(['合计', '', '', '', '', '', totalOrg.toFixed(2), totalAcc.toFixed(2), totalNet.toFixed(2)]);
 
-            // 4. 生成并保存
             const worksheet = XLSX.utils.aoa_to_sheet(excelData);
-            worksheet["!merges"] = [
+            worksheet['!merges'] = [
               { s: { r: 0, c: 0 }, e: { r: 0, c: 8 } },
               { s: { r: 1, c: 0 }, e: { r: 1, c: 3 } },
               { s: { r: 1, c: 4 }, e: { r: 1, c: 8 } },
             ];
 
             const workbook = XLSX.utils.book_new();
-            XLSX.utils.book_append_sheet(workbook, worksheet, "资产价值报表");
-            XLSX.writeFile(
-              workbook,
-              `资产折旧报表_${new Date().getTime()}.xlsx`
-            );
+            XLSX.utils.book_append_sheet(workbook, worksheet, '资产价值报表');
+            XLSX.writeFile(workbook, `资产折旧报表_${new Date().getTime()}.xlsx`);
 
-            this.$message.success("导出成功！提足折旧设备已自动标记。");
+            this.$message.success('导出成功！');
           } catch (error) {
             console.error(error);
-            this.$message.error("导出异常");
+            this.$message.error('导出异常');
           } finally {
             loading.close();
           }
         })
-        .catch((action) => {
-          // 关键修正：捕获取消操作
-          if (action === "cancel") {
-            console.log("用户取消了导出");
-          } else {
-            // 其他可能的非预期错误
-            console.error("确认框异常", action);
-          }
-        });
-    },
-    formatStatus(status) {
-      const map = { 1: "在用", 2: "检修", 3: "报废" };
-      return map[status] || "未知";
+        .catch(() => {});
     },
     // 2. 处理下拉菜单指令分发
     handleCommand(command, row) {

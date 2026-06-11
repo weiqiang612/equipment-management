@@ -1,5 +1,6 @@
 package com.weiqiang.controller;
 
+import com.weiqiang.anno.RequiresRoles;
 import com.weiqiang.pojo.MaintenanceRecord;
 import com.weiqiang.pojo.Result;
 import com.weiqiang.pojo.ScrapRecord;
@@ -19,6 +20,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/scrapRecords")
+@RequiresRoles({2, 3})
 public class ScrapRecordController {
 
     @Autowired

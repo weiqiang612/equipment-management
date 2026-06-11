@@ -133,6 +133,9 @@ public class EquipmentServiceImpl implements EquipmentService {
      * 计算某台设备的累积折旧
      */
     public EquipmentDepreciationVO calculateAccumulated(Equipment equipment) {
+        if (equipment.getUsefulLife() == null || equipment.getUsefulLife() <= 0) {
+            throw new BusinessException("该设备所属分类的预计使用年限未配置，无法计算折旧");
+        }
         EquipmentDepreciationVO vo = new EquipmentDepreciationVO();
         vo.setEquipId(equipment.getEquipId());
         vo.setResidualRate(equipment.getResidualRate());

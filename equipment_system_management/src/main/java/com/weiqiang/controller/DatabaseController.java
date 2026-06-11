@@ -59,6 +59,11 @@ public class DatabaseController {
 
     @PostMapping("/restore")
     public Result restore(@RequestParam("fileName") String fileName) {
+        // 文件名白名单校验，防止路径穿越
+        if (fileName == null || !fileName.matches("^[\\w\\-]+\\.sql$")) {
+            return Result.error("非法的文件名格式");
+        }
+
         // 1. 防御会话失效：提前备份当前正在操作的管理员信息
         final String currentUsername = BaseContext.getCurrentName();
         User currentUser = null;

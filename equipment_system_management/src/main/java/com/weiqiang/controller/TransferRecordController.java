@@ -1,5 +1,6 @@
 package com.weiqiang.controller;
 
+import com.weiqiang.anno.RequiresRoles;
 import com.weiqiang.pojo.Result;
 import com.weiqiang.pojo.TransferRecord;
 import com.weiqiang.service.TransferRecordService;
@@ -17,6 +18,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequestMapping("/transferRecords")
+@RequiresRoles({2, 3})
 public class TransferRecordController {
 
     @Autowired

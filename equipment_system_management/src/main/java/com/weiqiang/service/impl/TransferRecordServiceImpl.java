@@ -41,6 +41,9 @@ public class TransferRecordServiceImpl implements TransferRecordService {
         if ("报废".equals(equipment.getStatus())) {
             throw new BusinessException("该设备已报废，禁止进行此操作");
         }
+        if ("维修".equals(equipment.getStatus())) {
+            throw new BusinessException("操作失败：该设备正在维修中，无法进行调拨操作");
+        }
 
         // 不可以从本部门调到本部门
         if (transferRecord.getOutUnitCode().equals(transferRecord.getInUnitCode())){

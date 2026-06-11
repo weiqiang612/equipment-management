@@ -2,7 +2,9 @@
   <div class="login-container">
     <div class="login-card">
       <!-- 左侧背景插图 -->
-      <div class="login-left"></div>
+      <div class="login-left">
+        <img src="@/assets/login_bg.png" class="login-left-img" alt="" />
+      </div>
 
       <!-- 右侧表单区域 -->
       <div class="login-right">
@@ -173,8 +175,8 @@ export default {
   display: flex;
   align-items: stretch;
   width: 923px;
-  height: 658px;
-  max-height: 658px;
+  height: 620px;
+  max-height: 620px;
   background-color: transparent;
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
@@ -185,23 +187,28 @@ export default {
 .login-left {
   width: 462px;
   height: 100%;
-  background-image: url('~@/assets/login_bg.png');
-  background-size: 100% calc(100% + 9px); /* 纵向拉伸9像素 */
-  background-position: center top; /* 靠顶对齐，将底部的9px视觉假背景挤出可视范围 */
-  background-repeat: no-repeat;
-  background-color: #edf2f6;
-  border-radius: 12px 0 0 12px;
+  overflow: hidden;
+  flex-shrink: 0;
+  border-bottom-left-radius: 12px;
+}
+
+.login-left-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
 }
 
 /* 右侧白底表单 */
 .login-right {
   width: 461px;
   height: 100%;
-  padding: 42px 48px;
+  padding: 72px 48px 42px;
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   background-color: #ffffff;
   border-radius: 0 12px 12px 0;
 }

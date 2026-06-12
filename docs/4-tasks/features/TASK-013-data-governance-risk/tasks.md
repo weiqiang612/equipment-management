@@ -17,11 +17,11 @@
 - [ ] T4 — 新增 `GovernanceDao` 聚合查询和分页查询，统计质量问题、风险分布、成本异常、空闲设备、部门/分类风险分布和风险设备清单 · covers: AC-001, AC-002, AC-005, AC-006
 - [ ] T5 — 新增 `GovernanceService` / `GovernanceServiceImpl`，实现风险评分、质量检查、异常降级和 Role 2/3 权限裁剪逻辑 · covers: AC-001, AC-002, AC-003, AC-005, AC-006
 - [ ] T6 — 新增 `GovernanceController`，实现 `/governance/summary` 和 `/governance/equipment-risks`，保持统一 `Result` 响应 · covers: AC-003, AC-004
-- [ ] T7 — 新增前端 `equipment-web/src/api/governance.js` 和 `Governance.vue`，展示质量总览、风险分布、异常设备、空闲设备概览和风险设备分页列表 · covers: AC-001, AC-002, AC-005, AC-006
-- [ ] T8 — 更新前端路由和菜单，仅 Role 2/3 可见 `/governance` 入口，Role 0/1 不显示入口且后端仍强制拦截 · covers: AC-001, AC-003
+- [x] T7 — 新增前端 `equipment-web/src/api/governance.js` 和 `Governance.vue`，展示质量总览、风险分布、异常设备、空闲设备概览 and 风险设备分页列表 · covers: AC-001, AC-002, AC-005, AC-006
+- [x] T8 — 更新前端路由和菜单，仅 Role 2/3 可见 `/governance` 入口，Role 0/1 不显示入口且后端仍强制拦截 · covers: AC-001, AC-003
 - [ ] T9 — 补充后端测试，覆盖 Role 0/1 拒绝、Role 2 单位隔离、Role 3 全局只读、风险阈值边界和异常数据降级 · covers: AC-002, AC-003, AC-005
 - [ ] T10 — Run `cd equipment_system_management && mvn test` — all tests must pass
-- [ ] T11 — Run `cd equipment-web && npm run lint` — frontend lint must pass
+- [x] T11 — Run `cd equipment-web && npm run lint` — frontend lint must pass
 - [ ] T12 — Verify ACs: update `passes` to `true` in spec.md for each passing criterion
 - [ ] T13 — Update `docs/4-tasks/CURRENT_PLAN.md` — keep TASK-012 active and leave this task in Backlog until implementation starts
 

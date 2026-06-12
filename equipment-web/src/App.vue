@@ -69,6 +69,9 @@
             <el-menu-item v-if="role === 2 || role === 3" index="/department">
               <i class="el-icon-office-building"></i> <span>单位管理</span>
             </el-menu-item>
+            <el-menu-item v-if="role === 2 || role === 3" index="/governance">
+              <i class="el-icon-pie-chart"></i> <span>数据治理</span>
+            </el-menu-item>
             <el-menu-item v-if="role === 3" index="/user-manage">
               <i class="el-icon-user-solid"></i>
               <span>用户权限管理</span>

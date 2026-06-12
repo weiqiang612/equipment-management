@@ -42,7 +42,7 @@
       "访问 /dashboard 或访问根路径 /。",
       "Verify: 页面展示数据看板，根路径重定向到 /dashboard，菜单中存在数据看板入口。"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-002",
@@ -53,7 +53,7 @@
       "检查设备总数、资产总原值、在用数、维修中数、报废数、分类分布、部门分布和维保趋势。",
       "Verify: Role 2 可看到待审批/待指派待办及跳转入口，Role 3 仅看到全局审计与系统状态信息，不展示业务审批或派单操作按钮。"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-003",
@@ -65,7 +65,7 @@
       "使用 Role 0 账号访问 /dashboard。",
       "Verify: 仅展示当前操作员保管设备、当前操作员领用申请和当前操作员报修进度。"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-004",
@@ -77,7 +77,7 @@
       "使用 Role 1 账号调用 GET /dashboard/summary。",
       "Verify: 响应中不包含未分配给当前维修工程师的工单详情。"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-005",
@@ -89,7 +89,7 @@
       "调用 GET /dashboard/summary。",
       "Verify: 响应使用 Result 统一结构，字段不直接暴露数据库实体。"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-006",
@@ -101,7 +101,7 @@
       "检查后端 SQL。",
       "Verify: 聚合查询使用 COUNT、SUM、GROUP BY 等数据库聚合能力，并复用现有索引字段。"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-007",
@@ -113,7 +113,7 @@
       "Verify: 视觉风格继承现有后台深蓝、白卡、冷灰背景，并通过状态色区分在用、维修、报废、完成和审计信息。",
       "Verify: 页面不使用全屏炫酷大屏、霓虹渐变或复杂转场动画。"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-008",
@@ -126,7 +126,7 @@
       "Verify: 图表实例在 mounted 后初始化，在 beforeDestroy 中销毁，并监听容器尺寸变化触发 resize。",
       "Verify: 页面 loading 时使用 Element UI loading 或骨架状态，不出现空白等待。"
     ],
-    "passes": false
+    "passes": true
   }
 ]
 ```

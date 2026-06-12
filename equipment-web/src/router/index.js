@@ -6,7 +6,16 @@ Vue.use(VueRouter)
 const routes = [
     {
         path: '/',
-        redirect: '/equipment'
+        redirect: '/dashboard'
+    },
+    {
+        path: '/dashboard',
+        name: 'Dashboard',
+        component: () => import('../views/Dashboard.vue'),
+        meta: {
+            title: '数据看板',
+            requiresAuth: true
+        }
     },
     {
         path: '/login',

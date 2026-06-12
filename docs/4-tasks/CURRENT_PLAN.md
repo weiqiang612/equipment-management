@@ -4,7 +4,7 @@
 
 ## Active feature
 
-`docs/4-tasks/features/TASK-011-dashboard/`
+`docs/4-tasks/features/TASK-012-operation-audit-lifecycle/`
 - spec.md ✅ Ready
 - tasks.md → Not started
 
@@ -41,12 +41,16 @@
 - [x] Implementation (7 tasks)
 
 ### TASK-011: 数据看板
-- [ ] Implementation (15 tasks)
+- [x] Implementation (15 tasks)
 
 ### TASK-012: 操作审计与设备生命周期详情
 - [ ] Implementation (15 tasks)
 
 ## Completed
+
+`docs/4-tasks/features/TASK-011-dashboard/`
+- spec.md ✅ Ready
+- tasks.md ✅ 100% Complete
 
 `docs/4-tasks/features/TASK-010-code-review-fixes/`
 - spec.md ✅ Ready

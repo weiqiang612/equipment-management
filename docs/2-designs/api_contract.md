@@ -305,3 +305,145 @@
           }
         }
         ```
+
+---
+
+### 10. 获取看板数据 (Get Dashboard Summary)
+
+获取当前登录角色的聚合数据看板。后端根据 Token 解析出的角色、用户名及所属单位动态裁剪数据。
+
+*   **请求路径**：`GET /dashboard/summary`
+*   **请求头**：
+    *   `token: <JWT_TOKEN_STRING>`
+*   **请求参数**：无
+*   **响应结构 (Result.data)**：
+    *   **通用结构**：
+        ```json
+        {
+          "role": 2, // 0-操作员, 1-维修工, 2-资产管理员, 3-系统管理员
+          "kpis": {}, // KPI指标项（不同角色键值对不同）
+          "charts": {}, // 图表数据集（不同角色键值对不同，内部常为 { name, value } 或 { month, cost, count }）
+          "listData": {} // 列表/待办数据集
+        }
+        ```
+    *   **Role 2 (资产管理员) 响应示例**：
+        ```json
+        {
+          "code": 1,
+          "msg": "success",
+          "data": {
+            "role": 2,
+            "kpis": {
+              "totalEquipment": 105,
+              "totalValue": 854000.00,
+              "inUseCount": 85,
+              "inMaintenanceCount": 12,
+              "scrappedCount": 8
+            },
+            "charts": {
+              "categoryDistribution": [
+                { "name": "网络设备", "value": 25 },
+                { "name": "计算机设备", "value": 80 }
+              ],
+              "departmentDistribution": [
+                { "name": "研发部", "value": 45 },
+                { "name": "行政部", "value": 60 }
+              ],
+              "maintenanceTrend": [
+                { "month": "2026-05", "cost": 5400.00, "count": 6 },
+                { "month": "2026-06", "cost": 3200.00, "count": 4 }
+              ]
+            },
+            "listData": {
+              "pendingClaims": [
+                { "claimId": 1, "equipId": "E001", "equipName": "研发笔记本", "applicantRealName": "张三", "createTime": "2026-06-11 10:00:00" }
+              ],
+              "pendingMaintenances": [
+                { "maintId": 5, "equipId": "E002", "faultDescription": "开机无显示", "maintStatus": 0 }
+              ]
+            }
+          }
+        }
+        ```
+    *   **Role 3 (系统管理员) 响应示例**：
+        ```json
+        {
+          "code": 1,
+          "msg": "success",
+          "data": {
+            "role": 3,
+            "kpis": {
+              "totalEquipment": 105,
+              "totalValue": 854000.00,
+              "totalUsers": 12,
+              "backupCount": 3
+            },
+            "charts": {
+              "userRoleDistribution": [
+                { "name": "操作员", "value": 6 },
+                { "name": "维修工", "value": 3 },
+                { "name": "资产管理员", "value": 2 },
+                { "name": "系统管理员", "value": 1 }
+              ]
+            },
+            "listData": {
+              "backupFiles": [
+                { "name": "backup_1781065853532.sql", "size": 15420, "lastModified": 1781065853532 }
+              ]
+            }
+          }
+        }
+        ```
+    *   **Role 1 (维修工程师) 响应示例**：
+        ```json
+        {
+          "code": 1,
+          "msg": "success",
+          "data": {
+            "role": 1,
+            "kpis": {
+              "myPendingMaint": 3, // 分配我的待处理工单数
+              "myInMaint": 2, // 维修中工单数
+              "myCompletedMaint": 15 // 历史完工数
+            },
+            "charts": {
+              "maintCostTrend": [
+                { "month": "2026-05", "cost": 1500.00 },
+                { "month": "2026-06", "cost": 800.00 }
+              ]
+            },
+            "listData": {
+              "myWorkOrders": [
+                { "maintId": 6, "equipId": "E003", "faultDescription": "网口松动", "maintStatus": 1 }
+              ]
+            }
+          }
+        }
+        ```
+    *   **Role 0 (设备操作员) 响应示例**：
+        ```json
+        {
+          "code": 1,
+          "msg": "success",
+          "data": {
+            "role": 0,
+            "kpis": {
+              "myEquipCount": 4, // 个人保管设备数
+              "myActiveClaims": 1, // 个人在途领用申请数
+              "myActiveMaintenances": 1, // 个人在途报修数
+              "myDepreciationValue": 1540.00 // 个人保管设备累计折旧总额
+            },
+            "listData": {
+              "myEquipments": [
+                { "equipId": "E004", "equipName": "办公电脑", "status": "在用", "originalValue": 5000.00 }
+              ],
+              "myClaims": [
+                { "claimId": 2, "equipId": "E005", "status": 0, "createTime": "2026-06-11 12:00:00" }
+              ],
+              "myMaintenances": [
+                { "maintId": 7, "equipId": "E004", "maintStatus": 1 }
+              ]
+            }
+          }
+        }
+        ```

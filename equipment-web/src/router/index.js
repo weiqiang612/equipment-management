@@ -126,6 +126,25 @@ const routes = [
             requiresAuth: true,
             roles: [3]
         }
+    },
+    {
+        path: '/equipment/detail/:equipId',
+        name: 'EquipmentDetail',
+        component: () => import('../views/equipment/Detail.vue'),
+        meta: {
+            title: '设备生命周期详情',
+            requiresAuth: true
+        }
+    },
+    {
+        path: '/system/log',
+        name: 'AuditLog',
+        component: () => import('../views/system/AuditLog.vue'),
+        meta: {
+            title: '操作审计日志',
+            requiresAuth: true,
+            roles: [3]
+        }
     }
 ]
 

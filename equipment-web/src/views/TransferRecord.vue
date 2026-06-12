@@ -229,6 +229,7 @@ export default {
     },
     openAddDialog() {
       this.isEdit = false;
+      this.resetForm();
       this.dialogVisible = true;
       this.form.transferDate = new Date().toISOString().split("T")[0];
     },
@@ -329,23 +330,7 @@ export default {
       }
     },
 
-    // 选中后的逻辑：自动填充原单位
-    handleEquipChange(val) {
-      const equip = this.equipOptions.find((item) => item.equipId === val);
-      if (equip) {
-        this.form.outUnitCode = equip.unitCode;
-        this.form.outUnitName = equip.unitName;
-        // 记录设备名称，防止修改模式下丢失
-        this.form.equipName = equip.equipName;
-      }
-    },
 
-    // 打开弹窗逻辑统一
-    openAddDialog() {
-      this.isEdit = false;
-      this.resetForm(); // 确保表单清空
-      this.dialogVisible = true;
-    },
   },
 };
 </script>

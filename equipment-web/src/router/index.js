@@ -145,6 +145,16 @@ const routes = [
             requiresAuth: true,
             roles: [3]
         }
+    },
+    {
+        path: '/governance',
+        name: 'Governance',
+        component: () => import('../views/Governance.vue'),
+        meta: {
+            title: '数据治理与运营风险分析',
+            requiresAuth: true,
+            roles: [2, 3]
+        }
     }
 ]
 

@@ -583,3 +583,84 @@
           }
         }
         ```
+
+---
+
+### 13. 获取数据治理总览 (Get Governance Summary)
+
+获取当前登录部门的数据治理与运营风险总览。Role 2 资产管理员只能查看本单位数据，Role 3 系统管理员可查看全局数据。Role 0/1 拒绝访问。
+
+*   **请求路径**：`GET /governance/summary`
+*   **请求头**：
+    *   `token: <JWT_TOKEN_STRING>`
+*   **请求参数**：无
+*   **响应示例**：
+    *   **成功 (Result.code = 1)**：
+        ```json
+        {
+          "code": 1,
+          "msg": "success",
+          "data": {
+            "qualityScore": 95.5,
+            "totalEquipmentCount": 100,
+            "issueCount": 4,
+            "missingFieldsCount": 1,
+            "mismatchCount": 2,
+            "duplicateCount": 2,
+            "highRiskCount": 3,
+            "mediumRiskCount": 5,
+            "lowRiskCount": 92,
+            "idleCount": 10,
+            "costAnomalyCount": 2
+          }
+        }
+        ```
+
+---
+
+### 14. 查询风险设备清单 (Get Equipment Risk List)
+
+分页查询受风险影响的设备列表，支持根据风险等级、使用单位、分类编码筛选。Role 2 资产管理员仅能过滤本单位的数据，Role 3 系统管理员可获取全局数据。Role 0/1 拒绝访问。
+
+*   **请求路径**：`GET /governance/equipment-risks`
+*   **请求头**：
+    *   `token: <JWT_TOKEN_STRING>`
+*   **请求参数**：
+    *   `riskLevel` (可选，风险等级："高风险", "中风险", "低风险")
+    *   `unitCode` (可选，单位代码。Role 2 只能传本单位代码，传其他或不传时均由后端强制过滤为本单位代码)
+    *   `categoryId` (可选，分类编码)
+    *   `page` (默认 1)
+    *   `pageSize` (默认 10)
+*   **响应示例**：
+    *   **成功 (Result.code = 1)**：
+        ```json
+        {
+          "code": 1,
+          "msg": "success",
+          "data": {
+            "total": 3,
+            "rows": [
+              {
+                "equipId": "E001",
+                "equipName": "研发笔记本",
+                "model": "ThinkPad T14",
+                "categoryId": "C001",
+                "categoryName": "计算机设备",
+                "unitCode": "D001",
+                "unitName": "研发部",
+                "custodian": "operator1",
+                "status": "在用",
+                "healthScore": 40,
+                "riskLevel": "高风险",
+                "riskReasons": "维保次数超标,使用年限占比超标",
+                "maintenanceCount": 3,
+                "costRatio": 0.12,
+                "ageRatio": 0.95,
+                "originalValue": 8000.00,
+                "purchaseDate": "2021-06-01"
+              }
+            ]
+          }
+        }
+        ```
+

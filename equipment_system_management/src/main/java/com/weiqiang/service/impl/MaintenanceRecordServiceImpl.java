@@ -10,6 +10,7 @@ import com.weiqiang.pojo.User;
 import com.weiqiang.service.MaintenanceRecordService;
 import com.weiqiang.utils.BaseContext;
 import org.springframework.beans.factory.annotation.Autowired;
+import com.weiqiang.service.OperationLogService;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -29,12 +30,16 @@ public class MaintenanceRecordServiceImpl implements MaintenanceRecordService {
     @Autowired
     private UserDao userDao;
 
+    @Autowired
+    private OperationLogService operationLogService;
+
     @Override
     public List<MaintenanceRecord> getMaintenanceRecords() {
         return maintenanceRecordDao.getMaintenanceRecords();
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public boolean maintenanceEquip(String equipId, MaintenanceRecord maintenanceRecord) {
         Equipment equipment = equipmentDao.getEquipmentById(equipId);
         if (equipment == null) {
@@ -71,7 +76,14 @@ public class MaintenanceRecordServiceImpl implements MaintenanceRecordService {
             maintenanceRecord.setMaintDate(java.time.LocalDate.now());
         }
 
-        return maintenanceRecordDao.maintenanceEquip(equipId, maintenanceRecord);
+        boolean success = maintenanceRecordDao.maintenanceEquip(equipId, maintenanceRecord);
+        if (success) {
+            Long lastId = (Long) maintenanceRecordDao.singleSelect("SELECT LAST_INSERT_ID()");
+            Integer maintId = lastId != null ? lastId.intValue() : null;
+            operationLogService.record("设备报修", "maintenance_record", String.valueOf(maintId), 
+                "报修人 " + currentUsername + " 报修设备 " + equipId + "，故障描述: " + maintenanceRecord.getFaultDescription(), 1, null);
+        }
+        return success;
     }
 
     @Override
@@ -84,6 +96,7 @@ public class MaintenanceRecordServiceImpl implements MaintenanceRecordService {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public int putMaintenanceRecords(Integer maintId, MaintenanceRecord maintenanceRecord) {
         // 1. 获取原工单信息
         MaintenanceRecord oldRecord = maintenanceRecordDao.getById(maintId);
@@ -120,7 +133,12 @@ public class MaintenanceRecordServiceImpl implements MaintenanceRecordService {
             }
             
             // 执行指派：更新工单状态为 1，并写入指派的维修工ID和姓名
-            return maintenanceRecordDao.assignMaintenance(maintId, targetPersonId, targetUser.getRealName());
+            int rows = maintenanceRecordDao.assignMaintenance(maintId, targetPersonId, targetUser.getRealName());
+            if (rows > 0) {
+                operationLogService.record("维保指派", "maintenance_record", maintId.toString(), 
+                    "指派维保工单 " + maintId + " 给工程师 " + targetUser.getRealName(), 1, null);
+            }
+            return rows;
             
         } else if (oldRecord.getMaintStatus() == 1) {
             // 分支 B: 登记维保结果 (状态 1 -> 2)
@@ -142,7 +160,12 @@ public class MaintenanceRecordServiceImpl implements MaintenanceRecordService {
             }
             
             // 执行登记维保结果：状态置为 2 且设备改回在用
-            return maintenanceRecordDao.completeMaintenance(maintId, oldRecord.getEquipId(), maintenanceRecord);
+            int rows = maintenanceRecordDao.completeMaintenance(maintId, oldRecord.getEquipId(), maintenanceRecord);
+            if (rows > 0) {
+                operationLogService.record("维保完工", "maintenance_record", maintId.toString(), 
+                    "完成维保工单 " + maintId + "，维修费用: " + maintenanceRecord.getMaintCost() + ", 检修内容: " + maintenanceRecord.getMaintContent(), 1, null);
+            }
+            return rows;
             
         } else {
             // 分支 C: 工单已完结 (状态为 2)

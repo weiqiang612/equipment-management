@@ -7,6 +7,7 @@ import com.weiqiang.pojo.Result;
 import com.weiqiang.pojo.User;
 import com.weiqiang.utils.BaseContext;
 import lombok.extern.slf4j.Slf4j;
+import com.weiqiang.service.OperationLogService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -34,6 +35,9 @@ public class DatabaseController {
     @Autowired
     private UserDao userDao;
 
+    @Autowired
+    private OperationLogService operationLogService;
+
     @PostMapping("/backup")
     public Result backup() {
         String fileName = "backup_" + System.currentTimeMillis() + ".sql";
@@ -49,10 +53,12 @@ public class DatabaseController {
         try {
             Process process = Runtime.getRuntime().exec(cmd);
             if (process.waitFor() == 0) {
+                operationLogService.record("数据库备份", "database", fileName, "数据库备份成功，文件名：" + fileName, 1, null);
                 return Result.success("备份成功，文件名：" + fileName);
             }
         } catch (Exception e) {
             e.printStackTrace();
+            operationLogService.record("数据库备份", "database", fileName, "数据库备份失败，文件名：" + fileName + "，异常：" + e.getMessage(), 0, e.getMessage());
         }
         return Result.error("备份执行失败，请检查数据库配置");
     }
@@ -114,6 +120,7 @@ public class DatabaseController {
                         log.info("还原数据库后已强行同步当前管理员账户密码与角色防失效：{}", currentUsername);
                     }
                 }
+                operationLogService.record("数据库恢复", "database", fileName, "数据库恢复成功，恢复的文件：" + fileName, 1, null);
                 return Result.success("数据已成功恢复");
             }
         } catch (Exception e) {

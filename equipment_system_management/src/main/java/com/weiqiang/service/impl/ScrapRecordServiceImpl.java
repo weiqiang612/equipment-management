@@ -6,6 +6,7 @@ import com.weiqiang.exception.BusinessException;
 import com.weiqiang.pojo.Equipment;
 import com.weiqiang.pojo.ScrapRecord;
 import com.weiqiang.service.ScrapRecordService;
+import com.weiqiang.service.OperationLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +24,7 @@ public class ScrapRecordServiceImpl implements ScrapRecordService {
 
     private final ScrapRecordDao scrapRecordDao;
     private final EquipmentDao equipmentDao;
+    private final OperationLogService operationLogService;
 
     @Override
     public List<ScrapRecord> getScrapRecords() {
@@ -30,6 +32,7 @@ public class ScrapRecordServiceImpl implements ScrapRecordService {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public boolean scrapEquip(String equipId, ScrapRecord scrapRecord) {
         Equipment equipment = equipmentDao.getEquipmentById(equipId);
         if (equipment == null) {
@@ -50,7 +53,12 @@ public class ScrapRecordServiceImpl implements ScrapRecordService {
 
         String oldCustodian = equipment.getCustodian();
 
-        return scrapRecordDao.scrapEquip(equipId, scrapRecord, oldCustodian);
+        boolean success = scrapRecordDao.scrapEquip(equipId, scrapRecord, oldCustodian);
+        if (success) {
+            operationLogService.record("设备报废", "scrap_record", equipId, 
+                "设备报废: 设备 " + equipId + "，报废单号: " + scrapRecord.getScrapNo() + "，原因: " + scrapRecord.getReason(), 1, null);
+        }
+        return success;
     }
 
     @Override

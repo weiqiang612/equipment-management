@@ -14,7 +14,10 @@ import java.util.List;
  */
 
 
+import com.weiqiang.pojo.EquipmentDetailVO;
+
 public interface EquipmentService {
+    EquipmentDetailVO getEquipmentDetail(String equipId);
     List<Equipment> getEquipments();
 
     Equipment getEquipmentById(String equipId);

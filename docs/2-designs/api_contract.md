@@ -447,3 +447,139 @@
           }
         }
         ```
+
+---
+
+### 11. 查询审计日志流水 (Get Operation Log List)
+
+仅限 **系统管理员 (role=3)** 调用，用于在操作审计后台展示系统关键操作。
+
+*   **请求路径**：`GET /system/log/list`
+*   **请求头**：
+    *   `token: <JWT_TOKEN_STRING>`
+*   **请求参数**：
+    *   `operator` (可选，操作人筛选)
+    *   `opType` (可选，操作类型筛选)
+    *   `targetType` (可选，对象类型筛选)
+    *   `status` (可选，状态筛选，1-成功，0-失败)
+    *   `page` (默认 1)
+    *   `pageSize` (默认 10)
+*   **响应示例**：
+    *   **成功 (Result.code = 1)**：
+        ```json
+        {
+          "code": 1,
+          "msg": "success",
+          "data": {
+            "total": 1,
+            "rows": [
+              {
+                "id": 1,
+                "operator": "admin",
+                "operatorRole": 3,
+                "opType": "设备新增",
+                "targetType": "equipment",
+                "targetId": "E001",
+                "opTime": "2026-06-12 10:00:00",
+                "summary": "新增设备: 研发笔记本 (E001)",
+                "status": 1,
+                "errorMsg": null
+              }
+            ]
+          }
+        }
+        ```
+
+---
+
+### 12. 查询设备生命周期聚合详情 (Get Equipment Lifecycle Detail)
+
+查询单台设备的全生命周期流转历史。各角色访问严格受到 RBAC 越权校验：普通用户（Role 0）仅能访问自己保管的设备；维修工和管理员（Role 1/2）仅能访问本单位的设备；系统管理员（Role 3）无限制。
+
+*   **请求路径**：`GET /equipments/detail/{equipId}`
+*   **请求头**：
+    *   `token: <JWT_TOKEN_STRING>`
+*   **响应示例**：
+    *   **成功 (Result.code = 1)**：
+        ```json
+        {
+          "code": 1,
+          "msg": "success",
+          "data": {
+            "equipId": "E001",
+            "equipName": "研发笔记本",
+            "model": "ThinkPad T14",
+            "status": "在用",
+            "purchaseDate": "2026-06-01",
+            "originalValue": 8000.00,
+            "unitCode": "D001",
+            "unitName": "研发部",
+            "categoryId": "C001",
+            "categoryName": "计算机设备",
+            "custodian": "operator1",
+            "custodianRealName": "张三",
+            "usefulLife": 5,
+            "residualRate": 0.05,
+            "monthlyDepreciation": 126.67,
+            "accumulatedDepreciation": 126.67,
+            "netValue": 7873.33,
+            "claims": [
+              {
+                "claimId": 1,
+                "equipId": "E001",
+                "applicant": "operator1",
+                "approver": "manager1",
+                "status": 1,
+                "remark": "同意领用",
+                "createTime": "2026-06-11 10:00:00",
+                "updateTime": "2026-06-11 10:05:00",
+                "equipName": "研发笔记本",
+                "applicantRealName": "张三",
+                "approverRealName": "李四"
+              }
+            ],
+            "maintenances": [
+              {
+                "maintId": 1,
+                "equipId": "E001",
+                "maintDate": "2026-06-05",
+                "maintContent": "更换风扇",
+                "maintCost": 150.00,
+                "maintPerson": "工程师小王",
+                "reporter": "operator1",
+                "faultDescription": "风扇噪音大",
+                "maintStatus": 2,
+                "maintPersonId": 3
+              }
+            ],
+            "transfers": [],
+            "scrap": null,
+            "auditTimeline": [
+              {
+                "id": 2,
+                "operator": "manager1",
+                "operatorRole": 2,
+                "opType": "领用同意",
+                "targetType": "t_equipment_claim",
+                "targetId": "1",
+                "opTime": "2026-06-11 10:05:00",
+                "summary": "审批人 manager1 同意了领用申请 1，设备保管人变更为 operator1",
+                "status": 1,
+                "errorMsg": null
+              },
+              {
+                "id": 1,
+                "operator": "operator1",
+                "operatorRole": 0,
+                "opType": "领用申请",
+                "targetType": "t_equipment_claim",
+                "targetId": "1",
+                "opTime": "2026-06-11 10:00:00",
+                "summary": "申请人 operator1 申请领用设备 E001",
+                "status": 1,
+                "errorMsg": null
+              }
+            ]
+          }
+        }
+        ```

@@ -8,6 +8,14 @@ import com.weiqiang.pojo.PageBean;
 import com.weiqiang.service.EquipmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import com.weiqiang.service.OperationLogService;
+import com.weiqiang.pojo.EquipmentDetailVO;
+import com.weiqiang.pojo.EquipmentClaim;
+import com.weiqiang.pojo.MaintenanceRecord;
+import com.weiqiang.pojo.TransferRecord;
+import com.weiqiang.pojo.ScrapRecord;
+import com.weiqiang.pojo.OperationLogVO;
+import com.weiqiang.pojo.User;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -26,6 +34,12 @@ public class EquipmentServiceImpl implements EquipmentService {
 
     private final EquipmentDao equipmentDao;
     private final com.weiqiang.dao.EquipmentClaimDao equipmentClaimDao;
+    private final OperationLogService operationLogService;
+    private final com.weiqiang.dao.MaintenanceRecordDao maintenanceRecordDao;
+    private final com.weiqiang.dao.TransferRecordDao transferRecordDao;
+    private final com.weiqiang.dao.ScrapRecordDao scrapRecordDao;
+    private final com.weiqiang.dao.OperationLogDao operationLogDao;
+    private final com.weiqiang.dao.UserDao userDao;
 
     @Override
     public List<Equipment> getEquipments() {
@@ -51,13 +65,19 @@ public class EquipmentServiceImpl implements EquipmentService {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public int addEquipment(Equipment equipment) {
         // 校验唯一编号防重复
         Equipment oldEquip = equipmentDao.getEquipmentById(equipment.getEquipId());
         if (oldEquip != null) {
             throw new BusinessException("操作失败：唯一编号已存在，请勿重复添加！");
         }
-        return equipmentDao.addEquipment(equipment);
+        int rows = equipmentDao.addEquipment(equipment);
+        if (rows > 0) {
+            operationLogService.record("设备新增", "equipment", equipment.getEquipId(), 
+                "新增设备: " + equipment.getEquipName() + " (" + equipment.getEquipId() + ")", 1, null);
+        }
+        return rows;
     }
 
     @Override
@@ -78,6 +98,8 @@ public class EquipmentServiceImpl implements EquipmentService {
         int rows = equipmentDao.updateEquipment(equipment);
 
         if (rows > 0) {
+            operationLogService.record("设备修改", "equipment", equipment.getEquipId(), 
+                "修改设备: " + equipment.getEquipName() + " (" + equipment.getEquipId() + ")", 1, null);
             boolean oldIsEmpty = oldCustodian == null || oldCustodian.trim().isEmpty();
             boolean newIsEmpty = newCustodian == null || newCustodian.trim().isEmpty();
 
@@ -90,6 +112,8 @@ public class EquipmentServiceImpl implements EquipmentService {
                 audit.setStatus(com.weiqiang.pojo.EquipmentClaim.STATUS_RETURNED);
                 audit.setRemark("管理员取消分配");
                 equipmentClaimDao.addClaim(audit);
+                operationLogService.record("设备退还", "equipment", equipment.getEquipId(), 
+                    "管理员取消用户 " + oldCustodian + " 对设备 " + equipment.getEquipId() + " 的保管分配", 1, null);
             } else if (newCustodian != null && !newCustodian.trim().isEmpty() && !newCustodian.equals(oldCustodian)) {
                 // 无主 -> 有人，或者换人: 写入 status=5 (直接分配) 审计日志
                 com.weiqiang.pojo.EquipmentClaim audit = new com.weiqiang.pojo.EquipmentClaim();
@@ -99,14 +123,24 @@ public class EquipmentServiceImpl implements EquipmentService {
                 audit.setStatus(com.weiqiang.pojo.EquipmentClaim.STATUS_DIRECT);
                 audit.setRemark("管理员直接分配");
                 equipmentClaimDao.addClaim(audit);
+                operationLogService.record("直接分配", "equipment", equipment.getEquipId(), 
+                    "管理员直接分配设备 " + equipment.getEquipId() + " 给用户 " + newCustodian, 1, null);
             }
         }
         return rows;
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public boolean deleteEquipment(String equipId) {
-        return equipmentDao.deleteEquipment(equipId);
+        Equipment equipment = equipmentDao.getEquipmentById(equipId);
+        String name = equipment != null ? equipment.getEquipName() : "";
+        boolean success = equipmentDao.deleteEquipment(equipId);
+        if (success) {
+            operationLogService.record("设备删除", "equipment", equipId, 
+                "删除设备: " + name + " (" + equipId + ")", 1, null);
+        }
+        return success;
     }
 
     @Override
@@ -170,5 +204,100 @@ public class EquipmentServiceImpl implements EquipmentService {
         vo.setAccumulated(accumulatedDepreciation);
         vo.setNetValue(vo.getOriginalValue().subtract(accumulatedDepreciation));
         return vo;
+    }
+
+    @Override
+    public EquipmentDetailVO getEquipmentDetail(String equipId) {
+        Equipment equipment = equipmentDao.getEquipmentById(equipId);
+        if (equipment == null) {
+            throw new com.weiqiang.exception.BusinessException("该设备不存在");
+        }
+
+        EquipmentDetailVO detail = new EquipmentDetailVO();
+        detail.setEquipId(equipment.getEquipId());
+        detail.setEquipName(equipment.getEquipName());
+        detail.setModel(equipment.getModel());
+        detail.setStatus(equipment.getStatus());
+        detail.setPurchaseDate(equipment.getPurchaseDate());
+        detail.setOriginalValue(equipment.getOriginalValue());
+        detail.setUnitCode(equipment.getUnitCode());
+        detail.setUnitName(equipment.getUnitName());
+        detail.setCategoryId(equipment.getCategoryId());
+        detail.setCategoryName(equipment.getCategoryName());
+        detail.setCustodian(equipment.getCustodian());
+
+        if (equipment.getCustodian() != null && !equipment.getCustodian().trim().isEmpty()) {
+            User user = userDao.getByUsername(equipment.getCustodian());
+            if (user != null) {
+                detail.setCustodianRealName(user.getRealName());
+            }
+        }
+
+        EquipmentDepreciationVO dep = calculateAccumulated(equipment);
+        detail.setUsefulLife(dep.getUsefulLife());
+        detail.setResidualRate(dep.getResidualRate());
+        detail.setMonthlyDepreciation(dep.getMonthlyDepreciation());
+        detail.setAccumulatedDepreciation(dep.getAccumulated());
+        detail.setNetValue(dep.getNetValue());
+
+        List<EquipmentClaim> claims = equipmentClaimDao.mutiSelect(
+            "SELECT c.claim_id AS claimId, c.equip_id AS equipId, c.applicant AS applicant, " +
+            "c.approver AS approver, c.status AS status, c.remark AS remark, " +
+            "c.create_time AS createTime, c.update_time AS updateTime, " +
+            "e.equip_name AS equipName, u1.real_name AS applicantRealName, u2.real_name AS approverRealName " +
+            "FROM t_equipment_claim c " +
+            "LEFT JOIN equipment e ON c.equip_id = e.equip_id " +
+            "LEFT JOIN sys_user u1 ON c.applicant = u1.username " +
+            "LEFT JOIN sys_user u2 ON c.approver = u2.username " +
+            "WHERE c.equip_id = ? ORDER BY c.create_time DESC", EquipmentClaim.class, equipId);
+        detail.setClaims(claims);
+
+        List<MaintenanceRecord> maintenances = maintenanceRecordDao.mutiSelect(
+            "SELECT maint_id maintId, equip_id equipId, maint_date maintDate, maint_content maintContent, " +
+            "maint_cost maintCost, maint_person maintPerson, reporter, fault_description faultDescription, " +
+            "maint_status maintStatus, maint_person_id maintPersonId " +
+            "FROM maintenance_record WHERE equip_id = ? ORDER BY maint_date DESC, maint_id DESC", MaintenanceRecord.class, equipId);
+        detail.setMaintenances(maintenances);
+
+        List<TransferRecord> transfers = transferRecordDao.mutiSelect(
+            "SELECT t.transfer_id AS transferId, t.equip_id AS equipId, t.out_unit_code AS outUnitCode, " +
+            "t.in_unit_code AS inUnitCode, t.transfer_date AS transferDate, t.change_type AS changeType, " +
+            "t.operator, t.reason, d1.unit_name AS outUnitName, d2.unit_name AS inUnitName " +
+            "FROM transfer_record t " +
+            "LEFT JOIN department d1 ON t.out_unit_code = d1.unit_code " +
+            "LEFT JOIN department d2 ON t.in_unit_code = d2.unit_code " +
+            "WHERE t.equip_id = ? ORDER BY t.transfer_date DESC, t.transfer_id DESC", TransferRecord.class, equipId);
+        detail.setTransfers(transfers);
+
+        ScrapRecord scrap = scrapRecordDao.selectOne(
+            "SELECT equip_id equipId, scrap_no scrapNo, scrap_date scrapDate, approver, reason " +
+            "FROM scrap_record WHERE equip_id = ?", ScrapRecord.class, equipId);
+        detail.setScrap(scrap);
+
+        List<OperationLogVO> auditTimeline = operationLogDao.mutiSelect(
+            "SELECT id, operator, operator_role AS operatorRole, op_type AS opType, " +
+            "target_type AS targetType, target_id AS targetId, op_time AS opTime, " +
+            "summary, status, error_msg AS errorMsg " +
+            "FROM operation_log WHERE (target_type = 'equipment' AND target_id = ?) " +
+            "OR (target_type IN ('t_equipment_claim', 'maintenance_record', 'transfer_record', 'scrap_record') AND target_id IN (" +
+            "  SELECT CAST(claim_id AS CHAR) FROM t_equipment_claim WHERE equip_id = ? UNION " +
+            "  SELECT CAST(maint_id AS CHAR) FROM maintenance_record WHERE equip_id = ? UNION " +
+            "  SELECT CAST(transfer_id AS CHAR) FROM transfer_record WHERE equip_id = ? UNION " +
+            "  SELECT equip_id FROM scrap_record WHERE equip_id = ?" +
+            ")) ORDER BY op_time DESC, id DESC", OperationLogVO.class, equipId, equipId, equipId, equipId, equipId);
+        
+        if (auditTimeline != null) {
+            for (OperationLogVO vo : auditTimeline) {
+                if (vo.getOperator() != null) {
+                    User user = userDao.getByUsername(vo.getOperator());
+                    if (user != null) {
+                        vo.setOperatorRealName(user.getRealName());
+                    }
+                }
+            }
+        }
+        detail.setAuditTimeline(auditTimeline);
+
+        return detail;
     }
 }

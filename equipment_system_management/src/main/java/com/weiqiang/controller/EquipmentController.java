@@ -7,6 +7,9 @@ import com.weiqiang.service.MaintenanceRecordService;
 import com.weiqiang.service.ScrapRecordService;
 import com.weiqiang.service.TransferRecordService;
 import lombok.extern.slf4j.Slf4j;
+import com.weiqiang.pojo.EquipmentDetailVO;
+import com.weiqiang.exception.ForbiddenException;
+import com.weiqiang.utils.BaseContext;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
@@ -136,5 +139,39 @@ public class EquipmentController {
             return Result.success(list.get(0));
         }
         return Result.error("未找到该设备的价值信息");
+    }
+
+    // 设备全生命周期聚合详情查询
+    @GetMapping("/detail/{equipId}")
+    public Result getEquipmentDetail(@PathVariable("equipId") String equipId) {
+        EquipmentDetailVO detail = equipmentService.getEquipmentDetail(equipId);
+        if (detail == null) {
+            return Result.error("未查询到设备详情");
+        }
+
+        // RBAC 水平与垂直越权校验
+        Integer role = BaseContext.getCurrentRole();
+        String currentUnitCode = BaseContext.getCurrentUnitCode();
+        String currentUsername = BaseContext.getCurrentName();
+
+        if (role == null) {
+            throw new ForbiddenException("越权访问：权限不足");
+        }
+
+        if (role == 0) {
+            // 普通用户（Role 0）只能查看其保管的设备详情
+            if (detail.getCustodian() == null || !detail.getCustodian().equals(currentUsername)) {
+                throw new ForbiddenException("越权访问：普通用户只能查看自己保管的设备详情");
+            }
+        } else if (role == 1 || role == 2) {
+            // 维修工程师（Role 1）和资产管理员（Role 2）只能查看本单位（unitCode 匹配）的设备详情
+            if (detail.getUnitCode() == null || !detail.getUnitCode().equals(currentUnitCode)) {
+                throw new ForbiddenException("越权访问：只能查看本单位的设备详情");
+            }
+        }
+        // 系统管理员（Role 3）可以看全部，直接放行
+
+        log.info("查询了设备详情，equipId: {}", equipId);
+        return Result.success(detail);
     }
 }

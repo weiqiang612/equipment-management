@@ -78,7 +78,7 @@ public class MaintenanceRecordServiceImpl implements MaintenanceRecordService {
 
         boolean success = maintenanceRecordDao.maintenanceEquip(equipId, maintenanceRecord);
         if (success) {
-            Long lastId = (Long) maintenanceRecordDao.singleSelect("SELECT LAST_INSERT_ID()");
+            Number lastId = (Number) maintenanceRecordDao.singleSelect("SELECT LAST_INSERT_ID()");
             Integer maintId = lastId != null ? lastId.intValue() : null;
             operationLogService.record("设备报修", "maintenance_record", String.valueOf(maintId), 
                 "报修人 " + currentUsername + " 报修设备 " + equipId + "，故障描述: " + maintenanceRecord.getFaultDescription(), 1, null);

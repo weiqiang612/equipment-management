@@ -217,11 +217,9 @@ export default {
     async getDetail() {
       this.loading = true
       try {
-        const res = await getEquipmentDetail(this.equipId)
-        if (res && res.code === 1) {
-          this.detailData = res.data
-        } else {
-          this.$message.error(res.msg || '获取设备详情失败')
+        const data = await getEquipmentDetail(this.equipId)
+        if (data) {
+          this.detailData = data
         }
       } catch (error) {
         this.$message.error('请求接口失败')

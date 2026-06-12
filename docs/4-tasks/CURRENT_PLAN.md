@@ -4,7 +4,7 @@
 
 ## Active feature
 
-`docs/4-tasks/features/TASK-012-operation-audit-lifecycle/`
+`docs/4-tasks/features/TASK-013-data-governance-risk/`
 - spec.md ✅ Ready
 - tasks.md → Not started
 
@@ -54,6 +54,10 @@
 
 ## Completed
 
+`docs/4-tasks/features/TASK-012-operation-audit-lifecycle/`
+- spec.md ✅ Ready
+- tasks.md ✅ 100% Complete
+
 `docs/4-tasks/features/TASK-011-dashboard/`
 - spec.md ✅ Ready
 - tasks.md ✅ 100% Complete
@@ -100,6 +104,5 @@
 
 ## Notes for next session
 
-- Active remains `docs/4-tasks/features/TASK-012-operation-audit-lifecycle/`
-- Backlog: `docs/4-tasks/features/TASK-013-data-governance-risk/`
+- Active remains `docs/4-tasks/features/TASK-013-data-governance-risk/`
 - Backlog: `docs/4-tasks/features/TASK-014-ai-assisted-reporting/`

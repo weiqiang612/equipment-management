@@ -167,12 +167,10 @@ export default {
       }
 
       try {
-        const res = await getAuditLogs(this.queryParams)
-        if (res && res.code === 1) {
-          this.logList = res.data.rows
-          this.total = res.data.total
-        } else {
-          this.$message.error(res.msg || '获取审计日志失败')
+        const data = await getAuditLogs(this.queryParams)
+        if (data) {
+          this.logList = data.rows || []
+          this.total = data.total || 0
         }
       } catch (error) {
         this.$message.error('请求接口失败')

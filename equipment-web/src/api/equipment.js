@@ -70,3 +70,9 @@ export const getCalculateAccumulated = (equipId) => request({
 export const getExportEquipments = (params) => {
     return request.get('/equipments/export', { params })
 }
+
+// 获取设备详情聚合信息
+export const getEquipmentDetail = (equipId) => request({
+    url: `/equipments/detail/${equipId}`,
+    method: 'get'
+})

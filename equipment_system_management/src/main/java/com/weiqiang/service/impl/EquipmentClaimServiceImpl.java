@@ -68,7 +68,7 @@ public class EquipmentClaimServiceImpl implements EquipmentClaimService {
 
         boolean success = equipmentClaimDao.addClaim(claim) > 0;
         if (success) {
-            Long lastId = (Long) equipmentClaimDao.singleSelect("SELECT LAST_INSERT_ID()");
+            Number lastId = (Number) equipmentClaimDao.singleSelect("SELECT LAST_INSERT_ID()");
             Integer claimId = lastId != null ? lastId.intValue() : null;
             operationLogService.record("领用申请", "t_equipment_claim", String.valueOf(claimId), 
                 "申请人 " + currentUsername + " 申请领用设备 " + equipId, 1, null);

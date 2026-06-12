@@ -41,14 +41,18 @@ public class DatabaseController {
     @PostMapping("/backup")
     public Result backup() {
         String fileName = "backup_" + System.currentTimeMillis() + ".sql";
-        File dir = new File(backupProperties.getPath());
+        String backupPath = backupProperties.getPath();
+        if (backupPath != null && !backupPath.endsWith("/") && !backupPath.endsWith("\\")) {
+            backupPath += "/";
+        }
+        File dir = new File(backupPath);
         if (!dir.exists()) dir.mkdirs();
 
         String cmd = String.format("mysqldump -u%s -p%s %s -r %s",
                 backupProperties.getUser(),
                 backupProperties.getPassword(),
                 backupProperties.getDatabase(),
-                backupProperties.getPath() + fileName);
+                backupPath + fileName);
 
         try {
             Process process = Runtime.getRuntime().exec(cmd);
@@ -78,7 +82,11 @@ public class DatabaseController {
         }
 
         // 构造完整的备份文件路径
-        String filePath = backupProperties.getPath() + fileName;
+        String backupPath = backupProperties.getPath();
+        if (backupPath != null && !backupPath.endsWith("/") && !backupPath.endsWith("\\")) {
+            backupPath += "/";
+        }
+        String filePath = backupPath + fileName;
 
         // Windows 环境下需要调用 cmd /c 才能执行带 < 的重定向命令
         String cmd = String.format("cmd /c mysql -u%s -p%s %s < %s",

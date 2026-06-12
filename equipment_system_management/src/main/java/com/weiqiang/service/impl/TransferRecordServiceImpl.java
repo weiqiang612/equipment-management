@@ -57,7 +57,7 @@ public class TransferRecordServiceImpl implements TransferRecordService {
 
         boolean success = transferRecordDao.transferEquip(equipId, transferRecord, oldCustodian);
         if (success) {
-            Long lastId = (Long) transferRecordDao.singleSelect("SELECT LAST_INSERT_ID()");
+            Number lastId = (Number) transferRecordDao.singleSelect("SELECT LAST_INSERT_ID()");
             Integer transferId = lastId != null ? lastId.intValue() : null;
             operationLogService.record("设备调拨", "transfer_record", String.valueOf(transferId), 
                 "设备调拨: 设备 " + equipId + " 从单位 " + transferRecord.getOutUnitCode() + " 调拨至单位 " + transferRecord.getInUnitCode() + "，变动类型: " + transferRecord.getChangeType() + "，经办人: " + transferRecord.getOperator(), 1, null);

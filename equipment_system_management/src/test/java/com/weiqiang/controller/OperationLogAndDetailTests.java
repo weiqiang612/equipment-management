@@ -132,6 +132,7 @@ public class OperationLogAndDetailTests {
         user.setUsername(username);
         user.setPassword("123456");
         user.setRealName(realName);
+        user.setUnitCode("D98");
         mockMvc.perform(post("/users/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(user)))

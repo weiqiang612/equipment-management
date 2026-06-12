@@ -4,7 +4,7 @@
 # =============================================================================
 $APP_PORT = 8080
 $HEALTH_CHECK_URL = "http://localhost:8080/"
-$STARTUP_COMMAND = "Set-Location -LiteralPath 'equipment_system_management'; mvn spring-boot:run"
+$STARTUP_COMMAND = "chcp 65001; [Console]::InputEncoding = [System.Text.Encoding]::UTF8; [Console]::OutputEncoding = [System.Text.Encoding]::UTF8; Set-Location -LiteralPath 'equipment_system_management'; mvn spring-boot:run"
 $LOG_DIR = "logs"
 $STDOUT_LOG = Join-Path $LOG_DIR "dev_server.out.log"
 $STDERR_LOG = Join-Path $LOG_DIR "dev_server.err.log"

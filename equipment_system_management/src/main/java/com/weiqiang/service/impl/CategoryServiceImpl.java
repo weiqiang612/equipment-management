@@ -10,17 +10,18 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+import lombok.RequiredArgsConstructor;
+
 /**
  * 分类服务实现类
  */
 @Service
+@RequiredArgsConstructor
 public class CategoryServiceImpl implements CategoryService {
 
-    @Autowired
-    private CategoryDao categoryDao;
+    private final CategoryDao categoryDao;
 
-    @Autowired
-    private EquipmentDao equipmentDao;
+    private final EquipmentDao equipmentDao;
 
     @Override
     public List<Category> getCategories() {
@@ -28,19 +29,19 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    public Category getCategoryById(String categoryId) {
+    public Category getCategoryById(final String categoryId) {
         return categoryDao.getCategoryById(categoryId);
     }
 
     @Override
-    public int addCategory(Category category) {
+    public int addCategory(final Category category) {
         return categoryDao.addCategory(category);
     }
 
     @Override
-    public int deleteCategoryById(String categoryId) {
+    public int deleteCategoryById(final String categoryId) {
         // 前置校验：该分类下若有关联的设备，禁止删除
-        Long count = equipmentDao.getEquipmentsNum(null, null, categoryId, null, null, null);
+        final Long count = equipmentDao.getEquipmentsNum(null, null, categoryId, null, null, null, null);
         if (count != null && count > 0) {
             throw new BusinessException("操作失败：该分类下有关联设备，无法删除！");
         }
@@ -48,7 +49,7 @@ public class CategoryServiceImpl implements CategoryService {
     }
 
     @Override
-    public int updateCategory(Category category, String categoryId) {
+    public int updateCategory(final Category category, final String categoryId) {
         return categoryDao.updateCategory(category, categoryId);
     }
 }

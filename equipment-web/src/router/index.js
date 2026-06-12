@@ -148,8 +148,8 @@ const routes = [
     },
     {
         path: '/governance',
-        name: 'Governance',
-        component: () => import('../views/Governance.vue'),
+        name: 'DataGovernance',
+        component: () => import('../views/DataGovernance.vue'),
         meta: {
             title: '数据治理与运营风险分析',
             requiresAuth: true,

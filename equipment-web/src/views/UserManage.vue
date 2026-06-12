@@ -5,10 +5,48 @@
         <span class="card-title"><i class="el-icon-user-solid"></i> 用户权限管理</span>
       </div>
 
+      <!-- 搜索与筛选区域 -->
+      <div class="filter-wrapper">
+        <el-form :inline="true" :model="filterForm" size="small" style="margin-bottom: -10px;">
+          <el-form-item label="模糊搜索">
+            <el-input
+              v-model="filterForm.query"
+              placeholder="输入用户名 / 真实姓名"
+              prefix-icon="el-icon-search"
+              clearable
+              style="width: 220px;"
+            />
+          </el-form-item>
+          <el-form-item label="系统角色">
+            <el-select v-model="filterForm.role" placeholder="全部角色" clearable style="width: 140px;">
+              <el-option
+                v-for="item in roleOptions"
+                :key="item.value"
+                :label="item.label"
+                :value="item.value"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item label="所属单位">
+            <el-select v-model="filterForm.unitCode" placeholder="全部单位" clearable style="width: 160px;">
+              <el-option
+                v-for="item in departments"
+                :key="item.unitCode"
+                :label="item.unitName"
+                :value="item.unitCode"
+              />
+            </el-select>
+          </el-form-item>
+          <el-form-item>
+            <el-button icon="el-icon-refresh" @click="resetFilters">重置</el-button>
+          </el-form-item>
+        </el-form>
+      </div>
+
       <!-- 用户列表表格 -->
       <el-table
         v-loading="loading"
-        :data="users"
+        :data="filteredUsers"
         style="width: 100%"
         border
         stripe
@@ -99,6 +137,11 @@ export default {
       departments: [],
       loading: false,
       currentUsername: localStorage.getItem('username') || '',
+      filterForm: {
+        query: '',
+        role: '',
+        unitCode: ''
+      },
       roleOptions: [
         { value: 0, label: '设备操作员' },
         { value: 1, label: '维修工程师' },
@@ -107,11 +150,32 @@ export default {
       ]
     }
   },
+  computed: {
+    filteredUsers() {
+      return this.users.filter(u => {
+        const matchesQuery = !this.filterForm.query ||
+          (u.username && u.username.toLowerCase().includes(this.filterForm.query.toLowerCase())) ||
+          (u.realName && u.realName.toLowerCase().includes(this.filterForm.query.toLowerCase()));
+        
+        const matchesRole = this.filterForm.role === '' || this.filterForm.role === null || u.role === this.filterForm.role;
+        
+        const matchesDept = !this.filterForm.unitCode || u.unitCode === this.filterForm.unitCode;
+        
+        return matchesQuery && matchesRole && matchesDept;
+      })
+    }
+  },
   created() {
     this.fetchUsers()
     this.fetchDepartments()
   },
   methods: {
+    // 重置筛选条件
+    resetFilters() {
+      this.filterForm.query = ''
+      this.filterForm.role = ''
+      this.filterForm.unitCode = ''
+    },
     // 获取所有用户列表
     fetchUsers() {
       this.loading = true
@@ -260,5 +324,13 @@ export default {
 }
 .clearfix::after {
   clear: both;
+}
+
+.filter-wrapper {
+  margin-bottom: 15px;
+  background-color: #fcfcfd;
+  padding: 14px 14px 0 14px;
+  border-radius: 6px;
+  border: 1px dashed #e2e8f0;
 }
 </style>

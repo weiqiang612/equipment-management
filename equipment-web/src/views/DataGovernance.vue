@@ -187,14 +187,21 @@
         <el-form :inline="true" :model="queryForm" size="small" class="demo-form-inline">
           <el-form-item label="风险等级">
             <el-select v-model="queryForm.riskLevel" placeholder="选择风险等级" clearable style="width: 130px;" @change="handleSearch">
-              <el-option label="高风险" value="high" />
-              <el-option label="中风险" value="medium" />
-              <el-option label="低风险" value="low" />
+              <el-option label="高风险" value="高风险" />
+              <el-option label="中风险" value="中风险" />
+              <el-option label="低风险" value="低风险" />
             </el-select>
           </el-form-item>
 
           <el-form-item label="所属单位">
-            <el-select v-model="queryForm.unitCode" placeholder="选择单位" clearable style="width: 160px;" :disabled="isUnitCodeDisabled" @change="handleSearch">
+            <el-select 
+              v-model="queryForm.unitCode" 
+              :placeholder="role === 2 ? unitPlaceholder : '选择单位'" 
+              :clearable="role !== 2" 
+              style="width: 160px;" 
+              :disabled="isUnitCodeDisabled" 
+              @change="handleSearch"
+            >
               <el-option v-for="item in depts" :key="item.unitCode" :label="item.unitName" :value="item.unitCode" />
             </el-select>
           </el-form-item>
@@ -261,10 +268,10 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="maintCount" label="维修次数" width="80" align="center">
+        <el-table-column prop="maintenanceCount" label="维修次数" width="80" align="center">
           <template slot-scope="scope">
-            <span :class="scope.row.maintCount >= 3 ? 'danger-color text-bold' : (scope.row.maintCount >= 2 ? 'warning-color text-bold' : '')">
-              {{ scope.row.maintCount }}次
+            <span :class="scope.row.maintenanceCount >= 3 ? 'danger-color text-bold' : (scope.row.maintenanceCount >= 2 ? 'warning-color text-bold' : '')">
+              {{ scope.row.maintenanceCount ? scope.row.maintenanceCount + '次' : '无' }}
             </span>
           </template>
         </el-table-column>
@@ -275,7 +282,7 @@
             </span>
           </template>
         </el-table-column>
-        <el-table-column prop="riskReason" label="判定原因说明" min-width="200" show-overflow-tooltip />
+        <el-table-column prop="riskReasons" label="判定原因说明" min-width="200" show-overflow-tooltip />
         <el-table-column prop="custodianRealName" label="保管人" width="80" align="center">
           <template slot-scope="scope">
             {{ scope.row.custodianRealName || '无保管人' }}
@@ -312,7 +319,7 @@ import { getDepts } from '@/api/department'
 import { getCategories } from '@/api/category'
 
 export default {
-  name: 'Governance',
+  name: 'DataGovernance',
   filters: {
     formatNumber(val) {
       if (val === undefined || val === null) return '0.00'
@@ -363,6 +370,13 @@ export default {
     // 资产管理员 (role === 2) 只能查看本单位数据，禁止修改单位筛选框
     isUnitCodeDisabled() {
       return this.role === 2
+    },
+    unitPlaceholder() {
+      if (this.role === 2 && this.unitCode) {
+        const dept = this.depts.find(d => d.unitCode === this.unitCode)
+        return dept ? dept.unitName : '加载中...'
+      }
+      return '选择单位'
     }
   },
   created() {
@@ -396,12 +410,8 @@ export default {
           getDepts(),
           getCategories()
         ])
-        if (deptsRes.code === 1) {
-          this.depts = deptsRes.data || []
-        }
-        if (categoriesRes.code === 1) {
-          this.categories = categoriesRes.data || []
-        }
+        this.depts = deptsRes || []
+        this.categories = categoriesRes || []
       } catch (err) {
         console.error('Fetch filter dictionary error:', err)
       }
@@ -410,14 +420,33 @@ export default {
     async loadSummary() {
       this.loading = true
       try {
-        const res = await getGovernanceSummary()
-        if (res.code === 1) {
-          this.summaryData = res.data
-          // 渲染图表
-          this.$nextTick(() => {
-            this.renderCharts()
-          })
+        const data = await getGovernanceSummary() || {}
+        this.summaryData = {
+          ...this.summaryData,
+          qualityScore: data.qualityScore || 100,
+          totalIssues: data.issueCount || 0,
+          issueCount: data.issueCount || 0,
+          idleCount: data.idleCount || 0,
+          costAnomaliesCount: data.costAnomalyCount || 0,
+          // 组装 issueSummary 数组
+          issueSummary: [
+            { type: 'missing_fields', name: '关键字段缺失', count: data.missingFieldsCount || 0 },
+            { type: 'mismatch', name: '保管人与单位不匹配', count: data.mismatchCount || 0 },
+            { type: 'duplicate', name: '疑似重复设备', count: data.duplicateCount || 0 }
+          ],
+          // 组装 riskDistribution
+          riskDistribution: {
+            high: data.highRiskCount || 0,
+            medium: data.mediumRiskCount || 0,
+            low: data.lowRiskCount || 0
+          },
+          departmentDistribution: data.departmentDistribution || [],
+          categoryDistribution: data.categoryDistribution || []
         }
+        // 渲染图表
+        this.$nextTick(() => {
+          this.renderCharts()
+        })
       } catch (err) {
         this.$message.error('加载治理总览数据失败')
         console.error(err)
@@ -429,10 +458,21 @@ export default {
     async loadRisks() {
       this.tableLoading = true
       try {
-        const res = await getEquipmentRisks(this.queryForm)
-        if (res.code === 1) {
-          this.tableData = res.data.rows || []
-          this.total = res.data.total || 0
+        const data = await getEquipmentRisks(this.queryForm) || {}
+        this.tableData = data.rows || []
+        this.total = data.total || 0
+        
+        // 优雅降级：如果真实列表数据有，则组装统计信息
+        if (!this.summaryData.costAnomalies || this.summaryData.costAnomalies.length === 0) {
+          this.summaryData.costAnomalies = [...this.tableData]
+            .filter(item => item.costRatio > 0)
+            .sort((a, b) => b.costRatio - a.costRatio)
+            .slice(0, 4)
+        }
+        if (!this.summaryData.idleEquipments || this.summaryData.idleEquipments.length === 0) {
+          this.summaryData.idleEquipments = [...this.tableData]
+            .filter(item => !item.custodian && item.status === '在用')
+            .slice(0, 6)
         }
       } catch (err) {
         this.$message.error('加载风险清单失败')
@@ -694,11 +734,17 @@ export default {
     },
     // 状态和样式格式化辅助
     formatRiskLevel(lvl) {
-      const map = { high: '高风险', medium: '中风险', low: '低风险' }
+      const map = { 
+        high: '高风险', medium: '中风险', low: '低风险',
+        '高风险': '高风险', '中风险': '中风险', '低风险': '低风险'
+      }
       return map[lvl] || lvl
     },
     getRiskTagType(lvl) {
-      const map = { high: 'danger', medium: 'warning', low: 'success' }
+      const map = { 
+        high: 'danger', medium: 'warning', low: 'success',
+        '高风险': 'danger', '中风险': 'warning', '低风险': 'success'
+      }
       return map[lvl] || 'info'
     },
     getHealthColor(score) {

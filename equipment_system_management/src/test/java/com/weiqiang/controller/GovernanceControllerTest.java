@@ -152,7 +152,7 @@ public class GovernanceControllerTest {
         final User user = new User();
         user.setUsername(username);
         user.setPassword("password123");
-        MvcResult res = mockMvc.perform(post("/users/login")
+        final MvcResult res = mockMvc.perform(post("/users/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(user)))
                 .andExpect(status().isOk())

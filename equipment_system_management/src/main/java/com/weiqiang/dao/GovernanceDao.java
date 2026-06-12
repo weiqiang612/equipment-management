@@ -1,6 +1,8 @@
 package com.weiqiang.dao;
 
 import com.weiqiang.pojo.EquipmentRiskVO;
+import com.weiqiang.pojo.DepartmentRiskDistributionVO;
+import com.weiqiang.pojo.CategoryRiskDistributionVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -38,11 +40,11 @@ public class GovernanceDao {
      */
     public Integer countMissingFieldsEquipments(final String unitCode) {
         final StringBuilder sql = new StringBuilder(
-                "SELECT COUNT(*) FROM equipment WHERE " +
+                "SELECT COUNT(*) FROM equipment WHERE (" +
                 "status IS NULL OR status NOT IN ('在用', '维修', '报废') " +
                 "OR category_id IS NULL OR unit_code IS NULL " +
                 "OR purchase_date IS NULL OR original_value IS NULL " +
-                "OR original_value <= 0"
+                "OR original_value <= 0)"
         );
         final List<Object> params = new ArrayList<>();
         if (unitCode != null && !unitCode.trim().isEmpty()) {
@@ -141,12 +143,12 @@ public class GovernanceDao {
             "     AND e.unit_code = dup.unit_code " +
             "     AND e.purchase_date = dup.purchase_date " +
             "     AND e.original_value = dup.original_value " +
-            "WHERE (e.status IS NULL OR e.status NOT IN ('在用', '维修', '报废') " +
+            "WHERE ((e.status IS NULL OR e.status NOT IN ('在用', '维修', '报废') " +
             "       OR e.category_id IS NULL OR e.unit_code IS NULL " +
             "       OR e.purchase_date IS NULL OR e.original_value IS NULL " +
             "       OR e.original_value <= 0) " +
             "   OR (e.custodian IS NOT NULL AND e.unit_code != u.unit_code) " +
-            "   OR (dup.equip_name IS NOT NULL)"
+            "   OR (dup.equip_name IS NOT NULL))"
         );
         final List<Object> params = new ArrayList<>();
         if (unitCode != null && !unitCode.trim().isEmpty()) {
@@ -285,7 +287,11 @@ public class GovernanceDao {
      * 分页查询风险设备列表
      */
     public List<EquipmentRiskVO> listEquipmentRisks(final String riskLevel, final String unitCode, final String categoryId, final Integer offset, final Integer limit) {
-        final StringBuilder sql = new StringBuilder("SELECT * FROM ( ");
+        final StringBuilder sql = new StringBuilder(
+            "SELECT t.equipId, t.equipName, t.model, t.status, t.purchaseDate, t.originalValue, " +
+            "t.unitCode, t.categoryId, t.custodian, t.unitName, t.categoryName, t.maintenanceCount, " +
+            "t.ageRatio, t.costRatio, t.riskLevel FROM ( "
+        );
         sql.append(buildRiskBaseSql());
         sql.append(" ) t WHERE 1 = 1");
         final List<Object> params = new ArrayList<>();
@@ -311,5 +317,95 @@ public class GovernanceDao {
         }
 
         return jdbcTemplate.query(sql.toString(), new BeanPropertyRowMapper<>(EquipmentRiskVO.class), params.toArray());
+    }
+
+    /**
+     * 查询各单位（部门）的风险设备分布
+     */
+    public List<DepartmentRiskDistributionVO> getDepartmentRiskDistribution(final String unitCode) {
+        final StringBuilder sql = new StringBuilder(
+            "SELECT " +
+            "  t.unitCode AS unitCode, " +
+            "  t.unitName AS unitName, " +
+            "  SUM(CASE WHEN t.riskLevel = '高风险' THEN 1 ELSE 0 END) AS highCount, " +
+            "  SUM(CASE WHEN t.riskLevel = '中风险' THEN 1 ELSE 0 END) AS mediumCount, " +
+            "  SUM(CASE WHEN t.riskLevel = '低风险' THEN 1 ELSE 0 END) AS lowCount " +
+            "FROM ( " +
+            "  SELECT " +
+            "    e.unit_code AS unitCode, " +
+            "    d.unit_name AS unitName, " +
+            "    CASE " +
+            "      WHEN e.status != '报废' AND ( " +
+            "        (IF(c.useful_life IS NOT NULL AND c.useful_life > 0, TIMESTAMPDIFF(MONTH, e.purchase_date, CURRENT_DATE()) / (c.useful_life * 12.0), 0.0) >= 0.9) OR " +
+            "        (COUNT(mr.maint_id) >= 3) OR " +
+            "        (IF(e.original_value IS NOT NULL AND e.original_value > 0, IFNULL(SUM(mr.maint_cost), 0.0) / e.original_value, 0.0) >= 0.3) " +
+            "      ) THEN '高风险' " +
+            "      WHEN e.status != '报废' AND ( " +
+            "        (IF(c.useful_life IS NOT NULL AND c.useful_life > 0, TIMESTAMPDIFF(MONTH, e.purchase_date, CURRENT_DATE()) / (c.useful_life * 12.0), 0.0) >= 0.75) OR " +
+            "        (COUNT(mr.maint_id) >= 2) OR " +
+            "        (IF(e.original_value IS NOT NULL AND e.original_value > 0, IFNULL(SUM(mr.maint_cost), 0.0) / e.original_value, 0.0) >= 0.15) OR " +
+            "        (e.status = '维修') " +
+            "      ) THEN '中风险' " +
+            "      ELSE '低风险' " +
+            "    END AS riskLevel " +
+            "  FROM equipment e " +
+            "  LEFT JOIN department d ON e.unit_code = d.unit_code " +
+            "  LEFT JOIN category c ON e.category_id = c.category_id " +
+            "  LEFT JOIN maintenance_record mr ON e.equip_id = mr.equip_id " +
+            "  GROUP BY e.equip_id, e.status, e.purchase_date, e.original_value, c.useful_life, e.unit_code, d.unit_name " +
+            ") t "
+        );
+        final List<Object> params = new ArrayList<>();
+        if (unitCode != null && !unitCode.trim().isEmpty()) {
+            sql.append(" WHERE t.unitCode = ? ");
+            params.add(unitCode);
+        }
+        sql.append(" GROUP BY t.unitCode, t.unitName ORDER BY t.unitCode ASC");
+        return jdbcTemplate.query(sql.toString(), new BeanPropertyRowMapper<>(DepartmentRiskDistributionVO.class), params.toArray());
+    }
+
+    /**
+     * 查询各分类的风险设备分布
+     */
+    public List<CategoryRiskDistributionVO> getCategoryRiskDistribution(final String unitCode) {
+        final StringBuilder sql = new StringBuilder(
+            "SELECT " +
+            "  t.categoryId AS categoryId, " +
+            "  t.categoryName AS categoryName, " +
+            "  SUM(CASE WHEN t.riskLevel = '高风险' THEN 1 ELSE 0 END) AS highCount, " +
+            "  SUM(CASE WHEN t.riskLevel = '中风险' THEN 1 ELSE 0 END) AS mediumCount, " +
+            "  SUM(CASE WHEN t.riskLevel = '低风险' THEN 1 ELSE 0 END) AS lowCount " +
+            "FROM ( " +
+            "  SELECT " +
+            "    e.category_id AS categoryId, " +
+            "    c.category_name AS categoryName, " +
+            "    e.unit_code AS unitCode, " +
+            "    CASE " +
+            "      WHEN e.status != '报废' AND ( " +
+            "        (IF(c.useful_life IS NOT NULL AND c.useful_life > 0, TIMESTAMPDIFF(MONTH, e.purchase_date, CURRENT_DATE()) / (c.useful_life * 12.0), 0.0) >= 0.9) OR " +
+            "        (COUNT(mr.maint_id) >= 3) OR " +
+            "        (IF(e.original_value IS NOT NULL AND e.original_value > 0, IFNULL(SUM(mr.maint_cost), 0.0) / e.original_value, 0.0) >= 0.3) " +
+            "      ) THEN '高风险' " +
+            "      WHEN e.status != '报废' AND ( " +
+            "        (IF(c.useful_life IS NOT NULL AND c.useful_life > 0, TIMESTAMPDIFF(MONTH, e.purchase_date, CURRENT_DATE()) / (c.useful_life * 12.0), 0.0) >= 0.75) OR " +
+            "        (COUNT(mr.maint_id) >= 2) OR " +
+            "        (IF(e.original_value IS NOT NULL AND e.original_value > 0, IFNULL(SUM(mr.maint_cost), 0.0) / e.original_value, 0.0) >= 0.15) OR " +
+            "        (e.status = '维修') " +
+            "      ) THEN '中风险' " +
+            "      ELSE '低风险' " +
+            "    END AS riskLevel " +
+            "  FROM equipment e " +
+            "  LEFT JOIN category c ON e.category_id = c.category_id " +
+            "  LEFT JOIN maintenance_record mr ON e.equip_id = mr.equip_id " +
+            "  GROUP BY e.equip_id, e.status, e.purchase_date, e.original_value, c.useful_life, e.category_id, c.category_name, e.unit_code " +
+            ") t "
+        );
+        final List<Object> params = new ArrayList<>();
+        if (unitCode != null && !unitCode.trim().isEmpty()) {
+            sql.append(" WHERE t.unitCode = ? ");
+            params.add(unitCode);
+        }
+        sql.append(" GROUP BY t.categoryId, t.categoryName ORDER BY t.categoryId ASC");
+        return jdbcTemplate.query(sql.toString(), new BeanPropertyRowMapper<>(CategoryRiskDistributionVO.class), params.toArray());
     }
 }

@@ -10,17 +10,18 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
+import lombok.RequiredArgsConstructor;
+
 /**
  * 部门服务实现类
  */
 @Service
+@RequiredArgsConstructor
 public class DepartmentServiceImpl implements DepartmentService {
 
-    @Autowired
-    private DepartmentDao departmentDao;
+    private final DepartmentDao departmentDao;
 
-    @Autowired
-    private EquipmentDao equipmentDao;
+    private final EquipmentDao equipmentDao;
 
     @Override
     public List<Department> getDepts() {
@@ -28,14 +29,14 @@ public class DepartmentServiceImpl implements DepartmentService {
     }
 
     @Override
-    public int addDept(Department department) {
+    public int addDept(final Department department) {
         return departmentDao.addDept(department);
     }
 
     @Override
-    public int deleteDept(String unitCode) {
+    public int deleteDept(final String unitCode) {
         // 前置校验：该部门下若有关联的设备，禁止删除
-        Long count = equipmentDao.getEquipmentsNum(null, unitCode, null, null, null, null);
+        final Long count = equipmentDao.getEquipmentsNum(null, unitCode, null, null, null, null, null);
         if (count != null && count > 0) {
             throw new BusinessException("操作失败：该部门下有关联设备，无法删除！");
         }
@@ -43,12 +44,12 @@ public class DepartmentServiceImpl implements DepartmentService {
     }
 
     @Override
-    public Department getDeptById(String unitCode) {
+    public Department getDeptById(final String unitCode) {
         return departmentDao.getDeptById(unitCode);
     }
 
     @Override
-    public int updateDept(Department department, String unitCode) {
+    public int updateDept(final Department department, final String unitCode) {
         return departmentDao.updateDept(department, unitCode);
     }
 }

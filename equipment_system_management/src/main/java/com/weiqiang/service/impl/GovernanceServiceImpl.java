@@ -4,6 +4,8 @@ import com.weiqiang.dao.GovernanceDao;
 import com.weiqiang.exception.ForbiddenException;
 import com.weiqiang.pojo.EquipmentRiskVO;
 import com.weiqiang.pojo.GovernanceSummaryVO;
+import com.weiqiang.pojo.DepartmentRiskDistributionVO;
+import com.weiqiang.pojo.CategoryRiskDistributionVO;
 import com.weiqiang.pojo.PageBean;
 import com.weiqiang.service.GovernanceService;
 import lombok.RequiredArgsConstructor;
@@ -51,6 +53,9 @@ public class GovernanceServiceImpl implements GovernanceService {
             qualityScore = Math.max(0.0, Math.round(score * 100.0) / 100.0);
         }
 
+        final List<DepartmentRiskDistributionVO> departmentDistribution = governanceDao.getDepartmentRiskDistribution(unit);
+        final List<CategoryRiskDistributionVO> categoryDistribution = governanceDao.getCategoryRiskDistribution(unit);
+
         return GovernanceSummaryVO.builder()
                 .qualityScore(qualityScore)
                 .totalEquipmentCount(totalEquipmentCount)
@@ -63,6 +68,8 @@ public class GovernanceServiceImpl implements GovernanceService {
                 .lowRiskCount(lowRiskCount)
                 .idleCount(idleCount)
                 .costAnomalyCount(costAnomalyCount)
+                .departmentDistribution(departmentDistribution)
+                .categoryDistribution(categoryDistribution)
                 .build();
     }
 

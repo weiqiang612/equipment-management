@@ -129,6 +129,7 @@ export default {
                 localStorage.setItem('role', payload.role)
                 localStorage.setItem('realName', payload.realName || '')
                 localStorage.setItem('username', payload.username || this.loginForm.username)
+                localStorage.setItem('unitCode', payload.unitCode || '')
 
                 this.$message({
                   message: '登录成功',

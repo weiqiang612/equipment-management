@@ -3,6 +3,8 @@ package com.weiqiang.service.impl;
 import com.weiqiang.dao.EquipmentDao;
 import com.weiqiang.dao.ScrapRecordDao;
 import com.weiqiang.exception.BusinessException;
+import com.weiqiang.exception.ForbiddenException;
+import com.weiqiang.utils.BaseContext;
 import com.weiqiang.pojo.Equipment;
 import com.weiqiang.pojo.ScrapRecord;
 import com.weiqiang.service.ScrapRecordService;
@@ -37,6 +39,15 @@ public class ScrapRecordServiceImpl implements ScrapRecordService {
         Equipment equipment = equipmentDao.getEquipmentById(equipId);
         if (equipment == null) {
             throw new BusinessException("该设备不存在");
+        }
+
+        // 资产管理员只能报废本单位的设备
+        Integer currentRole = BaseContext.getCurrentRole();
+        if (currentRole != null && currentRole == 2) {
+            String currentUnitCode = BaseContext.getCurrentUnitCode();
+            if (equipment.getUnitCode() == null || !equipment.getUnitCode().equals(currentUnitCode)) {
+                throw new ForbiddenException("越权操作：无权报废其他单位的设备");
+            }
         }
 
         // 报废状态的设备无法再报废

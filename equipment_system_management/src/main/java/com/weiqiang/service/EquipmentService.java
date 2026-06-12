@@ -28,7 +28,7 @@ public interface EquipmentService {
 
     boolean deleteEquipment(String equipId);
 
-    PageBean getEquipmentsDynamic(String equipName, String unitCode, String categoryId, String status, LocalDate begin, LocalDate end,Integer page,Integer pageSize);
+    PageBean getEquipmentsDynamic(String equipName, String unitCode, String categoryId, String status, LocalDate begin, LocalDate end, String custodian, Integer page, Integer pageSize);
 
-    List<EquipmentDepreciationVO> getEquipmentsDynamicForExport(String equipName, String unitCode, String categoryId, String status, LocalDate begin, LocalDate end);
+    List<EquipmentDepreciationVO> getEquipmentsDynamicForExport(String equipName, String unitCode, String categoryId, String status, LocalDate begin, LocalDate end, String custodian);
 }

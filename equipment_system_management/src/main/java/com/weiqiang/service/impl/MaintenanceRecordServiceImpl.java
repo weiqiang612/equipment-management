@@ -4,6 +4,7 @@ import com.weiqiang.dao.EquipmentDao;
 import com.weiqiang.dao.MaintenanceRecordDao;
 import com.weiqiang.dao.UserDao;
 import com.weiqiang.exception.BusinessException;
+import com.weiqiang.exception.ForbiddenException;
 import com.weiqiang.pojo.Equipment;
 import com.weiqiang.pojo.MaintenanceRecord;
 import com.weiqiang.pojo.User;
@@ -58,6 +59,14 @@ public class MaintenanceRecordServiceImpl implements MaintenanceRecordService {
 
         Integer currentRole = BaseContext.getCurrentRole();
         String currentUsername = BaseContext.getCurrentName();
+
+        // 资产管理员只能报修本单位的设备
+        if (currentRole != null && currentRole == 2) {
+            String currentUnitCode = BaseContext.getCurrentUnitCode();
+            if (equipment.getUnitCode() == null || !equipment.getUnitCode().equals(currentUnitCode)) {
+                throw new ForbiddenException("越权操作：无权报修其他单位的设备");
+            }
+        }
 
         // 报修人约束：普通操作员发起报修时，校验设备保管人是否是自己
         if (currentRole != null && currentRole == 0) {
@@ -132,6 +141,12 @@ public class MaintenanceRecordServiceImpl implements MaintenanceRecordService {
                 throw new BusinessException("操作失败：关联设备未处于维修状态！");
             }
             
+            // 资产管理员只能指派本单位设备工单
+            String currentUnitCode = BaseContext.getCurrentUnitCode();
+            if (equipment.getUnitCode() == null || !equipment.getUnitCode().equals(currentUnitCode)) {
+                throw new ForbiddenException("越权操作：无权指派其他单位的设备维保工单");
+            }
+            
             // 执行指派：更新工单状态为 1，并写入指派的维修工ID和姓名
             int rows = maintenanceRecordDao.assignMaintenance(maintId, targetPersonId, targetUser.getRealName());
             if (rows > 0) {
@@ -157,6 +172,14 @@ public class MaintenanceRecordServiceImpl implements MaintenanceRecordService {
             Equipment equipment = equipmentDao.getEquipmentById(oldRecord.getEquipId());
             if (equipment == null || !"维修".equals(equipment.getStatus())) {
                 throw new BusinessException("操作失败：关联设备不处于维修状态！");
+            }
+
+            // 资产管理员只能登记本单位的设备维保工单
+            if (currentRole == 2) {
+                String currentUnitCode = BaseContext.getCurrentUnitCode();
+                if (equipment.getUnitCode() == null || !equipment.getUnitCode().equals(currentUnitCode)) {
+                    throw new ForbiddenException("越权操作：无权登记其他单位的设备维保工单");
+                }
             }
             
             // 执行登记维保结果：状态置为 2 且设备改回在用

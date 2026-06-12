@@ -3,6 +3,8 @@ package com.weiqiang.service.impl;
 import com.weiqiang.dao.EquipmentDao;
 import com.weiqiang.dao.TransferRecordDao;
 import com.weiqiang.exception.BusinessException;
+import com.weiqiang.exception.ForbiddenException;
+import com.weiqiang.utils.BaseContext;
 import com.weiqiang.pojo.Equipment;
 import com.weiqiang.pojo.TransferRecord;
 import com.weiqiang.service.TransferRecordService;
@@ -41,6 +43,19 @@ public class TransferRecordServiceImpl implements TransferRecordService {
         if (equipment == null) {
             throw new BusinessException("该设备不存在");
         }
+
+        // 资产管理员只能调拨本单位设备，且调出单位必须是其所属单位
+        Integer currentRole = BaseContext.getCurrentRole();
+        if (currentRole != null && currentRole == 2) {
+            String currentUnitCode = BaseContext.getCurrentUnitCode();
+            if (equipment.getUnitCode() == null || !equipment.getUnitCode().equals(currentUnitCode)) {
+                throw new ForbiddenException("越权操作：无权调拨其他单位的设备");
+            }
+            if (transferRecord.getOutUnitCode() == null || !transferRecord.getOutUnitCode().equals(currentUnitCode)) {
+                throw new ForbiddenException("越权操作：调出单位与所属单位不一致");
+            }
+        }
+
         if ("报废".equals(equipment.getStatus())) {
             throw new BusinessException("该设备已报废，禁止进行此操作");
         }

@@ -67,6 +67,7 @@ public class UserServiceImpl implements UserService {
         claims.put("username", dbUser.getUsername());
         claims.put("role", dbUser.getRole());
         claims.put("realName", dbUser.getRealName());
+        claims.put("unitCode", dbUser.getUnitCode());
 
         final String token = jwtUtils.generateToken(claims);
         log.info("用户 {} 登录成功，下发 Token", username);

@@ -1,98 +1,133 @@
 <template>
   <div class="app-container">
     <!-- 搜索栏 -->
-    <div class="search-container" style="margin: 15px 0">
+    <div class="search-container">
       <el-form
-        :inline="true"
         :model="queryParams"
+        label-width="80px"
         size="small"
-        class="compact-form"
       >
-        <el-form-item label="编号/名称">
-          <el-input
-            v-model="queryParams.equipName"
-            placeholder="模糊查询"
-            style="width: 120px"
-            clearable
-          />
-        </el-form-item>
+        <el-row :gutter="20">
+          <el-col :xs="24" :sm="12" :md="8" :lg="6">
+            <el-form-item label="编号/名称">
+              <el-input
+                v-model="queryParams.equipName"
+                placeholder="模糊查询"
+                style="width: 100%"
+                clearable
+              />
+            </el-form-item>
+          </el-col>
 
-        <el-form-item label="单位">
-          <el-select
-            v-model="queryParams.unitCode"
-            placeholder="请选择"
-            style="width: 130px"
-            clearable
-          >
-            <el-option
-              v-for="item in deptOptions"
-              :key="item.unitCode"
-              :label="item.unitName"
-              :value="item.unitCode"
-            />
-          </el-select>
-        </el-form-item>
+          <el-col :xs="24" :sm="12" :md="8" :lg="6">
+            <el-form-item label="单位">
+              <el-select
+                v-model="queryParams.unitCode"
+                :placeholder="role === 2 ? unitPlaceholder : '请选择'"
+                style="width: 100%"
+                :clearable="role !== 2"
+                :disabled="role === 2"
+              >
+                <el-option
+                  v-for="item in deptOptions"
+                  :key="item.unitCode"
+                  :label="item.unitName"
+                  :value="item.unitCode"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
 
-        <el-form-item label="分类">
-          <el-select
-            v-model="queryParams.categoryId"
-            placeholder="请选择"
-            style="width: 130px"
-            clearable
-          >
-            <el-option
-              v-for="item in categoryOptions"
-              :key="item.categoryId"
-              :label="item.categoryName"
-              :value="item.categoryId"
-            />
-          </el-select>
-        </el-form-item>
+          <el-col :xs="24" :sm="12" :md="8" :lg="6">
+            <el-form-item label="分类">
+              <el-select
+                v-model="queryParams.categoryId"
+                placeholder="请选择"
+                style="width: 100%"
+                clearable
+              >
+                <el-option
+                  v-for="item in categoryOptions"
+                  :key="item.categoryId"
+                  :label="item.categoryName"
+                  :value="item.categoryId"
+                />
+              </el-select>
+            </el-form-item>
+          </el-col>
 
-        <el-form-item label="状态">
-          <el-select
-            v-model="queryParams.status"
-            placeholder="状态"
-            style="width: 90px"
-            clearable
-          >
-            <el-option label="在用" value="在用" />
-            <el-option label="维修" value="维修" />
-            <el-option label="报废" value="报废" />
-          </el-select>
-        </el-form-item>
+          <el-col :xs="24" :sm="12" :md="8" :lg="6">
+            <el-form-item label="状态">
+              <el-select
+                v-model="queryParams.status"
+                placeholder="状态"
+                style="width: 100%"
+                clearable
+              >
+                <el-option label="在用" value="在用" />
+                <el-option label="维修" value="维修" />
+                <el-option label="报废" value="报废" />
+              </el-select>
+            </el-form-item>
+          </el-col>
 
-        <el-form-item label="日期">
-          <el-date-picker
-            v-model="dateRange"
-            type="daterange"
-            range-separator="-"
-            start-placeholder="开始"
-            end-placeholder="结束"
-            value-format="yyyy-MM-dd"
-            style="width: 210px"
-            @change="handleDateChange"
-          />
-        </el-form-item>
+          <el-col :xs="24" :sm="12" :md="8" :lg="6">
+            <el-form-item label="保管人">
+              <el-input
+                v-model="queryParams.custodian"
+                placeholder="账号/姓名"
+                style="width: 100%"
+                clearable
+              />
+            </el-form-item>
+          </el-col>
 
-        <el-form-item>
-          <el-button type="primary" icon="el-icon-search" @click="handleSearch"
-            >查询</el-button
-          >
-          <el-button icon="el-icon-refresh" @click="resetQuery">重置</el-button>
-        </el-form-item>
-        <el-form-item>
-          <el-button
-            type="success"
-            icon="el-icon-download"
-            @click="handleExport"
-            >导出明细表</el-button
-          >
-        </el-form-item>
+          <el-col :xs="24" :sm="12" :md="8" :lg="6">
+            <el-form-item label="日期">
+              <el-date-picker
+                v-model="dateRange"
+                type="daterange"
+                range-separator="-"
+                start-placeholder="开始"
+                end-placeholder="结束"
+                value-format="yyyy-MM-dd"
+                style="width: 100%"
+                @change="handleDateChange"
+              />
+            </el-form-item>
+          </el-col>
+
+          <!-- 检索控制按钮组：在 lg 屏幕下居右对齐，填补多余宽度 -->
+          <el-col :xs="24" :sm="12" :md="8" :lg="12" style="text-align: right;">
+            <el-form-item>
+              <el-button type="primary" icon="el-icon-search" @click="handleSearch">查询</el-button>
+              <el-button icon="el-icon-refresh" @click="resetQuery">重置</el-button>
+            </el-form-item>
+          </el-col>
+        </el-row>
       </el-form>
     </div>
-    <!-- 新增按钮 -->
-    <el-button v-if="role === 2 || role === 3" type="primary" @click="handleAdd">新增设备</el-button>
+
+    <!-- 表格工具操作栏 -->
+    <div class="table-toolbar">
+      <div class="left-actions">
+        <el-button
+          v-if="role === 2 || role === 3"
+          type="primary"
+          icon="el-icon-plus"
+          size="small"
+          @click="handleAdd"
+        >新增设备</el-button>
+      </div>
+      <div class="right-actions">
+        <el-button
+          type="success"
+          icon="el-icon-download"
+          size="small"
+          @click="handleExport"
+        >导出明细表</el-button>
+      </div>
+    </div>
     <!-- 设备表格 -->
     <el-table :data="equipmentList" border style="margin-top: 20px">
       <el-table-column prop="equipId" label="设备编号" />
@@ -148,14 +183,14 @@
           </el-popover>
         </template>
       </el-table-column>
-      <el-table-column label="操作" align="center" width="260">
+      <el-table-column label="操作" align="center" width="220">
         <template slot-scope="scope">
-          <el-button size="mini" type="success" @click="handleDetail(scope.row)">详情</el-button>
+          <el-button size="small" type="text" icon="el-icon-view" @click="handleDetail(scope.row)">详情</el-button>
           <!-- 资产管理员(2) 或 系统管理员(3) 可见完整的编辑和下拉菜单 -->
           <template v-if="role === 2 || role === 3">
-            <el-button size="mini" type="primary" style="margin-left: 10px" @click="handleEdit(scope.row)">编辑</el-button>
+            <el-button size="small" type="text" icon="el-icon-edit" style="margin-left: 10px" @click="handleEdit(scope.row)">编辑</el-button>
             <el-dropdown style="margin-left: 10px" trigger="click">
-              <el-button size="mini" type="info">
+              <el-button size="small" type="text" icon="el-icon-more" class="more-btn">
                 更多<i class="el-icon-arrow-down el-icon--right"></i>
               </el-button>
               <el-dropdown-menu slot="dropdown">
@@ -188,23 +223,26 @@
           <template v-else-if="role === 0 || role === 1">
             <el-button
               v-if="role === 0 && !scope.row.custodian && scope.row.status === '在用'"
-              size="mini"
-              type="primary"
+              size="small"
+              type="text"
+              icon="el-icon-shopping-cart-2"
               style="margin-left: 10px"
               @click="handleClaimApply(scope.row)"
               >申请领用</el-button
             >
             <el-button
               v-if="role === 0 && scope.row.custodian === username"
-              size="mini"
-              type="danger"
-              style="margin-left: 10px"
+              size="small"
+              type="text"
+              icon="el-icon-back"
+              style="margin-left: 10px; color: #f56c6c;"
               @click="handleClaimReturn(scope.row)"
               >退还</el-button
             >
             <el-button
-              size="mini"
-              type="warning"
+              size="small"
+              type="text"
+              icon="el-icon-setting"
               :disabled="scope.row.status !== '在用'"
               style="margin-left: 10px"
               @click="handleMaintenance(scope.row)"
@@ -255,7 +293,7 @@
           />
         </el-form-item>
         <el-form-item label="所属单位">
-          <el-select v-model="form.unitCode" placeholder="请选择单位">
+          <el-select v-model="form.unitCode" placeholder="请选择单位" :disabled="role === 2">
             <el-option
               v-for="item in deptOptions"
               :key="item.unitCode"
@@ -484,6 +522,7 @@ export default {
       role: null,
       realName: "",
       username: "", // 当前用户名
+      unitCode: "", // 保存当前用户的单位代码
       users: [], // 用户列表，用于管理员指派时筛选本部门操作员
       maintainers: [], // 存储维修工列表
       equipmentList: [], // 设备列表数据
@@ -524,12 +563,12 @@ export default {
       },
       total: 0,
       dateRange: [],
-      // 搜索参数对象
       queryParams: {
         equipName: "",
         status: "",
         unitCode: "", // 新增：单位筛选
         categoryId: "", // 新增：分类筛选
+        custodian: "", // 新增：保管人筛选
         begin: "",
         end: "",
         page: 1,
@@ -581,6 +620,13 @@ export default {
     operatorOptions() {
       // 过滤出本部门 (unitCode 相同) 的操作员 (role === 0)
       return this.users.filter(u => u.role === 0 && u.unitCode === this.form.unitCode);
+    },
+    unitPlaceholder() {
+      if (this.role === 2 && this.unitCode) {
+        const dept = this.deptOptions.find(d => d.unitCode === this.unitCode);
+        return dept ? dept.unitName : "加载中...";
+      }
+      return "请选择";
     }
   },
   created() {
@@ -588,6 +634,10 @@ export default {
     this.role = roleStr !== null ? parseInt(roleStr, 10) : null;
     this.realName = localStorage.getItem("realName") || "";
     this.username = localStorage.getItem("username") || "";
+    this.unitCode = localStorage.getItem("unitCode") || "";
+    if (this.role === 2 && this.unitCode) {
+      this.queryParams.unitCode = this.unitCode;
+    }
     this.initAllData();
     this.fetchMaintainers();
     if (this.role === 2 || this.role === 3) {
@@ -695,7 +745,7 @@ export default {
         purchaseDate: new Date().toISOString().split("T")[0], // 默认今天
         originalValue: 0,
         model: "",
-        unitCode: "",
+        unitCode: (this.role === 2 && this.unitCode) ? this.unitCode : "",
         categoryId: "",
       };
       this.dialogVisible = true;
@@ -776,8 +826,9 @@ export default {
       this.queryParams = {
         equipName: "",
         status: "",
-        unitCode: "",
+        unitCode: this.role === 2 ? (this.unitCode || "") : "",
         categoryId: "",
+        custodian: "",
         begin: "",
         end: "",
         page: 1,
@@ -1028,3 +1079,49 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.app-container {
+  padding: 20px;
+  background: #f8f9fa;
+  min-height: calc(100vh - 84px);
+}
+
+.search-container {
+  background: #ffffff;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  padding: 20px 20px 4px 20px;
+  box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.03);
+  margin-bottom: 15px;
+}
+
+.table-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  background: #ffffff;
+  padding: 10px 20px;
+  border: 1px solid #ebeef5;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.02);
+}
+
+.left-actions, .right-actions {
+  display: flex;
+  align-items: center;
+}
+
+/* 按钮微调 */
+.el-button--text {
+  font-weight: 500;
+}
+
+.more-btn {
+  color: #909399;
+}
+.more-btn:hover {
+  color: #409eff;
+}
+</style>

@@ -73,23 +73,25 @@ public class EquipmentDao extends BasicDao<Equipment> {
     }
 
     // 根据所给条件进行动态查询
-    public List<Equipment> getEquipmentsDynamic(String equipName, String unitCode, String categoryId, String status, LocalDate begin, LocalDate end, Integer page, Integer pageSize) {
-        StringBuilder sql = new StringBuilder("SELECT equip_id equipId, equip_name equipName, model, status, " +
+    public List<Equipment> getEquipmentsDynamic(final String equipName, final String unitCode, final String categoryId, final String status, final LocalDate begin, final LocalDate end, final String custodian, final Integer page, final Integer pageSize) {
+        final StringBuilder sql = new StringBuilder("SELECT equip_id equipId, equip_name equipName, model, status, " +
                 "purchase_date purchaseDate, original_value originalValue, d.unit_code unitCode ,unit_name unitName " +
                 ", c.category_id categoryId ,category_name categoryName ,c.useful_life usefulLife, c.residual_rate residualRate, e.custodian custodian " +
                 "FROM equipment e " +
                 "JOIN department d " +
                 "ON e.unit_code = d.unit_code " +
                 "JOIN category c " +
-                "ON e.category_id = c.category_id ");
+                "ON e.category_id = c.category_id " +
+                "LEFT JOIN sys_user u " +
+                "ON e.custodian = u.username ");
         sql.append("where 1=1 ");
-        ArrayList<Object> params = new ArrayList<>();
+        final ArrayList<Object> params = new ArrayList<>(16);
 
         // 【P0 级数据隔离逻辑】若为操作员（role=0），强制追加部门及保管人条件限制
-        Integer currentRole = BaseContext.getCurrentRole();
+        final Integer currentRole = BaseContext.getCurrentRole();
         if (currentRole != null && currentRole == 0) {
-            String currentUsername = BaseContext.getCurrentName();
-            String currentUnitCode = BaseContext.getCurrentUnitCode();
+            final String currentUsername = BaseContext.getCurrentName();
+            final String currentUnitCode = BaseContext.getCurrentUnitCode();
             sql.append("AND (e.custodian = ? OR (e.custodian IS NULL AND e.unit_code = ?)) ");
             params.add(currentUsername);
             params.add(currentUnitCode);
@@ -111,6 +113,11 @@ public class EquipmentDao extends BasicDao<Equipment> {
         if (status != null && !status.trim().isEmpty()){
             sql.append("AND status = ? ");
             params.add(status);
+        }
+        if (custodian != null && !custodian.trim().isEmpty()) {
+            sql.append("AND (e.custodian LIKE ? OR u.real_name LIKE ?) ");
+            params.add("%" + custodian + "%");
+            params.add("%" + custodian + "%");
         }
         if (begin != null && end != null) {
             sql.append("AND purchase_date BETWEEN ? AND ? ");
@@ -119,7 +126,7 @@ public class EquipmentDao extends BasicDao<Equipment> {
         }
         sql.append("order by purchase_date desc ");
         if (page != null && pageSize != null) {
-            int offset = (page - 1) * pageSize;
+            final int offset = (page - 1) * pageSize;
             sql.append("limit ?,? ");
             params.add(offset);
             params.add(pageSize);
@@ -128,21 +135,23 @@ public class EquipmentDao extends BasicDao<Equipment> {
     }
 
     // 查询总数量
-    public Long getEquipmentsNum(String equipName, String unitCode, String categoryId, String status, LocalDate begin, LocalDate end) {
-        StringBuilder sql = new StringBuilder("SELECT count(*) " +
+    public Long getEquipmentsNum(final String equipName, final String unitCode, final String categoryId, final String status, final LocalDate begin, final LocalDate end, final String custodian) {
+        final StringBuilder sql = new StringBuilder("SELECT count(*) " +
                 " FROM equipment e " +
                 " JOIN department d " +
                 " ON e.unit_code = d.unit_code " +
                 " JOIN category c " +
-                " ON e.category_id = c.category_id  ");
+                " ON e.category_id = c.category_id  " +
+                " LEFT JOIN sys_user u " +
+                " ON e.custodian = u.username ");
         sql.append("where 1=1 ");
-        ArrayList<Object> params = new ArrayList<>();
+        final ArrayList<Object> params = new ArrayList<>(16);
 
         // 【P0 级数据隔离逻辑】若为操作员（role=0），强制追加部门及保管人条件限制
-        Integer currentRole = BaseContext.getCurrentRole();
+        final Integer currentRole = BaseContext.getCurrentRole();
         if (currentRole != null && currentRole == 0) {
-            String currentUsername = BaseContext.getCurrentName();
-            String currentUnitCode = BaseContext.getCurrentUnitCode();
+            final String currentUsername = BaseContext.getCurrentName();
+            final String currentUnitCode = BaseContext.getCurrentUnitCode();
             sql.append("AND (e.custodian = ? OR (e.custodian IS NULL AND e.unit_code = ?)) ");
             params.add(currentUsername);
             params.add(currentUnitCode);
@@ -164,6 +173,11 @@ public class EquipmentDao extends BasicDao<Equipment> {
         if (status != null && !status.trim().isEmpty()){
             sql.append("AND status = ? ");
             params.add(status);
+        }
+        if (custodian != null && !custodian.trim().isEmpty()) {
+            sql.append("AND (e.custodian LIKE ? OR u.real_name LIKE ?) ");
+            params.add("%" + custodian + "%");
+            params.add("%" + custodian + "%");
         }
         if (begin != null && end != null) {
             sql.append("AND purchase_date BETWEEN ? AND ? ");

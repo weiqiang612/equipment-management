@@ -22,8 +22,8 @@
 - [x] T9 — 补充后端测试，覆盖 Role 0/1 拒绝、Role 2 单位隔离、Role 3 全局只读、风险阈值边界和异常数据降级 · covers: AC-002, AC-003, AC-005
 - [x] T10 — Run `cd equipment_system_management && mvn test` — all tests must pass
 - [x] T11 — Run `cd equipment-web && npm run lint` — frontend lint must pass
-- [ ] T12 — Verify ACs: update `passes` to `true` in spec.md for each passing criterion
-- [ ] T13 — Update `docs/4-tasks/CURRENT_PLAN.md` — keep TASK-012 active and leave this task in Backlog until implementation starts
+- [x] T12 — Verify ACs: update `passes` to `true` in spec.md for each passing criterion
+- [x] T13 — Update `docs/4-tasks/CURRENT_PLAN.md` — keep TASK-012 active and leave this task in Backlog until implementation starts
 
 ## Dependencies
 - T3 requires T1 and T2

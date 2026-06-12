@@ -24,4 +24,6 @@ public class GovernanceSummaryVO {
     private Integer lowRiskCount;
     private Integer idleCount;
     private Integer costAnomalyCount;
+    private java.util.List<DepartmentRiskDistributionVO> departmentDistribution;
+    private java.util.List<CategoryRiskDistributionVO> categoryDistribution;
 }

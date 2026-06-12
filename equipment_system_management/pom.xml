@@ -97,6 +97,7 @@
                 <version>${spring-boot.version}</version>
                 <configuration>
                     <mainClass>com.weiqiang.DatabaseAssignmentApplication</mainClass>
+                    <jvmArguments>-Dfile.encoding=UTF-8</jvmArguments>
                 </configuration>
                 <executions>
                     <execution>

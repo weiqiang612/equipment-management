@@ -61,6 +61,9 @@
               <el-menu-item v-if="role === 2 || role === 3" index="/equipment/scrap">
                 <i class="el-icon-delete"></i>报废记录
               </el-menu-item>
+              <el-menu-item v-if="role === 2 || role === 3" index="/governance">
+                <i class="el-icon-pie-chart"></i>数据治理
+              </el-menu-item>
             </el-submenu>
 
             <el-menu-item v-if="role === 2 || role === 3" index="/category">
@@ -68,9 +71,6 @@
             </el-menu-item>
             <el-menu-item v-if="role === 2 || role === 3" index="/department">
               <i class="el-icon-office-building"></i> <span>单位管理</span>
-            </el-menu-item>
-            <el-menu-item v-if="role === 2 || role === 3" index="/governance">
-              <i class="el-icon-pie-chart"></i> <span>数据治理</span>
             </el-menu-item>
             <el-menu-item v-if="role === 3" index="/user-manage">
               <i class="el-icon-user-solid"></i>
@@ -170,6 +170,7 @@ export default {
           localStorage.removeItem('role')
           localStorage.removeItem('realName')
           localStorage.removeItem('username')
+          localStorage.removeItem('unitCode')
           this.$message({
             type: 'success',
             message: '已安全退出登录'

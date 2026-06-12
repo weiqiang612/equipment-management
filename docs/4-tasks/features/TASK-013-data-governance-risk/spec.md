@@ -38,7 +38,7 @@
       "访问 /governance。",
       "Verify: 页面展示数据质量总览、风险等级分布、维修成本异常概览和长期空闲设备概览。"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-002",
@@ -50,7 +50,7 @@
       "Verify: 返回分页结果包含风险等级、风险原因、健康评分、维修次数、维修费用占比和使用年限占比。",
       "Verify: 高中低风险等级符合 spec 中定义的阈值规则。"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-003",
@@ -64,7 +64,7 @@
       "使用 Role 3 账号访问治理页面。",
       "Verify: 可全局只读查看，不提供业务写操作入口。"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-004",
@@ -72,11 +72,11 @@
     "description": "新增治理 API 必须写入接口契约并使用统一 Result 响应。",
     "steps": [
       "检查 docs/2-designs/api_contract.md。",
-      "Verify: 文档包含 /governance/summary 和 /governance/equipment-risks 的请求头、参数、响应结构和权限说明。",
+      "Verify: 文档包含 /governance/summary 和 /governance/equipment-risks 的请求头、参数、响应结构 and 权限说明。",
       "调用新增接口。",
       "Verify: 响应使用 Result 统一结构，data 为 DTO/VO，不直接暴露数据库实体。"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-005",
@@ -87,7 +87,7 @@
       "调用 GET /governance/summary 和 GET /governance/equipment-risks。",
       "Verify: 接口正常返回，异常数据进入质量问题统计或风险原因说明。"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-006",
@@ -99,7 +99,7 @@
       "检查后端 DAO 查询。",
       "Verify: 汇总统计使用 COUNT、SUM、GROUP BY 等数据库聚合能力，风险清单使用分页查询。"
     ],
-    "passes": false
+    "passes": true
   }
 ]
 ```

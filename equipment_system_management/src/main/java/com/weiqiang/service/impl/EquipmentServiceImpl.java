@@ -2,6 +2,8 @@ package com.weiqiang.service.impl;
 
 import com.weiqiang.dao.EquipmentDao;
 import com.weiqiang.exception.BusinessException;
+import com.weiqiang.exception.ForbiddenException;
+import com.weiqiang.utils.BaseContext;
 import com.weiqiang.pojo.Equipment;
 import com.weiqiang.pojo.EquipmentDepreciationVO;
 import com.weiqiang.pojo.PageBean;
@@ -72,6 +74,11 @@ public class EquipmentServiceImpl implements EquipmentService {
         if (oldEquip != null) {
             throw new BusinessException("操作失败：唯一编号已存在，请勿重复添加！");
         }
+        // 资产管理员只能录入本单位资产
+        Integer currentRole = BaseContext.getCurrentRole();
+        if (currentRole != null && currentRole == 2) {
+            equipment.setUnitCode(BaseContext.getCurrentUnitCode());
+        }
         int rows = equipmentDao.addEquipment(equipment);
         if (rows > 0) {
             operationLogService.record("设备新增", "equipment", equipment.getEquipId(), 
@@ -90,6 +97,16 @@ public class EquipmentServiceImpl implements EquipmentService {
         }
         if ("报废".equals(oldEquip.getStatus())) {
             throw new BusinessException("该设备已报废，禁止进行此操作");
+        }
+
+        // 资产管理员只能更新本单位资产，且强制绑定本单位 unitCode
+        Integer currentRole = BaseContext.getCurrentRole();
+        if (currentRole != null && currentRole == 2) {
+            String currentUnitCode = BaseContext.getCurrentUnitCode();
+            if (oldEquip.getUnitCode() == null || !oldEquip.getUnitCode().equals(currentUnitCode)) {
+                throw new ForbiddenException("越权操作：无权修改其他单位 of 设备");
+            }
+            equipment.setUnitCode(currentUnitCode);
         }
 
         String oldCustodian = oldEquip.getCustodian();
@@ -134,7 +151,20 @@ public class EquipmentServiceImpl implements EquipmentService {
     @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public boolean deleteEquipment(String equipId) {
         Equipment equipment = equipmentDao.getEquipmentById(equipId);
-        String name = equipment != null ? equipment.getEquipName() : "";
+        if (equipment == null) {
+            throw new BusinessException("该设备不存在");
+        }
+        
+        // 资产管理员只能删除本单位设备
+        Integer currentRole = BaseContext.getCurrentRole();
+        if (currentRole != null && currentRole == 2) {
+            String currentUnitCode = BaseContext.getCurrentUnitCode();
+            if (equipment.getUnitCode() == null || !equipment.getUnitCode().equals(currentUnitCode)) {
+                throw new ForbiddenException("越权操作：无权删除其他单位 of 设备");
+            }
+        }
+
+        String name = equipment.getEquipName();
         boolean success = equipmentDao.deleteEquipment(equipId);
         if (success) {
             operationLogService.record("设备删除", "equipment", equipId, 
@@ -144,9 +174,16 @@ public class EquipmentServiceImpl implements EquipmentService {
     }
 
     @Override
-    public PageBean getEquipmentsDynamic(String equipName, String unitCode, String categoryId, String status, LocalDate begin, LocalDate end, Integer page, Integer pageSize) {
-        Long total = equipmentDao.getEquipmentsNum(equipName, unitCode, categoryId, status, begin, end);
-        List<Equipment> equipmentsDynamic = equipmentDao.getEquipmentsDynamic(equipName, unitCode, categoryId, status, begin, end, page, pageSize);
+    public PageBean getEquipmentsDynamic(String equipName, String unitCode, String categoryId, String status, LocalDate begin, LocalDate end, String custodian, Integer page, Integer pageSize) {
+        // 资产管理员只能检索本单位的设备列表
+        Integer currentRole = BaseContext.getCurrentRole();
+        String finalUnitCode = unitCode;
+        if (currentRole != null && currentRole == 2) {
+            finalUnitCode = BaseContext.getCurrentUnitCode();
+        }
+
+        Long total = equipmentDao.getEquipmentsNum(equipName, finalUnitCode, categoryId, status, begin, end, custodian);
+        List<Equipment> equipmentsDynamic = equipmentDao.getEquipmentsDynamic(equipName, finalUnitCode, categoryId, status, begin, end, custodian, page, pageSize);
 
         if (equipmentsDynamic == null) {
             equipmentsDynamic = new ArrayList<>();
@@ -158,8 +195,15 @@ public class EquipmentServiceImpl implements EquipmentService {
     }
 
     @Override
-    public List<EquipmentDepreciationVO> getEquipmentsDynamicForExport(String equipName, String unitCode, String categoryId, String status, LocalDate begin, LocalDate end) {
-        List<Equipment> list = equipmentDao.getEquipmentsDynamic(equipName, unitCode, categoryId, status, begin, end, null, null);
+    public List<EquipmentDepreciationVO> getEquipmentsDynamicForExport(String equipName, String unitCode, String categoryId, String status, LocalDate begin, LocalDate end, String custodian) {
+        // 资产管理员只能导出本单位的设备列表
+        Integer currentRole = BaseContext.getCurrentRole();
+        String finalUnitCode = unitCode;
+        if (currentRole != null && currentRole == 2) {
+            finalUnitCode = BaseContext.getCurrentUnitCode();
+        }
+
+        List<Equipment> list = equipmentDao.getEquipmentsDynamic(equipName, finalUnitCode, categoryId, status, begin, end, custodian, null, null);
         return list.stream().map(this::calculateAccumulated).collect(Collectors.toList());
     }
 

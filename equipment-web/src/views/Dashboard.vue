@@ -1099,10 +1099,14 @@ export default {
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.05);
 }
 
+.kpi-card /deep/ .el-card__body {
+  padding: 12px 15px !important;
+}
+
 .kpi-card-body {
   display: flex;
   align-items: center;
-  padding: 10px 5px;
+  padding: 0;
 }
 
 .kpi-icon-wrapper {
@@ -1112,7 +1116,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-right: 16px;
+  margin-right: 12px;
   flex-shrink: 0;
 }
 
@@ -1122,14 +1126,16 @@ export default {
 
 .kpi-info {
   flex-grow: 1;
+  min-width: 0;
 }
 
 .kpi-value {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: bold;
   color: #303133;
   line-height: 1.2;
   margin-bottom: 4px;
+  white-space: nowrap;
 }
 
 .money-symbol {

@@ -17,13 +17,13 @@
         >
           <!-- 1. 设备操作员菜单 (role === 0) -->
           <template v-if="role === 0">
-            <el-menu-item index="/equipment">
-              <i class="el-icon-notebook-2"></i>
-              <span slot="title">我的设备</span>
-            </el-menu-item>
             <el-menu-item index="/dashboard">
               <i class="el-icon-data-line"></i>
               <span slot="title">数据看板</span>
+            </el-menu-item>
+            <el-menu-item index="/equipment">
+              <i class="el-icon-notebook-2"></i>
+              <span slot="title">我的设备</span>
             </el-menu-item>
             <el-menu-item index="/equipment/claim">
               <i class="el-icon-document"></i>
@@ -37,6 +37,10 @@
 
           <!-- 2. 非操作员菜单 (role === 1, 2, 3) -->
           <template v-else>
+            <el-menu-item index="/dashboard">
+              <i class="el-icon-data-line"></i>
+              <span slot="title">数据看板</span>
+            </el-menu-item>
             <el-submenu index="1">
               <template slot="title">
                 <i class="el-icon-monitor"></i>
@@ -58,10 +62,6 @@
                 <i class="el-icon-delete"></i>报废记录
               </el-menu-item>
             </el-submenu>
-            <el-menu-item index="/dashboard">
-              <i class="el-icon-data-line"></i>
-              <span slot="title">数据看板</span>
-            </el-menu-item>
 
             <el-menu-item v-if="role === 2 || role === 3" index="/category">
               <i class="el-icon-menu"></i> <span>分类管理</span>

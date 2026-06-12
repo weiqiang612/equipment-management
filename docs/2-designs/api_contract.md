@@ -586,9 +586,9 @@
 
 ---
 
-### 13. 获取数据治理与运营风险总览 (Get Governance Summary)
+### 13. 获取数据治理总览 (Get Governance Summary)
 
-仅限 **资产管理员 (role=2)** 与 **系统管理员 (role=3)** 调用。资产管理员仅可查看本单位的数据质量和风险总览，系统管理员可看全局总览。
+获取当前登录部门的数据治理与运营风险总览。Role 2 资产管理员只能查看本单位数据，Role 3 系统管理员可查看全局数据。Role 0/1 拒绝访问。
 
 *   **请求路径**：`GET /governance/summary`
 *   **请求头**：
@@ -601,40 +601,34 @@
           "code": 1,
           "msg": "success",
           "data": {
-            "qualityScore": 92.5,
-            "totalIssues": 5,
-            "riskDistribution": {
-              "high": 3,
-              "medium": 8,
-              "low": 94
-            },
-            "costAnomaliesCount": 2,
-            "longTermIdleCount": 4
+            "qualityScore": 95.5,
+            "totalEquipmentCount": 100,
+            "issueCount": 4,
+            "missingFieldsCount": 1,
+            "mismatchCount": 2,
+            "duplicateCount": 2,
+            "highRiskCount": 3,
+            "mediumRiskCount": 5,
+            "lowRiskCount": 92,
+            "idleCount": 10,
+            "costAnomalyCount": 2
           }
-        }
-        ```
-    *   **失败 (Role 0 或 Role 1 访问拒绝)**：返回 403：
-        ```json
-        {
-          "code": 0,
-          "msg": "权限不足，拒绝访问",
-          "data": null
         }
         ```
 
 ---
 
-### 14. 分页查询风险设备清单 (Get Equipment Risks Page)
+### 14. 查询风险设备清单 (Get Equipment Risk List)
 
-仅限 **资产管理员 (role=2)** 与 **系统管理员 (role=3)** 调用。资产管理员只能查询本单位名下的风险设备，系统管理员可全局检索。
+分页查询受风险影响的设备列表，支持根据风险等级、使用单位、分类编码筛选。Role 2 资产管理员仅能过滤本单位的数据，Role 3 系统管理员可获取全局数据。Role 0/1 拒绝访问。
 
 *   **请求路径**：`GET /governance/equipment-risks`
 *   **请求头**：
     *   `token: <JWT_TOKEN_STRING>`
 *   **请求参数**：
-    *   `riskLevel` (可选，风险等级筛选，值范围: `"high"`, `"medium"`, `"low"`)
-    *   `unitCode` (可选，单位代码筛选)
-    *   `categoryId` (可选，分类编码筛选)
+    *   `riskLevel` (可选，风险等级："高风险", "中风险", "低风险")
+    *   `unitCode` (可选，单位代码。Role 2 只能传本单位代码，传其他或不传时均由后端强制过滤为本单位代码)
+    *   `categoryId` (可选，分类编码)
     *   `page` (默认 1)
     *   `pageSize` (默认 10)
 *   **响应示例**：
@@ -644,25 +638,26 @@
           "code": 1,
           "msg": "success",
           "data": {
-            "total": 11,
+            "total": 3,
             "rows": [
               {
                 "equipId": "E001",
                 "equipName": "研发笔记本",
                 "model": "ThinkPad T14",
-                "unitCode": "D001",
-                "unitName": "研发部",
                 "categoryId": "C001",
                 "categoryName": "计算机设备",
+                "unitCode": "D001",
+                "unitName": "研发部",
                 "custodian": "operator1",
-                "custodianRealName": "张三",
                 "status": "在用",
-                "healthScore": 65.0,
-                "riskLevel": "high",
-                "riskReasons": "使用年限占比(92%)已超阈值; 维修费用占原值(35%)已超阈值",
+                "healthScore": 40,
+                "riskLevel": "高风险",
+                "riskReasons": "维保次数超标,使用年限占比超标",
                 "maintenanceCount": 3,
-                "maintenanceCostRatio": 0.35,
-                "ageRatio": 0.92
+                "costRatio": 0.12,
+                "ageRatio": 0.95,
+                "originalValue": 8000.00,
+                "purchaseDate": "2021-06-01"
               }
             ]
           }

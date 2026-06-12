@@ -38,6 +38,11 @@ public class LoginCheckInterceptor implements HandlerInterceptor {
             return true;
         }
 
+        // 放行获取部门信息的 GET 请求，使注册页能够拉取部门列表
+        if ("GET".equalsIgnoreCase(request.getMethod()) && request.getRequestURI().startsWith("/departments")) {
+            return true;
+        }
+
         // 2. 获取请求头中的 token
         final String token = request.getHeader(HEADER_TOKEN_NAME);
 

@@ -45,20 +45,21 @@ if (-not (Test-Path $LOG_DIR)) {
 Remove-Item -LiteralPath $STDOUT_LOG, $STDERR_LOG -Force -ErrorAction SilentlyContinue
 
 $ShellCommand = Get-Command pwsh -ErrorAction SilentlyContinue
-if (-not $ShellCommand) {
-  $ShellCommand = Get-Command powershell -ErrorAction Stop
+$Shell = Get-Command pwsh -ErrorAction SilentlyContinue
+if (-not $Shell) {
+  $Shell = Get-Command powershell -ErrorAction Stop
+}
+$Shell = $Shell.Source
+
+$StartParams = @{
+    FilePath = $Shell
+    ArgumentList = "-NoProfile", "-NoExit", "-Command", "`$Host.UI.RawUI.WindowTitle='EquipTrack Backend Server'; $STARTUP_COMMAND"
+    PassThru = $true
 }
 
-$Process = Start-Process `
-  -FilePath $ShellCommand.Source `
-  -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", $STARTUP_COMMAND) `
-  -WorkingDirectory (Get-Location).Path `
-  -RedirectStandardOutput $STDOUT_LOG `
-  -RedirectStandardError $STDERR_LOG `
-  -WindowStyle Hidden `
-  -PassThru
+$Process = Start-Process @StartParams
 
-Write-Host "[init] Server starting (PID $($Process.Id), logs -> $STDOUT_LOG / $STDERR_LOG)"
+Write-Host "[init] Server starting in a new window..."
 Write-Host "[init] Waiting for server (timeout: ${HEALTH_TIMEOUT}s)..."
 
 $Count = 0
@@ -82,9 +83,8 @@ while ($Count -lt $HEALTH_TIMEOUT) {
 }
 
 if ($Count -ge $HEALTH_TIMEOUT) {
-  Write-Host "[ERROR] Server not healthy after ${HEALTH_TIMEOUT}s."
-  Write-Host "[ERROR] Check stderr first: $STDERR_LOG"
-  Write-Host "[ERROR] Then check stdout: $STDOUT_LOG"
+  Write-Host "[ERROR] Server not healthy after ${HEALTH_TIMEOUT}s." -ForegroundColor Red
+  Write-Host "[ERROR] Please check the popped backend window for startup errors." -ForegroundColor Red
   exit 1
 }
 

@@ -1,124 +1,98 @@
 # =============================================================================
-# init.ps1 — AI Agent environment bootstrap (Windows PowerShell)
-# Run at the start of every Agent session: .\init.ps1
+# init.ps1 - AI Agent environment bootstrap
+# Windows path. Run on demand when the dev server needs starting.
 # =============================================================================
-# ⚙️  CONFIGURATION — review before first run
 $APP_PORT = 8080
 $HEALTH_CHECK_URL = "http://localhost:8080/"
-$STARTUP_COMMAND = "cd equipment_system_management && mvn spring-boot:run"
-$ROOT_DIR = Get-Location
-$LOG_FILE = "$ROOT_DIR\logs\dev_server.log"
+$STARTUP_COMMAND = "Set-Location -LiteralPath 'equipment_system_management'; mvn spring-boot:run"
+$LOG_DIR = "logs"
+$STDOUT_LOG = Join-Path $LOG_DIR "dev_server.out.log"
+$STDERR_LOG = Join-Path $LOG_DIR "dev_server.err.log"
 $HEALTH_TIMEOUT = 60
-# =============================================================================
 
 $ErrorActionPreference = "Stop"
 Write-Host "[init] Bootstrapping equipment-management..."
 
-# 1. Verify required tools
 $Missing = @()
 if (-not (Get-Command java -ErrorAction SilentlyContinue)) { $Missing += "java" }
 if (-not (Get-Command mvn -ErrorAction SilentlyContinue)) { $Missing += "mvn" }
 if (-not (Get-Command node -ErrorAction SilentlyContinue)) { $Missing += "node" }
 if (-not (Get-Command npm -ErrorAction SilentlyContinue)) { $Missing += "npm" }
-
 if ($Missing.Count -gt 0) {
-  Write-Host "[ERROR] Missing tools: $($Missing -join ', '). Install them and re-run." -ForegroundColor Red
-  Exit 1
+  Write-Host "[ERROR] Missing tools: $($Missing -join ', ')"
+  exit 1
 }
-Write-Host "[init] ✓ Tools OK"
+Write-Host "[init] Tools OK"
 
-# 2. Extract Environment Variables from IDEA workspace.xml (Zero-maintenance Auto-Extraction)
-$WorkspaceXmlPath = Get-ChildItem -Path $ROOT_DIR -Filter "workspace.xml" -Recurse -Depth 3 -ErrorAction SilentlyContinue | Where-Object { $_.FullName -like "*\.idea\workspace.xml" } | Select-Object -First 1 -ExpandProperty FullName
-if ($WorkspaceXmlPath -and (Test-Path $WorkspaceXmlPath)) {
-  Write-Host "[init] Detected IDEA configuration ($WorkspaceXmlPath). Auto-extracting env variables..." -ForegroundColor Cyan
-  try {
-    $Content = Get-Content $WorkspaceXmlPath -Raw
-    # Find all configuration blocks containing envs
-    $ConfigMatches = [regex]::Matches($Content, '(?s)<configuration[^>]*>.*?</configuration>')
-    foreach ($Match in $ConfigMatches) {
-      $ConfigBlock = $Match.Value
-      if ($ConfigBlock -like "*<envs>*") {
-        $ConfigName = if ($ConfigBlock -match 'name="([^"]+)"') { $Matches[1] } else { "Unknown" }
-        $EnvMatches = [regex]::Matches($ConfigBlock, '<env name="([^"]+)" value="([^"]+)"')
-        foreach ($EnvMatch in $EnvMatches) {
-          $Name = $EnvMatch.Groups[1].Value
-          $Value = $EnvMatch.Groups[2].Value
-          if ($Name) {
-            # Inject into the process environment
-            [System.Environment]::SetEnvironmentVariable($Name, $Value, [System.EnvironmentVariableTarget]::Process)
-            Write-Host "[init]   Loaded env: $Name (from $ConfigName)" -ForegroundColor DarkCyan
-          }
-        }
-      }
-    }
-  } catch {
-    Write-Host "[WARNING] Failed to parse workspace.xml: $_. Continuing with defaults." -ForegroundColor Yellow
+$PortPids = @()
+try {
+  $PortPids = Get-NetTCPConnection -LocalPort $APP_PORT -State Listen -ErrorAction Stop |
+    Select-Object -ExpandProperty OwningProcess -Unique
+} catch {}
+
+foreach ($PidToStop in $PortPids) {
+  if ($PidToStop) {
+    Write-Host "[init] Releasing port $APP_PORT (PID $PidToStop)..."
+    try { Stop-Process -Id ([int]$PidToStop) -Force -ErrorAction Stop } catch {}
   }
 }
+Start-Sleep -Seconds 1
 
-# 3. Clear port if occupied
-$PortOwner = Get-NetTCPConnection -LocalPort $APP_PORT -ErrorAction SilentlyContinue
-if ($PortOwner) {
-  $PIDToKill = $PortOwner.OwningProcess | Select-Object -Unique
-  if ($PIDToKill) {
-    Write-Host "[init] Releasing port $APP_PORT (PID $PIDToKill)..."
-    Stop-Process -Id $PIDToKill -Force -ErrorAction SilentlyContinue
-    Start-Sleep -Seconds 1
-  }
+if (-not (Test-Path $LOG_DIR)) {
+  New-Item -ItemType Directory -Path $LOG_DIR | Out-Null
 }
 
-# 4. Start dev server in background
-if (-not (Test-Path "$ROOT_DIR\logs")) {
-  New-Item -ItemType Directory -Path "$ROOT_DIR\logs" | Out-Null
-}
-$CommandToRun = "$STARTUP_COMMAND *>&1 > `"$LOG_FILE`""
-Start-Process powershell -ArgumentList "-NoProfile -Command `"$CommandToRun`"" -WindowStyle Hidden
-Write-Host "[init] Server starting in background (logs → $LOG_FILE)"
+Remove-Item -LiteralPath $STDOUT_LOG, $STDERR_LOG -Force -ErrorAction SilentlyContinue
 
-# 5. Health check loop
-Write-Host "[init] Waiting for server (timeout: $($HEALTH_TIMEOUT)s)..."
+$ShellCommand = Get-Command pwsh -ErrorAction SilentlyContinue
+if (-not $ShellCommand) {
+  $ShellCommand = Get-Command powershell -ErrorAction Stop
+}
+
+$Process = Start-Process `
+  -FilePath $ShellCommand.Source `
+  -ArgumentList @("-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", $STARTUP_COMMAND) `
+  -WorkingDirectory (Get-Location).Path `
+  -RedirectStandardOutput $STDOUT_LOG `
+  -RedirectStandardError $STDERR_LOG `
+  -WindowStyle Hidden `
+  -PassThru
+
+Write-Host "[init] Server starting (PID $($Process.Id), logs -> $STDOUT_LOG / $STDERR_LOG)"
+Write-Host "[init] Waiting for server (timeout: ${HEALTH_TIMEOUT}s)..."
+
 $Count = 0
-$Success = $false
 while ($Count -lt $HEALTH_TIMEOUT) {
   try {
-    $Response = Invoke-WebRequest -Uri $HEALTH_CHECK_URL -UseBasicParsing -TimeoutSec 1 -ErrorAction Stop
-    if ($Response.StatusCode -eq 200) {
-      Write-Host "[init] ✓ Server ready at $HEALTH_CHECK_URL" -ForegroundColor Green
-      $Success = $true
+    $TcpClient = [System.Net.Sockets.TcpClient]::new()
+    $Connect = $TcpClient.BeginConnect("localhost", $APP_PORT, $null, $null)
+    if ($Connect.AsyncWaitHandle.WaitOne(1000, $false)) {
+      $TcpClient.EndConnect($Connect)
+      $TcpClient.Close()
+      Write-Host "[init] Server reachable on port $APP_PORT"
       break
     }
-  } catch {
-    # Ignore connection errors during startup
-  }
+    $TcpClient.Close()
+  } catch {}
   Start-Sleep -Seconds 1
-  $Count++
+  $Count += 1
   if ($Count % 10 -eq 0) {
-    Write-Host "[init]   Waiting... $($Count)s"
+    Write-Host "[init]   Waiting... ${Count}s"
   }
 }
 
-if (-not $Success) {
-  Write-Host "[ERROR] Server not healthy after $($HEALTH_TIMEOUT)s — check $LOG_FILE" -ForegroundColor Red
-  Exit 1
+if ($Count -ge $HEALTH_TIMEOUT) {
+  Write-Host "[ERROR] Server not healthy after ${HEALTH_TIMEOUT}s."
+  Write-Host "[ERROR] Check stderr first: $STDERR_LOG"
+  Write-Host "[ERROR] Then check stdout: $STDOUT_LOG"
+  exit 1
 }
 
-# 6. Git context (Robust multi-repo detection)
 Write-Host ""
-$GitRepoPath = Get-ChildItem -Path $ROOT_DIR -Filter ".git" -Directory -Recurse -Depth 3 -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty Parent
-if ($GitRepoPath) {
-  Write-Host "[init] ── Git status ($($GitRepoPath.Name)) ───────────────────"
-  Set-Location $GitRepoPath.FullName
-  git status -s
-  Write-Host ""
-  Write-Host "[init] ── Recent commits ($($GitRepoPath.Name)) ──────────────"
-  git log -n 3 --oneline
-  Set-Location $ROOT_DIR
-} else {
-  Write-Host "[init] ── Git status ─────────────────────────────────"
-  git status -s
-  Write-Host ""
-  Write-Host "[init] ── Recent commits ────────────────────────────"
-  git log -n 3 --oneline
-}
+Write-Host "[init] -- Git status --------------------------------"
+git status -s
 Write-Host ""
-Write-Host "[init] ✓ Environment ready."
+Write-Host "[init] -- Recent commits ----------------------------"
+git log -n 3 --oneline
+Write-Host ""
+Write-Host "[init] Environment ready."

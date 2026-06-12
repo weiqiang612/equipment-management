@@ -25,6 +25,7 @@ import javax.servlet.http.HttpServletResponse;
 public class LoginCheckInterceptor implements HandlerInterceptor {
 
     private final UserDao userDao;
+    private final JwtUtils jwtUtils;
 
     private static final String HEADER_TOKEN_NAME = "token";
     private static final String NOT_LOGIN_MSG = "NOT_LOGIN";
@@ -48,7 +49,7 @@ public class LoginCheckInterceptor implements HandlerInterceptor {
 
         // 4. 验证并解析 token
         try {
-            final Claims claims = JwtUtils.parseToken(token);
+            final Claims claims = jwtUtils.parseToken(token);
             
             // 解析基本字段
             final Integer id = claims.get("id", Integer.class);

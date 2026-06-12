@@ -32,6 +32,7 @@ public class UserServiceImpl implements UserService {
     private final com.weiqiang.dao.EquipmentDao equipmentDao;
     private final com.weiqiang.dao.EquipmentClaimDao equipmentClaimDao;
     private final com.weiqiang.dao.DepartmentDao departmentDao;
+    private final JwtUtils jwtUtils;
 
     private static final int DEFAULT_ROLE = 0;
     private static final int CLAIMS_MAP_CAPACITY = 5;
@@ -65,7 +66,7 @@ public class UserServiceImpl implements UserService {
         claims.put("role", dbUser.getRole());
         claims.put("realName", dbUser.getRealName());
 
-        final String token = JwtUtils.generateToken(claims);
+        final String token = jwtUtils.generateToken(claims);
         log.info("用户 {} 登录成功，下发 Token", username);
         return Result.success(token);
     }

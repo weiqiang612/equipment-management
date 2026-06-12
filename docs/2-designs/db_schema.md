@@ -46,6 +46,11 @@
         *   `applicant` 逻辑参照用户表 `sys_user.username` (申请人/原保管人)
         *   `approver` 逻辑参照用户表 `sys_user.username` (审批人/指派人)
 
+### 2.4 操作审计模块
+*   **操作审计日志表 (operation_log)**
+    *   关系模式：审计日志(<u>id</u>, *operator*, operator_role, op_type, target_type, target_id, op_time, summary, status, error_msg)
+    *   *外键说明*：`operator` 逻辑参照用户表 `sys_user.username` (操作人)
+
 ---
 
 ## 3. 数据完整性与范式评价
@@ -73,6 +78,7 @@
     *   `idx_transfer_equip` / `idx_transfer_date`：加速调拨流水的检索与排序。
     *   `idx_maint_equip` / `idx_scrap_equip`：优化维保记录和报废单的读取性能。
     *   `idx_claim_equip` / `idx_claim_applicant` / `idx_claim_status`：加速设备领用申请记录的匹配和查询。
+    *   `idx_op_log_operator` / `idx_op_log_target` / `idx_op_log_time`：加速审计日志按操作人、业务对象及时间的检索。
 
 ---
 
@@ -200,4 +206,22 @@ CREATE TABLE `t_equipment_claim` (
   KEY `idx_claim_applicant` (`applicant`),
   KEY `idx_claim_status` (`status`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='设备领用与审批记录表';
+
+-- 9. 操作审计日志表
+CREATE TABLE `operation_log` (
+  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `operator` varchar(50) NOT NULL COMMENT '操作人用户名(关联 sys_user.username)',
+  `operator_role` tinyint(4) NOT NULL COMMENT '操作人角色: 0-设备操作员, 1-维修工程师, 2-资产管理员, 3-系统管理员',
+  `op_type` varchar(50) NOT NULL COMMENT '操作类型',
+  `target_type` varchar(50) NOT NULL COMMENT '业务对象类型',
+  `target_id` varchar(50) NOT NULL COMMENT '业务对象ID',
+  `op_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '操作执行时间',
+  `summary` varchar(500) DEFAULT NULL COMMENT '操作摘要',
+  `status` tinyint(4) NOT NULL DEFAULT '1' COMMENT '结果状态: 0-失败, 1-成功',
+  `error_msg` text DEFAULT NULL COMMENT '错误异常信息',
+  PRIMARY KEY (`id`),
+  KEY `idx_op_log_operator` (`operator`),
+  KEY `idx_op_log_target` (`target_type`, `target_id`),
+  KEY `idx_op_log_time` (`op_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='操作审计日志表';
 ```

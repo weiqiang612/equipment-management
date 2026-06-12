@@ -46,6 +46,12 @@
 ### TASK-012: 操作审计与设备生命周期详情
 - [ ] Implementation (15 tasks)
 
+### TASK-013: 数据治理与运营风险分析
+- [ ] Implementation (13 tasks)
+
+### TASK-014: AI 辅助报告与建议草案
+- [ ] Implementation (14 tasks)
+
 ## Completed
 
 `docs/4-tasks/features/TASK-011-dashboard/`
@@ -94,4 +100,6 @@
 
 ## Notes for next session
 
-- Backlog: `docs/4-tasks/features/TASK-012-operation-audit-lifecycle/`
+- Active remains `docs/4-tasks/features/TASK-012-operation-audit-lifecycle/`
+- Backlog: `docs/4-tasks/features/TASK-013-data-governance-risk/`
+- Backlog: `docs/4-tasks/features/TASK-014-ai-assisted-reporting/`

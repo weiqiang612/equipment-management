@@ -32,7 +32,13 @@ Web 浏览器 (SPA) ➔ 控制层 (Controller) ➔ 业务逻辑层 (Service) ➔
 
 ### 2.4 数据治理与 AI 辅助层
 *   **定位**：在看板和审计稳定后，逐步增加数据质量检查、健康评分、异常分析和 AI 报告。
-*   **实现边界**：先使用可解释规则生成候选风险，再由 AI 进行总结、解释和建议草案生成。
+*   **数据治理边界**：第一版通过 `GovernanceController -> GovernanceService -> GovernanceDao` 提供实时聚合和分页查询，不新增数据库表、索引或迁移脚本。
+*   **规则计算方式**：风险阈值以 Service 层命名常量实现，包括使用年限占比、维修次数、维修费用占原值和当前状态；数据质量问题作为查询结果降级返回，不导致接口 500。
+*   **权限要求**：Role 2 按单位边界查看治理结果，Role 3 全局只读，Role 0/1 禁止访问治理接口。
+*   **AI 边界**：先使用可解释规则生成候选风险，再由 AI 进行总结、解释和建议草案生成。
+*   **AI 编排方式**：AI 辅助能力通过 `AiAssistantController -> AiAssistantService -> AI Provider Adapter` 调用外部模型；上下文由后端从 Dashboard、Governance、Operation Log 和 Equipment Detail 的 DTO/VO 摘要中组装。
+*   **Provider 降级**：AI Provider 未配置、超时或失败时，服务返回明确错误，不影响看板、治理、审计和设备详情等非 AI 功能。
+*   **数据最小化**：发送给 AI 的上下文必须过滤密码、Token、完整用户敏感信息和无关全量业务数据。
 *   **安全要求**：AI 不直接调用高风险业务写接口，所有审批、报废、恢复数据库等动作必须由人工确认并审计留痕。
 
 ---

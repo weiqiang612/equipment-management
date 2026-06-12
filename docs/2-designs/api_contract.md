@@ -447,3 +447,306 @@
           }
         }
         ```
+
+---
+
+### 11. 获取数据治理总览 (Get Governance Summary)
+
+获取资产管理员或系统管理员可见的数据治理与运营风险总览。Role 2 只能查看本单位或业务管理范围内的数据，Role 3 可全局只读查看；Role 0/1 禁止访问。
+
+*   **请求路径**：`GET /governance/summary`
+*   **请求头**：
+    *   `token: <JWT_TOKEN_STRING>`
+*   **请求参数**：无
+*   **响应结构 (Result.data)**：
+    ```json
+    {
+      "quality": {
+        "issueCount": 5,
+        "invalidStatusCount": 1,
+        "missingCategoryCount": 1,
+        "missingUnitCount": 1,
+        "invalidValueCount": 1,
+        "duplicateEquipmentCount": 1
+      },
+      "riskDistribution": [
+        { "name": "高风险", "value": 3 },
+        { "name": "中风险", "value": 8 },
+        { "name": "低风险", "value": 94 }
+      ],
+      "costAbnormal": {
+        "count": 4,
+        "totalMaintCost": 12600.00
+      },
+      "idleEquipment": {
+        "count": 12
+      },
+      "departmentRiskDistribution": [
+        { "unitCode": "D001", "unitName": "研发部", "highRisk": 2, "mediumRisk": 3, "lowRisk": 20 }
+      ],
+      "categoryRiskDistribution": [
+        { "categoryId": "C001", "categoryName": "计算机设备", "highRisk": 2, "mediumRisk": 4, "lowRisk": 30 }
+      ]
+    }
+    ```
+*   **失败响应**：
+    *   未登录返回 401。
+    *   Role 0/1 越权访问返回 403 或统一权限不足响应。
+
+---
+
+### 12. 查询风险设备清单 (List Equipment Risks)
+
+分页查询风险设备清单。风险等级由后端按照固定规则实时计算，前端不得拉取全量业务列表自行统计。
+
+*   **请求路径**：`GET /governance/equipment-risks`
+*   **请求头**：
+    *   `token: <JWT_TOKEN_STRING>`
+*   **请求参数**：
+    *   `riskLevel` (可选)：`HIGH`、`MEDIUM`、`LOW`
+    *   `unitCode` (可选)：单位代码。Role 2 传入非本单位代码时不得返回越权明细。
+    *   `categoryId` (可选)：分类编码
+    *   `page` (默认 1)
+    *   `pageSize` (默认 10)
+*   **响应结构 (Result.data)**：
+    ```json
+    {
+      "total": 1,
+      "rows": [
+        {
+          "equipId": "E001",
+          "equipName": "研发笔记本",
+          "model": "ThinkPad",
+          "status": "维修",
+          "unitCode": "D001",
+          "unitName": "研发部",
+          "categoryId": "C001",
+          "categoryName": "计算机设备",
+          "originalValue": 8000.00,
+          "maintenanceCount": 3,
+          "maintenanceCost": 2600.00,
+          "maintenanceCostRatio": 0.325,
+          "ageRatio": 0.91,
+          "riskLevel": "HIGH",
+          "healthScore": 42,
+          "riskReasons": [
+            "使用年限占比超过 90%",
+            "维修次数达到 3 次",
+            "维修费用超过原值 30%"
+          ],
+          "qualityIssues": []
+        }
+      ]
+    }
+    ```
+*   **失败响应**：
+    *   未登录返回 401。
+    *   Role 0/1 越权访问返回 403 或统一权限不足响应。
+
+---
+
+### 13. 查询操作审计日志 (List Operation Logs)
+
+仅限 **系统管理员 (role=3)** 调用，分页检索和过滤审计流水平面。
+
+*   **请求路径**：`GET /system/log/list`
+*   **请求头**：
+    *   `token: <JWT_TOKEN_STRING>`
+*   **请求参数**：
+    *   `operator` (可选)：操作人用户名模糊匹配
+    *   `opType` (可选)：操作类型模糊匹配
+    *   `status` (可选)：结果状态（0-失败, 1-成功）
+    *   `page` (默认 1)
+    *   `pageSize` (默认 10)
+*   **响应结构 (Result.data)**：
+    ```json
+    {
+      "total": 120,
+      "rows": [
+        {
+          "id": 1,
+          "operator": "admin",
+          "operatorRole": 3,
+          "opType": "设备新增",
+          "targetType": "EQUIPMENT",
+          "targetId": "E001",
+          "opTime": "2026-06-12 10:00:00",
+          "summary": "新增设备：ThinkPad笔记本 (E001)",
+          "status": 1,
+          "errorMsg": null
+        }
+      ]
+    }
+    ```
+*   **失败响应**：
+    *   未登录返回 401。
+    *   Role 0/1/2 越权访问返回 403。
+
+---
+
+### 14. 获取设备生命周期详情 (Get Equipment Life Cycle Detail)
+
+获取单台设备全生命周期详情。包括设备信息、折旧分析、保管人领用维保调拨等历史（以时间线呈现）。
+此接口包含 RBAC 过滤校验（Role 0 仅限查看名下保管设备详情，Role 1/2 仅限查看本单位设备详情，Role 3 可看全部）。
+
+*   **请求路径**：`GET /equipment/detail/{equipId}`
+*   **请求头**：
+    *   `token: <JWT_TOKEN_STRING>`
+*   **请求参数**：路径参数 `equipId`
+*   **响应结构 (Result.data)**：
+    ```json
+    {
+      "equipment": {
+        "equipId": "E001",
+        "equipName": "研发笔记本",
+        "model": "ThinkPad",
+        "status": "在用",
+        "purchaseDate": "2024-06-10",
+        "originalValue": 8000.00,
+        "unitCode": "D001",
+        "unitName": "研发部",
+        "categoryId": "C001",
+        "categoryName": "计算机设备",
+        "custodian": "operator1",
+        "custodianName": "设备操作员小张",
+        "usefulLife": 5,
+        "residualRate": 0.05,
+        "netValue": 4933.33
+      },
+      "claims": [
+        {
+          "claimId": 1,
+          "applicant": "operator1",
+          "applicantName": "设备操作员小张",
+          "approver": "admin",
+          "approverName": "系统管理员",
+          "status": 1,
+          "remark": "日常研发使用",
+          "createTime": "2026-06-11 10:00:00",
+          "updateTime": "2026-06-11 11:00:00"
+        }
+      ],
+      "maintenances": [
+        {
+          "maintId": 1,
+          "maintDate": "2026-06-12",
+          "maintContent": "更换键盘",
+          "maintCost": 200.00,
+          "maintPerson": "维修工程师小李",
+          "reporter": "operator1",
+          "reporterName": "设备操作员小张",
+          "faultDescription": "键盘某些键失灵",
+          "maintStatus": 2
+        }
+      ],
+      "transfers": [
+        {
+          "transferId": 1,
+          "outUnitCode": "D002",
+          "outUnitName": "市场部",
+          "inUnitCode": "D001",
+          "inUnitName": "研发部",
+          "transferDate": "2026-06-10",
+          "changeType": "调拨",
+          "operator": "admin",
+          "reason": "项目需要"
+        }
+      ],
+      "scrap": {
+        "scrapNo": "S2026061201",
+        "scrapDate": "2026-06-12",
+        "approver": "admin",
+        "reason": "设备严重老化"
+      },
+      "auditTimeline": [
+        {
+          "id": 10,
+          "operator": "admin",
+          "operatorRole": 3,
+          "opType": "设备新增",
+          "opTime": "2026-06-10 10:00:00",
+          "summary": "新增设备：研发笔记本 (E001)",
+          "status": 1
+        }
+      ]
+    }
+    ```
+*   **失败响应**：
+    *   未登录返回 401。
+    *   越权调用返回 403 或统一权限不足响应。
+
+---
+
+### 15. 生成资产运营报告草案 (Generate AI Operation Report Draft)
+
+为资产管理员或系统管理员生成资产运营周报/月报草案。AI 输入由后端基于看板、治理、审计和生命周期摘要组装，AI 输出仅作为人工编辑草案，不执行任何业务写操作。
+
+*   **请求路径**：`POST /ai/reports/operations/draft`
+*   **请求头**：
+    *   `Content-Type: application/json`
+    *   `token: <JWT_TOKEN_STRING>`
+*   **请求体**：
+    ```json
+    {
+      "period": "monthly",
+      "unitCode": "D001",
+      "includeAudit": true,
+      "includeGovernance": true
+    }
+    ```
+*   **响应结构 (Result.data)**：
+    ```json
+    {
+      "draftTitle": "2026-06 资产运营月报草案",
+      "draftText": "本月设备总量保持稳定，高风险设备主要集中在计算机设备分类...",
+      "sections": [
+        { "title": "资产概况", "content": "..." },
+        { "title": "风险摘要", "content": "..." },
+        { "title": "建议动作", "content": "..." }
+      ],
+      "evidence": [
+        { "type": "GOVERNANCE", "summary": "高风险设备 3 台" },
+        { "type": "DASHBOARD", "summary": "维修中设备 12 台" }
+      ],
+      "advisoryOnly": true,
+      "providerStatus": "OK"
+    }
+    ```
+*   **失败响应**：
+    *   未登录返回 401。
+    *   Role 0/1 越权访问返回 403。
+    *   AI Provider 未配置时返回 `code=0`，`msg="AI 服务未配置"`。
+    *   AI Provider 超时或调用失败时返回可诊断错误信息，不影响非 AI 业务接口。
+
+---
+
+### 16. 生成设备生命周期 AI 摘要 (Generate AI Equipment Summary)
+
+基于单台设备生命周期详情生成自然语言摘要、风险证据和人工复核建议。此接口不修改设备状态，不创建审批、调拨、报废或维修记录。
+
+*   **请求路径**：`POST /ai/equipment/{equipId}/summary`
+*   **请求头**：
+    *   `token: <JWT_TOKEN_STRING>`
+*   **请求参数**：路径参数 `equipId`
+*   **响应结构 (Result.data)**：
+    ```json
+    {
+      "equipId": "E001",
+      "summary": "该设备于 2024-06-10 入库，目前由 operator1 保管，累计维修 3 次...",
+      "riskEvidence": [
+        "维修次数达到 3 次",
+        "维修费用超过原值 30%",
+        "使用年限占比超过 90%"
+      ],
+      "suggestions": [
+        "建议资产管理员发起报废评估",
+        "建议人工复核最近一次维修记录"
+      ],
+      "advisoryOnly": true,
+      "providerStatus": "OK"
+    }
+    ```
+*   **失败响应**：
+    *   未登录返回 401。
+    *   越权访问设备详情返回 403。
+    *   AI Provider 未配置时返回 `code=0`，`msg="AI 服务未配置"`。

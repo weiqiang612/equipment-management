@@ -148,11 +148,12 @@
           </el-popover>
         </template>
       </el-table-column>
-      <el-table-column label="操作" align="center" width="240">
+      <el-table-column label="操作" align="center" width="260">
         <template slot-scope="scope">
+          <el-button size="mini" type="success" @click="handleDetail(scope.row)">详情</el-button>
           <!-- 资产管理员(2) 或 系统管理员(3) 可见完整的编辑和下拉菜单 -->
           <template v-if="role === 2 || role === 3">
-            <el-button size="mini" type="primary" @click="handleEdit(scope.row)">编辑</el-button>
+            <el-button size="mini" type="primary" style="margin-left: 10px" @click="handleEdit(scope.row)">编辑</el-button>
             <el-dropdown style="margin-left: 10px" trigger="click">
               <el-button size="mini" type="info">
                 更多<i class="el-icon-arrow-down el-icon--right"></i>
@@ -189,6 +190,7 @@
               v-if="role === 0 && !scope.row.custodian && scope.row.status === '在用'"
               size="mini"
               type="primary"
+              style="margin-left: 10px"
               @click="handleClaimApply(scope.row)"
               >申请领用</el-button
             >
@@ -196,6 +198,7 @@
               v-if="role === 0 && scope.row.custodian === username"
               size="mini"
               type="danger"
+              style="margin-left: 10px"
               @click="handleClaimReturn(scope.row)"
               >退还</el-button
             >
@@ -203,6 +206,7 @@
               size="mini"
               type="warning"
               :disabled="scope.row.status !== '在用'"
+              style="margin-left: 10px"
               @click="handleMaintenance(scope.row)"
               >维修</el-button
             >
@@ -695,6 +699,9 @@ export default {
         categoryId: "",
       };
       this.dialogVisible = true;
+    },
+    handleDetail(row) {
+      this.$router.push(`/equipment/detail/${row.equipId}`);
     },
     handleEdit(row) {
       this.isEdit = true;

@@ -77,6 +77,10 @@
               <i class="el-icon-receiving"></i>
               <span>备份与恢复</span>
             </el-menu-item>
+            <el-menu-item v-if="role === 3" index="/system/log">
+              <i class="el-icon-document"></i>
+              <span>操作审计</span>
+            </el-menu-item>
           </template>
         </el-menu>
       </el-aside>

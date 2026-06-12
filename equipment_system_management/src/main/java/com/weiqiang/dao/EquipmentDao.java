@@ -28,7 +28,7 @@ public class EquipmentDao extends BasicDao<Equipment> {
     public Equipment getEquipmentById(String equipId) {
         String sql = "SELECT equip_id equipId, equip_name equipName, model, status, " +
                 "purchase_date purchaseDate, original_value originalValue, d.unit_code unitCode ,unit_name unitName " +
-                ", c.category_id categoryId ,category_name categoryName, e.custodian custodian " +
+                ", c.category_id categoryId ,category_name categoryName, c.useful_life usefulLife, c.residual_rate residualRate, e.custodian custodian " +
                 "FROM equipment e " +
                 "JOIN department d " +
                 "ON e.unit_code = d.unit_code " +

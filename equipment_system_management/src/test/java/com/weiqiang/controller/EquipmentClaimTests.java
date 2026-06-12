@@ -50,12 +50,27 @@ public class EquipmentClaimTests {
 
     @BeforeEach
     public void setup() throws Exception {
+        // 确保 operation_log 表存在
+        userDao.update("CREATE TABLE IF NOT EXISTS `operation_log` (" +
+                "  `id` int(11) NOT NULL AUTO_INCREMENT COMMENT '自增主键'," +
+                "  `operator` varchar(50) NOT NULL COMMENT '操作人用户名'," +
+                "  `operator_role` tinyint(4) NOT NULL COMMENT '操作人角色: 0-设备操作员, 1-维修工程师, 2-资产管理员, 3-系统管理员'," +
+                "  `op_type` varchar(50) NOT NULL COMMENT '操作类型'," +
+                "  `target_type` varchar(50) NOT NULL COMMENT '业务对象类型'," +
+                "  `target_id` varchar(50) NOT NULL COMMENT '业务对象ID'," +
+                "  `op_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '操作时间'," +
+                "  `summary` varchar(500) NOT NULL COMMENT '操作摘要'," +
+                "  `status` tinyint(4) NOT NULL COMMENT '状态: 1-成功, 0-失败'," +
+                "  `error_msg` varchar(500) DEFAULT NULL COMMENT '失败错误信息'," +
+                "  PRIMARY KEY (`id`)" +
+                ") ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='操作审计日志表';");
         // 1. 清理数据
-        userDao.update("DELETE FROM maintenance_record WHERE equip_id LIKE 'TE%'");
-        userDao.update("DELETE FROM transfer_record WHERE equip_id LIKE 'TE%'");
-        userDao.update("DELETE FROM scrap_record WHERE equip_id LIKE 'TE%'");
-        userDao.update("DELETE FROM t_equipment_claim WHERE equip_id LIKE 'TE%'");
-        userDao.update("DELETE FROM equipment WHERE equip_id LIKE 'TE%'");
+        // 1. 清理数据
+        userDao.update("DELETE FROM maintenance_record WHERE equip_id LIKE 'TE%' OR equip_id IN (SELECT equip_id FROM equipment WHERE unit_code IN ('D98', 'D99'))");
+        userDao.update("DELETE FROM transfer_record WHERE equip_id LIKE 'TE%' OR equip_id IN (SELECT equip_id FROM equipment WHERE unit_code IN ('D98', 'D99'))");
+        userDao.update("DELETE FROM scrap_record WHERE equip_id LIKE 'TE%' OR equip_id IN (SELECT equip_id FROM equipment WHERE unit_code IN ('D98', 'D99'))");
+        userDao.update("DELETE FROM t_equipment_claim WHERE equip_id LIKE 'TE%' OR equip_id IN (SELECT equip_id FROM equipment WHERE unit_code IN ('D98', 'D99'))");
+        userDao.update("DELETE FROM equipment WHERE unit_code IN ('D98', 'D99') OR equip_id LIKE 'TE%'");
         userDao.update("UPDATE sys_user SET unit_code = NULL WHERE unit_code IN ('D98', 'D99')");
         userDao.update("DELETE FROM sys_user WHERE username LIKE 'claim_%' OR username LIKE 'test_%'");
         userDao.update("DELETE FROM department WHERE unit_code IN ('D98', 'D99')");

@@ -6,6 +6,7 @@ import com.weiqiang.exception.BusinessException;
 import com.weiqiang.pojo.Equipment;
 import com.weiqiang.pojo.TransferRecord;
 import com.weiqiang.service.TransferRecordService;
+import com.weiqiang.service.OperationLogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +21,7 @@ public class TransferRecordServiceImpl implements TransferRecordService {
 
     private final TransferRecordDao transferRecordDao;
     private final EquipmentDao equipmentDao;
+    private final OperationLogService operationLogService;
 
     @Override
     public List<TransferRecord> getTransferRecords() {
@@ -32,6 +34,7 @@ public class TransferRecordServiceImpl implements TransferRecordService {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public boolean transferEquip(String equipId, TransferRecord transferRecord) {
         // 1. 防报废穿透：已报废的设备禁止调拨
         Equipment equipment = equipmentDao.getEquipmentById(equipId);
@@ -52,7 +55,14 @@ public class TransferRecordServiceImpl implements TransferRecordService {
 
         String oldCustodian = equipment.getCustodian();
 
-        return transferRecordDao.transferEquip(equipId, transferRecord, oldCustodian);
+        boolean success = transferRecordDao.transferEquip(equipId, transferRecord, oldCustodian);
+        if (success) {
+            Long lastId = (Long) transferRecordDao.singleSelect("SELECT LAST_INSERT_ID()");
+            Integer transferId = lastId != null ? lastId.intValue() : null;
+            operationLogService.record("设备调拨", "transfer_record", String.valueOf(transferId), 
+                "设备调拨: 设备 " + equipId + " 从单位 " + transferRecord.getOutUnitCode() + " 调拨至单位 " + transferRecord.getInUnitCode() + "，变动类型: " + transferRecord.getChangeType() + "，经办人: " + transferRecord.getOperator(), 1, null);
+        }
+        return success;
     }
 
     @Override

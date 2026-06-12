@@ -7,6 +7,7 @@ import com.weiqiang.pojo.User;
 import com.weiqiang.service.UserService;
 import com.weiqiang.utils.JwtUtils;
 import lombok.RequiredArgsConstructor;
+import com.weiqiang.service.OperationLogService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +34,7 @@ public class UserServiceImpl implements UserService {
     private final com.weiqiang.dao.EquipmentClaimDao equipmentClaimDao;
     private final com.weiqiang.dao.DepartmentDao departmentDao;
     private final JwtUtils jwtUtils;
+    private final OperationLogService operationLogService;
 
     private static final int DEFAULT_ROLE = 0;
     private static final int CLAIMS_MAP_CAPACITY = 5;
@@ -196,6 +198,8 @@ public class UserServiceImpl implements UserService {
                 claim.setStatus(CLAIM_STATUS_RETURNED); // 已退还
                 claim.setRemark("用户被删除导致保管关系自动清退");
                 equipmentClaimDao.addClaim(claim);
+                operationLogService.record("设备退还", "equipment", eq.getEquipId(), 
+                    "用户 " + user.getUsername() + " 被删除导致保管关系自动清退设备 " + eq.getEquipId(), 1, null);
             }
         }
 

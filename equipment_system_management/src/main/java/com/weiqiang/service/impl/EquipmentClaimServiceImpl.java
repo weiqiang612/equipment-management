@@ -10,6 +10,7 @@ import com.weiqiang.pojo.PageBean;
 import com.weiqiang.service.EquipmentClaimService;
 import com.weiqiang.utils.BaseContext;
 import lombok.RequiredArgsConstructor;
+import com.weiqiang.service.OperationLogService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +25,7 @@ public class EquipmentClaimServiceImpl implements EquipmentClaimService {
 
     private final EquipmentClaimDao equipmentClaimDao;
     private final EquipmentDao equipmentDao;
+    private final OperationLogService operationLogService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -64,7 +66,14 @@ public class EquipmentClaimServiceImpl implements EquipmentClaimService {
         claim.setStatus(EquipmentClaim.STATUS_PENDING); // 待审批
         claim.setRemark(remark);
 
-        return equipmentClaimDao.addClaim(claim) > 0;
+        boolean success = equipmentClaimDao.addClaim(claim) > 0;
+        if (success) {
+            Long lastId = (Long) equipmentClaimDao.singleSelect("SELECT LAST_INSERT_ID()");
+            Integer claimId = lastId != null ? lastId.intValue() : null;
+            operationLogService.record("领用申请", "t_equipment_claim", String.valueOf(claimId), 
+                "申请人 " + currentUsername + " 申请领用设备 " + equipId, 1, null);
+        }
+        return success;
     }
 
     @Override
@@ -85,7 +94,12 @@ public class EquipmentClaimServiceImpl implements EquipmentClaimService {
             throw new BusinessException("操作失败：只能撤回“待审批”状态的申请");
         }
 
-        return equipmentClaimDao.updateClaimStatus(claimId, EquipmentClaim.STATUS_CANCELLED, null, "申请人撤回") > 0;
+        boolean success = equipmentClaimDao.updateClaimStatus(claimId, EquipmentClaim.STATUS_CANCELLED, null, "申请人撤回") > 0;
+        if (success) {
+            operationLogService.record("领用撤回", "t_equipment_claim", claimId.toString(), 
+                "申请人 " + currentUsername + " 撤回了领用申请 " + claimId, 1, null);
+        }
+        return success;
     }
 
     @Override
@@ -125,9 +139,16 @@ public class EquipmentClaimServiceImpl implements EquipmentClaimService {
             if (row1 <= 0 || row2 <= 0) {
                 throw new RuntimeException("审批处理失败，事务回滚");
             }
+            operationLogService.record("领用同意", "t_equipment_claim", claimId.toString(), 
+                "审批人 " + currentUsername + " 同意了领用申请 " + claimId + "，设备保管人变更为 " + claim.getApplicant(), 1, null);
             return true;
         } else if (action == 2) { // 拒绝
-            return equipmentClaimDao.updateClaimStatus(claimId, EquipmentClaim.STATUS_REJECTED, currentUsername, remark) > 0;
+            boolean success = equipmentClaimDao.updateClaimStatus(claimId, EquipmentClaim.STATUS_REJECTED, currentUsername, remark) > 0;
+            if (success) {
+                operationLogService.record("领用拒绝", "t_equipment_claim", claimId.toString(), 
+                    "审批人 " + currentUsername + " 拒绝了领用申请 " + claimId + "，审批意见: " + remark, 1, null);
+            }
+            return success;
         } else {
             throw new BusinessException("无效的审批动作");
         }
@@ -161,6 +182,8 @@ public class EquipmentClaimServiceImpl implements EquipmentClaimService {
         if (row1 <= 0 || row2 <= 0) {
             throw new RuntimeException("退还处理失败，事务回滚");
         }
+        operationLogService.record("设备退还", "equipment", equipId, 
+            "保管人 " + currentUsername + " 退还设备 " + equipId + "，退还备注: " + remark, 1, null);
         return true;
     }
 

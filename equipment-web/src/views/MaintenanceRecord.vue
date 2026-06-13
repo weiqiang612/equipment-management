@@ -53,7 +53,7 @@
           </template>
         </el-table-column>
         <el-table-column prop="maintPerson" label="检修人" width="100" />
-        <el-table-column v-if="role !== 3" label="操作" align="center" width="160">
+        <el-table-column v-if="role !== 3" label="操作" align="center" width="200">
           <template slot-scope="scope">
             <!-- 维修工(1)只能修改自己负责的名下工单，资产管理员(2)可以修改所有 -->
             <el-button
@@ -62,6 +62,14 @@
               type="primary"
               @click="handleEdit(scope.row)"
               >修改</el-button
+            >
+            <!-- 复核按钮：对于状态为 2 且登录用户是资产管理员 (role=2) 展示 -->
+            <el-button
+              v-if="scope.row.maintStatus === 2 && role === 2"
+              size="mini"
+              type="warning"
+              @click="handleReview(scope.row)"
+              >复核</el-button
             >
             <!-- 只有资产管理员(2)可以删除 -->
             <el-button
@@ -118,7 +126,7 @@
           />
         </el-form-item>
 
-        <el-form-item label="检修费用" prop="maintCost">
+        <el-form-item v-if="!isEdit || form.maintStatus !== 0" label="检修费用" prop="maintCost">
           <el-input-number
             v-model="form.maintCost"
             :min="0"
@@ -128,7 +136,7 @@
         </el-form-item>
 
         <el-form-item label="检修人" prop="maintPersonId">
-          <el-select v-model="form.maintPersonId" placeholder="请选择检修人" style="width: 100%" @change="handleMaintainerChange">
+          <el-select v-model="form.maintPersonId" placeholder="请选择检修人" style="width: 100%" @change="handleMaintainerChange" :disabled="isEdit && form.maintStatus === 1">
             <el-option
               v-for="item in maintainers"
               :key="item.id"
@@ -138,7 +146,7 @@
           </el-select>
         </el-form-item>
 
-        <el-form-item label="检修内容" prop="maintContent">
+        <el-form-item v-if="!isEdit || form.maintStatus !== 0" label="检修内容" prop="maintContent">
           <el-input type="textarea" v-model="form.maintContent" :rows="3" />
         </el-form-item>
       </el-form>
@@ -146,6 +154,59 @@
       <div slot="footer">
         <el-button @click="dialogVisible = false">取 消</el-button>
         <el-button type="primary" @click="submitForm" :loading="submitLoading"
+          >确 定</el-button
+        >
+      </div>
+    </el-dialog>
+
+    <el-dialog
+      title="完工复核"
+      :visible.sync="reviewDialogVisible"
+      width="500px"
+      @closed="resetReviewForm"
+    >
+      <el-form
+        :model="reviewForm"
+        ref="reviewForm"
+        :rules="reviewRules"
+        label-width="100px"
+        size="small"
+      >
+        <el-form-item label="复核结论" prop="action">
+          <el-radio-group v-model="reviewForm.action">
+            <el-radio :label="3">复核通过恢复可用</el-radio>
+            <el-radio :label="4">转报废</el-radio>
+          </el-radio-group>
+        </el-form-item>
+
+        <el-form-item label="复核意见" prop="reviewComments">
+          <el-input
+            type="textarea"
+            v-model="reviewForm.reviewComments"
+            :rows="3"
+            placeholder="请输入复核意见"
+          />
+        </el-form-item>
+
+        <el-form-item
+          v-if="reviewForm.action === 4"
+          label="报废原因"
+          prop="reason"
+        >
+          <el-input
+            type="textarea"
+            v-model="reviewForm.reason"
+            :rows="3"
+            placeholder="请输入报废原因"
+          />
+        </el-form-item>
+      </el-form>
+      <div slot="footer">
+        <el-button @click="reviewDialogVisible = false">取 消</el-button>
+        <el-button
+          type="primary"
+          @click="submitReview"
+          :loading="reviewSubmitLoading"
           >确 定</el-button
         >
       </div>
@@ -159,6 +220,9 @@ import {
   addMaintenance,
   updateMaintenance,
   deleteMaintenance,
+  assignMaintenance,
+  completeMaintenance,
+  reviewMaintenance,
 } from "@/api/MaintenanceRecord";
 import { getEquipments } from "@/api/equipment";
 import { getMaintainers } from "@/api/user";
@@ -183,6 +247,7 @@ export default {
         maintCost: 0,
         maintPerson: "",
         maintPersonId: null,
+        maintStatus: null,
       },
       rules: {
         equipId: [{ required: true, message: "请选择设备", trigger: "change" }],
@@ -205,6 +270,30 @@ export default {
           { required: true, message: "请选择检修人", trigger: "change" },
         ],
       },
+      reviewDialogVisible: false,
+      reviewSubmitLoading: false,
+      reviewForm: {
+        maintId: null,
+        action: 3,
+        reviewComments: "",
+        reason: "",
+      },
+      reviewRules: {
+        action: [{ required: true, message: "请选择复核结论", trigger: "change" }],
+        reviewComments: [{ required: true, message: "请输入复核意见", trigger: "blur" }],
+        reason: [
+          {
+            validator: (rule, value, callback) => {
+              if (this.reviewForm.action === 4 && !value) {
+                callback(new Error("请输入报废原因"));
+              } else {
+                callback();
+              }
+            },
+            trigger: "blur",
+          },
+        ],
+      },
     };
   },
   filters: {
@@ -224,7 +313,9 @@ export default {
       const statusMap = {
         0: "待指派",
         1: "维修中",
-        2: "已完成",
+        2: "待复核",
+        3: "已复核可用",
+        4: "转报废",
       };
       return statusMap[status] || "未知";
     },
@@ -232,12 +323,14 @@ export default {
       const statusMap = {
         0: "info",
         1: "warning",
-        2: "success",
+        2: "primary",
+        3: "success",
+        4: "danger",
       };
       return statusMap[status] || "info";
     },
     canEdit(row) {
-      if (row.maintStatus === 2) {
+      if (row.maintStatus >= 2) {
         return false;
       }
       if (this.role === 2) {
@@ -300,8 +393,16 @@ export default {
         const { maintId, equipId } = this.form;
         try {
           if (this.isEdit) {
-            await updateMaintenance(maintId, this.form);
-            this.$message.success("修改成功");
+            if (this.form.maintStatus === 0) {
+              await assignMaintenance(maintId, this.form);
+              this.$message.success("指派成功");
+            } else if (this.form.maintStatus === 1) {
+              await completeMaintenance(maintId, this.form);
+              this.$message.success("登记完工成功");
+            } else {
+              await updateMaintenance(maintId, this.form);
+              this.$message.success("修改成功");
+            }
           } else {
             // 补录：对应后端 @PostMapping("/{equipId}")
             await addMaintenance(equipId, this.form);
@@ -313,6 +414,39 @@ export default {
           this.submitLoading = false;
         }
       });
+    },
+    handleReview(row) {
+      this.reviewForm.maintId = row.maintId;
+      this.reviewDialogVisible = true;
+    },
+    submitReview() {
+      this.$refs.reviewForm.validate(async (valid) => {
+        if (!valid) return;
+        this.reviewSubmitLoading = true;
+        try {
+          await reviewMaintenance(this.reviewForm.maintId, {
+            action: this.reviewForm.action,
+            reviewComments: this.reviewForm.reviewComments,
+            reason: this.reviewForm.reason,
+          });
+          this.$message.success("复核完成");
+          this.reviewDialogVisible = false;
+          this.loadList();
+        } finally {
+          this.reviewSubmitLoading = false;
+        }
+      });
+    },
+    resetReviewForm() {
+      if (this.$refs.reviewForm) {
+        this.$refs.reviewForm.resetFields();
+      }
+      this.reviewForm = {
+        maintId: null,
+        action: 3,
+        reviewComments: "",
+        reason: "",
+      };
     },
     confirmDelete(row) {
       this.$confirm('仅可撤销待指派工单，撤销后设备将恢复为在用，确认继续？', "提示", {

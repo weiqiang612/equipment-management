@@ -4,7 +4,7 @@ server:
 # 连接数据库
 spring:
   profiles:
-    active: dev # 默认激活开发环境
+    active: dev,local # 默认激活开发环境与本地私有配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
 
@@ -19,8 +19,8 @@ jwt:
 ai:
   provider:
     api-key: ${AI_API_KEY:}
-    base-url: ${AI_BASE_URL:https://api.openai.com/v1}
-    model: ${AI_MODEL:gpt-4o-mini}
+    base-url: ${AI_BASE_URL:https://api.siliconflow.cn/v1}
+    model: ${AI_MODEL:deepseek-ai/DeepSeek-V4-Flash}
     timeout-ms: 30000
 
 

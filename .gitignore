@@ -26,6 +26,7 @@ equipment_system_management/target/
 equipment_system_management/build/
 equipment_system_management/application-*.yml
 equipment_system_management/application-*.properties
+**/application-local.yml
 .apt_generated
 .classpath
 .factorypath

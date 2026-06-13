@@ -24,7 +24,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 /**
  * AI 辅助决策集成测试类
  */
-@SpringBootTest
+@SpringBootTest(properties = {"ai.provider.api-key="})
 @AutoConfigureMockMvc
 public class AiAssistantTests {
 

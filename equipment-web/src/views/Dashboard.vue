@@ -10,7 +10,7 @@
           </h2>
           <p class="welcome-subtitle">
             当前身份：<span class="role-badge">{{ formatRole(role) }}</span> | 
-            所属单位：<span>{{ unitCode || '系统总部' }}</span>
+            所属单位：<span>{{ getDeptName(unitCode) }}</span>
           </p>
         </div>
       </div>
@@ -375,6 +375,7 @@
 <script>
 import * as echarts from 'echarts'
 import { getDashboardSummary } from '@/api/dashboard'
+import { getDepts } from '@/api/department'
 
 export default {
   name: 'UserDashboard',
@@ -390,6 +391,7 @@ export default {
       resizeTimer: null,
       chartTimer: null,
       chartInstances: [],
+      departments: [],
       // 聚合数据结构
       dashboardData: {
         role: null,
@@ -481,6 +483,7 @@ export default {
   },
   created() {
     this.updateLocalUserInfo()
+    this.fetchDepartments()
     this.startClock()
   },
   mounted() {
@@ -495,6 +498,18 @@ export default {
     this.disposeCharts()
   },
   methods: {
+    fetchDepartments() {
+      getDepts()
+        .then(data => {
+          this.departments = data || []
+        })
+        .catch(() => {})
+    },
+    getDeptName(unitCode) {
+      if (!unitCode) return '系统总部'
+      const dept = this.departments.find(d => d.unitCode === unitCode)
+      return dept ? dept.unitName : unitCode
+    },
     updateLocalUserInfo() {
       const roleStr = localStorage.getItem('role')
       this.role = roleStr !== null ? parseInt(roleStr, 10) : 2 // 默认设为资产管理员2

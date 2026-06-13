@@ -8,6 +8,7 @@ export function draftOperationReport(data) {
   return request({
     url: '/ai/reports/operations/draft',
     method: 'post',
+    timeout: 60000,
     data
   })
 }
@@ -19,6 +20,7 @@ export function draftOperationReport(data) {
 export function getEquipmentAiSummary(equipId) {
   return request({
     url: `/ai/equipment/${equipId}/summary`,
-    method: 'post'
+    method: 'post',
+    timeout: 60000
   })
 }

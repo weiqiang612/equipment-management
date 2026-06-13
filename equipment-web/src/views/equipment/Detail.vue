@@ -344,10 +344,10 @@ export default {
       this.aiSummaryData = null
       try {
         const res = await getEquipmentAiSummary(this.equipId)
-        if (res.code === 1) {
-          this.aiSummaryData = res.data
+        if (res) {
+          this.aiSummaryData = res
         } else {
-          this.aiErrorMsg = res.msg || '获取 AI 生命周期摘要失败'
+          this.aiErrorMsg = '获取 AI 生命周期摘要失败'
         }
       } catch (err) {
         this.aiErrorMsg = err.message || '网络连接失败，请稍后重试'

@@ -503,6 +503,16 @@ public class WorkflowSecurityTests {
                 "SELECT maint_id FROM maintenance_record WHERE equip_id = 'TE012' ORDER BY maint_id DESC LIMIT 1");
         assertNotNull(pendingMaintId);
 
+        // 跨单位资产管理员 (来自 D99) 尝试删除该工单 -> 预期 403 Forbidden 拦截
+        userDao.update("UPDATE sys_user SET role = 2 WHERE username = ?", OP2_USERNAME);
+        String crossMgrToken = loginTestUser(OP2_USERNAME);
+        mockMvc.perform(delete("/maintenanceRecords/" + pendingMaintId)
+                        .header("token", crossMgrToken)
+                        .param("equipId", "TE012"))
+                .andExpect(status().isForbidden());
+        // 恢复角色
+        userDao.update("UPDATE sys_user SET role = 0 WHERE username = ?", OP2_USERNAME);
+
         mockMvc.perform(delete("/maintenanceRecords/" + pendingMaintId)
                         .header("token", mgrToken)
                         .param("equipId", "TE012"))

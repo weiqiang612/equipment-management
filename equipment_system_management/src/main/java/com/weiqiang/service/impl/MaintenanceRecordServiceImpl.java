@@ -123,6 +123,15 @@ public class MaintenanceRecordServiceImpl implements MaintenanceRecordService {
             throw new BusinessException("操作失败：关联设备当前未处于维修状态，无法撤销工单！");
         }
 
+        // 跨单位越权校验：资产管理员只能撤销本单位的维保工单
+        Integer currentRole = BaseContext.getCurrentRole();
+        if (currentRole != null && currentRole == 2) {
+            String currentUnitCode = BaseContext.getCurrentUnitCode();
+            if (equipment.getUnitCode() == null || !equipment.getUnitCode().equals(currentUnitCode)) {
+                throw new ForbiddenException("越权操作：无权撤销其他单位设备的维保工单");
+            }
+        }
+
         boolean success = maintenanceRecordDao.deleteMaintenanceRecords(equipId, maintId);
         if (success) {
             operationLogService.record("维保撤销", "maintenance_record", maintId.toString(),

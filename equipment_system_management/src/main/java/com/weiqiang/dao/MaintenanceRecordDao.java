@@ -29,6 +29,9 @@ public class MaintenanceRecordDao extends BasicDao<MaintenanceRecord>{
         if (currentRole != null && currentRole == 0) {
             sql.append("WHERE mr.reporter = ? ");
             params.add(BaseContext.getCurrentName());
+        } else if (currentRole != null && currentRole == 2) {
+            sql.append("WHERE e.unit_code = ? ");
+            params.add(BaseContext.getCurrentUnitCode());
         }
         
         sql.append("ORDER BY maint_id DESC ");

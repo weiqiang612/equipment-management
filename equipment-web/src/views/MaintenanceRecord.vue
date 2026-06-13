@@ -425,9 +425,9 @@ export default {
         this.reviewSubmitLoading = true;
         try {
           await reviewMaintenance(this.reviewForm.maintId, {
-            action: this.reviewForm.action,
-            reviewComments: this.reviewForm.reviewComments,
-            reason: this.reviewForm.reason,
+            maintStatus: this.reviewForm.action,
+            reviewComments: this.reviewForm.action === 4 ? this.reviewForm.reason : this.reviewForm.reviewComments,
+            scrapNo: this.reviewForm.action === 4 ? ("SCRAP-" + Date.now()) : null
           });
           this.$message.success("复核完成");
           this.reviewDialogVisible = false;

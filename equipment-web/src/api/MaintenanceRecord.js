@@ -17,10 +17,10 @@ export const deleteMaintenance = (maintId, equipId) => request.delete(`/maintena
 })
 
 // 维保指派
-export const assignMaintenance = (maintId, data) => request.put(`/maintenanceRecords/${maintId}/assign`, data)
+export const assignMaintenance = (maintId, data) => request.put(`/maintenanceRecords/assign/${maintId}`, data)
 
 // 完工登记
-export const completeMaintenance = (maintId, data) => request.put(`/maintenanceRecords/${maintId}/complete`, data)
+export const completeMaintenance = (maintId, data) => request.put(`/maintenanceRecords/complete/${maintId}`, data)
 
 // 完工复核
-export const reviewMaintenance = (maintId, data) => request.put(`/maintenanceRecords/${maintId}/review`, data)
+export const reviewMaintenance = (maintId, data) => request.put(`/maintenanceRecords/review/${maintId}`, data)

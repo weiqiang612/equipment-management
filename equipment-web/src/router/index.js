@@ -164,6 +164,16 @@ const routes = [
             title: '消息中心',
             requiresAuth: true
         }
+    },
+    {
+        path: '/ai-assistant',
+        name: 'AiAssistant',
+        component: () => import('../views/AiAssistant.vue'),
+        meta: {
+            title: 'AI 辅助决策',
+            requiresAuth: true,
+            roles: [2, 3]
+        }
     }
 ]
 

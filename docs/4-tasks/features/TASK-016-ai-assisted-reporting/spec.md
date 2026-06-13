@@ -1,6 +1,6 @@
 # TASK-016: AI 辅助报告与建议草案
 
-**Status**: Draft
+**Status**: Complete
 **Created**: 2026-06-12
 **Feature dir**: `docs/4-tasks/features/TASK-016-ai-assisted-reporting/`
 
@@ -39,7 +39,7 @@
       "选择 period 为 weekly 或 monthly 并提交生成报告。",
       "Verify: 页面展示包含资产概况、风险摘要、维修成本异常、待办积压和建议动作的 AI 草案。"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-002",
@@ -50,7 +50,7 @@
       "调用 POST /ai/equipment/{equipId}/summary。",
       "Verify: 响应包含设备生命周期摘要、主要风险证据和人工复核建议。"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-003",
@@ -62,7 +62,7 @@
       "检查 AI 生成结果。",
       "Verify: 结果只包含草案和建议，不包含自动审批、自动报废、自动调拨或自动恢复数据库执行结果。"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-004",
@@ -74,7 +74,7 @@
       "调用新增接口。",
       "Verify: 响应使用 Result 统一结构，data 为 DTO/VO。"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-005",
@@ -86,7 +86,7 @@
       "模拟 AI Provider 超时或失败。",
       "Verify: 返回可诊断失败信息，Dashboard、Governance、设备详情等非 AI 页面仍可正常使用。"
     ],
-    "passes": false
+    "passes": true
   },
   {
     "id": "AC-006",
@@ -97,7 +97,7 @@
       "Verify: 输入只包含看板、治理、审计和生命周期接口返回的必要 DTO 摘要。",
       "Verify: 不发送密码、Token、完整用户敏感信息或无关全量业务数据。"
     ],
-    "passes": false
+    "passes": true
   }
 ]
 ```

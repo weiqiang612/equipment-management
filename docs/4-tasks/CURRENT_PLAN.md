@@ -4,9 +4,7 @@
 
 ## Active feature
 
-`docs/4-tasks/features/TASK-015-event-notification-mvp/`
-- spec.md ✅ Ready
-- tasks.md → Not started
+None (All 16 stages successfully completed! 🎉)
 
 ## Stages
 
@@ -56,9 +54,13 @@
 - [x] Implementation (12 tasks)
 
 ### TASK-016: AI 辅助报告与建议草案
-- [ ] Implementation (14 tasks)
+- [x] Implementation (14 tasks)
 
 ## Completed
+
+`docs/4-tasks/features/TASK-016-ai-assisted-reporting/`
+- spec.md ✅ Ready
+- tasks.md ✅ 100% Complete
 
 `docs/4-tasks/features/TASK-015-event-notification-mvp/`
 - spec.md ✅ Ready

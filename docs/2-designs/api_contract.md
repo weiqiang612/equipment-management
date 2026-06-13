@@ -884,3 +884,84 @@
         }
         ```
 
+---
+
+### 22. 生成资产运营报告草案 (Draft Operation Report)
+
+限 **资产管理员 (role=2)** 或 **系统管理员 (role=3)** 调用，基于当前系统的看板统计数据、操作审计与治理风险等信息生成一份周度或月度运营报告草案。
+
+*   **请求路径**：`POST /ai/reports/operations/draft`
+*   **请求头**：
+    *   `token: <JWT_TOKEN_STRING>`
+    *   `Content-Type: application/json`
+*   **请求体 (RequestBody - JSON)**：
+    ```json
+    {
+      "period": "weekly"
+    }
+    ```
+*   **响应示例**：
+    *   **成功 (Result.code = 1)**：返回生成的 markdown 格式文本草案。
+        ```json
+        {
+          "code": 1,
+          "msg": "success",
+          "data": {
+            "title": "资产运营周报草案",
+            "content": "# 资产运营周报\n...\n",
+            "period": "weekly",
+            "generatedTime": "2026-06-13T16:30:00"
+          }
+        }
+        ```
+    *   **接口未启用 (Result.code = 0)**（API Key 未配置时优雅降级）：
+        ```json
+        {
+          "code": 0,
+          "msg": "AI 辅助服务未启用：请联系管理员配置 AI 接口凭证",
+          "data": null
+        }
+        ```
+    *   **权限不足 (Result.code = 0, HTTP 403)**：
+        ```json
+        {
+          "code": 0,
+          "msg": "权限不足，拒绝访问",
+          "data": null
+        }
+        ```
+
+---
+
+### 23. 生成设备生命周期分析摘要 (Summarize Equipment Lifecycle)
+
+限 **资产管理员 (role=2)** 或 **系统管理员 (role=3)** 调用，针对指定设备拉取该设备的资产信息、保管领用历史、检修记录和审计日志等，组装上下文以生成生命周期健康摘要及处置草案建议。
+
+*   **请求路径**：`POST /ai/equipment/{equipId}/summary`
+*   **请求头**：
+    *   `token: <JWT_TOKEN_STRING>`
+*   **响应示例**：
+    *   **成功 (Result.code = 1)**：
+        ```json
+        {
+          "code": 1,
+          "msg": "success",
+          "data": {
+            "equipId": "TE001",
+            "equipName": "高频振动筛",
+            "summary": "### 设备健康分析摘要\n...\n",
+            "riskLevel": "high",
+            "generatedTime": "2026-06-13T16:30:00"
+          }
+        }
+        ```
+    *   **接口未启用 (Result.code = 0)**：
+        ```json
+        {
+          "code": 0,
+          "msg": "AI 辅助服务未启用：请联系管理员配置 AI 接口凭证",
+          "data": null
+        }
+        ```
+
+

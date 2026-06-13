@@ -87,6 +87,10 @@
               <i class="el-icon-document"></i>
               <span>操作审计</span>
             </el-menu-item>
+            <el-menu-item v-if="role === 2 || role === 3" index="/ai-assistant">
+              <i class="el-icon-magic-stick"></i>
+              <span>AI 辅助决策</span>
+            </el-menu-item>
             <el-menu-item index="/message-center">
               <i class="el-icon-bell"></i>
               <span slot="title" class="menu-title-container">

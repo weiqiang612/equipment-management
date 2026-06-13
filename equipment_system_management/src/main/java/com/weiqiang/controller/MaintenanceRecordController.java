@@ -54,4 +54,44 @@ public class MaintenanceRecordController {
         int i = maintenanceRecordService.putMaintenanceRecords(maintId, maintenanceRecord);
         return i > 0 ? Result.success() : Result.error("更新维修表失败！");
     }
+
+    // 指派工单 (限资产管理员 2)
+    @PutMapping("/assign/{maintId}")
+    @RequiresRoles(2)
+    public Result assignMaintenance(@PathVariable("maintId") Integer maintId, @RequestBody MaintenanceRecord record) {
+        int rows = maintenanceRecordService.assignMaintenance(maintId, record.getMaintPersonId());
+        return rows > 0 ? Result.success() : Result.error("指派工单失败！");
+    }
+
+    // 完工登记 (限维修工 1 或资产管理员 2)
+    @PutMapping("/complete/{maintId}")
+    @RequiresRoles({1, 2})
+    public Result completeMaintenance(@PathVariable("maintId") Integer maintId, @RequestBody MaintenanceRecord record) {
+        int rows = maintenanceRecordService.completeMaintenance(maintId, record);
+        return rows > 0 ? Result.success() : Result.error("登记完工失败！");
+    }
+
+    // 维保复核 (限资产管理员 2)
+    @PutMapping("/review/{maintId}")
+    @RequiresRoles(2)
+    public Result reviewMaintenance(@PathVariable("maintId") Integer maintId, @RequestBody MaintenanceRecord record) {
+        String reviewer = com.weiqiang.utils.BaseContext.getCurrentName();
+        String reviewComments = record.getReviewComments();
+        Integer maintStatus = record.getMaintStatus(); // 3-已复核可用, 4-已复核转报废
+
+        if (maintStatus == null) {
+            return Result.error("复核结论状态不能为空");
+        }
+
+        if (maintStatus == 3) {
+            boolean success = maintenanceRecordService.reviewMaintenance(maintId, reviewer, reviewComments);
+            return success ? Result.success() : Result.error("复核确认在用失败！");
+        } else if (maintStatus == 4) {
+            String scrapNo = record.getScrapNo();
+            boolean success = maintenanceRecordService.reviewToScrap(maintId, reviewer, reviewComments, scrapNo);
+            return success ? Result.success() : Result.error("复核转报废失败！");
+        } else {
+            return Result.error("无效的复核结论状态！");
+        }
+    }
 }

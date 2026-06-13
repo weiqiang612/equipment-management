@@ -134,92 +134,204 @@ public class MaintenanceRecordServiceImpl implements MaintenanceRecordService {
     @Override
     @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public int putMaintenanceRecords(Integer maintId, MaintenanceRecord maintenanceRecord) {
-        // 1. 获取原工单信息
+        MaintenanceRecord oldRecord = maintenanceRecordDao.getById(maintId);
+        if (oldRecord == null) {
+            throw new BusinessException("该维保工单不存在");
+        }
+        if (oldRecord.getMaintStatus() == 0) {
+            return assignMaintenance(maintId, maintenanceRecord.getMaintPersonId());
+        } else if (oldRecord.getMaintStatus() == 1) {
+            return completeMaintenance(maintId, maintenanceRecord);
+        } else {
+            throw new BusinessException("操作失败：该维保工单已完成，禁止二次修改！");
+        }
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public int assignMaintenance(Integer maintId, Integer maintPersonId) {
         MaintenanceRecord oldRecord = maintenanceRecordDao.getById(maintId);
         if (oldRecord == null) {
             throw new BusinessException("该维保工单不存在");
         }
 
         Integer currentRole = BaseContext.getCurrentRole();
-        
-        // 2. 根据原工单的状态执行不同的业务分支
-        if (oldRecord.getMaintStatus() == 0) {
-            // 分支 A: 指派工单 (状态 0 -> 1)
-            // 校验 A1: 只有资产管理员(2)可以指派工单
-            if (currentRole == null || currentRole != 2) {
-                throw new BusinessException("操作失败：只有资产管理员可以指派工单！");
-            }
-            
-            // 校验 A2: 被指派的维修工ID不能为空
-            Integer targetPersonId = maintenanceRecord.getMaintPersonId();
-            if (targetPersonId == null) {
-                throw new BusinessException("操作失败：指派工单必须指定维修工！");
-            }
-            
-            // 校验 A3: 被指派人必须在 sys_user 中存在且角色为 1(维修工)
-            User targetUser = userDao.getById(targetPersonId);
-            if (targetUser == null || targetUser.getRole() != 1) {
-                throw new BusinessException("操作失败：被指派人不存在或不是维修工程师！");
-            }
-            
-            // 校验 A4: 关联设备必须处于'维修'状态
-            Equipment equipment = equipmentDao.getEquipmentById(oldRecord.getEquipId());
-            if (equipment == null || !"维修".equals(equipment.getStatus())) {
-                throw new BusinessException("操作失败：关联设备未处于维修状态！");
-            }
-            
-            // 资产管理员只能指派本单位设备工单
-            String currentUnitCode = BaseContext.getCurrentUnitCode();
-            if (equipment.getUnitCode() == null || !equipment.getUnitCode().equals(currentUnitCode)) {
-                throw new ForbiddenException("越权操作：无权指派其他单位的设备维保工单");
-            }
-            
-            // 执行指派：更新工单状态为 1，并写入指派的维修工ID和姓名
-            int rows = maintenanceRecordDao.assignMaintenance(maintId, targetPersonId, targetUser.getRealName());
-            if (rows > 0) {
-                operationLogService.record("维保指派", "maintenance_record", maintId.toString(), 
-                    "指派维保工单 " + maintId + " 给工程师 " + targetUser.getRealName(), 1, null);
-            }
-            return rows;
-            
-        } else if (oldRecord.getMaintStatus() == 1) {
-            // 分支 B: 登记维保结果 (状态 1 -> 2)
-            // 校验 B1: 只有维修工(1)或资产管理员(2)可以登记维保结果，且维修工只能登记分配给自己的工单
-            if (currentRole == null || (currentRole != 1 && currentRole != 2)) {
-                throw new BusinessException("操作失败：只有维修工或资产管理员可以登记维修结果！");
-            }
-            if (currentRole == 1) {
-                Integer currentUserId = BaseContext.getCurrentId();
-                if (oldRecord.getMaintPersonId() == null || !oldRecord.getMaintPersonId().equals(currentUserId)) {
-                    throw new BusinessException("操作失败：您没有权限登记他人的维保工单！");
-                }
-            }
-            
-            // 校验 B2: 关联设备必须处于'维修'状态
-            Equipment equipment = equipmentDao.getEquipmentById(oldRecord.getEquipId());
-            if (equipment == null || !"维修".equals(equipment.getStatus())) {
-                throw new BusinessException("操作失败：关联设备不处于维修状态！");
-            }
+        if (currentRole == null || currentRole != 2) {
+            throw new BusinessException("操作失败：只有资产管理员可以指派工单！");
+        }
 
-            // 资产管理员只能登记本单位的设备维保工单
-            if (currentRole == 2) {
-                String currentUnitCode = BaseContext.getCurrentUnitCode();
-                if (equipment.getUnitCode() == null || !equipment.getUnitCode().equals(currentUnitCode)) {
-                    throw new ForbiddenException("越权操作：无权登记其他单位的设备维保工单");
-                }
-            }
-            
-            // 执行登记维保结果：状态置为 2 且设备改回在用
-            int rows = maintenanceRecordDao.completeMaintenance(maintId, oldRecord.getEquipId(), maintenanceRecord);
-            if (rows > 0) {
-                operationLogService.record("维保完工", "maintenance_record", maintId.toString(), 
-                    "完成维保工单 " + maintId + "，维修费用: " + maintenanceRecord.getMaintCost() + ", 检修内容: " + maintenanceRecord.getMaintContent(), 1, null);
-            }
-            return rows;
-            
-        } else {
-            // 分支 C: 工单已完结 (状态为 2)
+        if (oldRecord.getMaintStatus() != 0) {
+            throw new BusinessException("操作失败：当前工单状态不支持指派！");
+        }
+
+        if (maintPersonId == null) {
+            throw new BusinessException("操作失败：指派工单必须指定维修工！");
+        }
+
+        User targetUser = userDao.getById(maintPersonId);
+        if (targetUser == null || targetUser.getRole() != 1) {
+            throw new BusinessException("操作失败：被指派人不存在或不是维修工程师！");
+        }
+
+        Equipment equipment = equipmentDao.getEquipmentById(oldRecord.getEquipId());
+        if (equipment == null || !"维修".equals(equipment.getStatus())) {
+            throw new BusinessException("操作失败：关联设备未处于维修状态！");
+        }
+
+        String currentUnitCode = BaseContext.getCurrentUnitCode();
+        if (equipment.getUnitCode() == null || !equipment.getUnitCode().equals(currentUnitCode)) {
+            throw new ForbiddenException("越权操作：无权指派其他单位的设备维保工单");
+        }
+
+        int rows = maintenanceRecordDao.assignMaintenance(maintId, maintPersonId, targetUser.getRealName());
+        if (rows > 0) {
+            operationLogService.record("维保指派", "maintenance_record", maintId.toString(), 
+                "指派维保工单 " + maintId + " 给工程师 " + targetUser.getRealName(), 1, null);
+        }
+        return rows;
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public int completeMaintenance(Integer maintId, MaintenanceRecord record) {
+        MaintenanceRecord oldRecord = maintenanceRecordDao.getById(maintId);
+        if (oldRecord == null) {
+            throw new BusinessException("该维保工单不存在");
+        }
+
+        Integer currentRole = BaseContext.getCurrentRole();
+        if (currentRole == null || (currentRole != 1 && currentRole != 2)) {
+            throw new BusinessException("操作失败：只有维修工或资产管理员可以登记维修结果！");
+        }
+
+        if (oldRecord.getMaintStatus() == 0) {
+            throw new BusinessException("操作失败：工单尚未指派！");
+        }
+        if (oldRecord.getMaintStatus() == 2) {
+            throw new BusinessException("操作失败：该维保工单已登记完工，禁止二次修改！");
+        }
+        if (oldRecord.getMaintStatus() == 3 || oldRecord.getMaintStatus() == 4) {
             throw new BusinessException("操作失败：该维保工单已完成，禁止二次修改！");
         }
+        if (oldRecord.getMaintStatus() != 1) {
+            throw new BusinessException("操作失败：当前工单状态不支持完工登记！");
+        }
+
+        if (currentRole == 1) {
+            Integer currentUserId = BaseContext.getCurrentId();
+            if (oldRecord.getMaintPersonId() == null || !oldRecord.getMaintPersonId().equals(currentUserId)) {
+                throw new BusinessException("操作失败：您没有权限登记他人的维保工单！");
+            }
+        }
+
+        Equipment equipment = equipmentDao.getEquipmentById(oldRecord.getEquipId());
+        if (equipment == null || !"维修".equals(equipment.getStatus())) {
+            throw new BusinessException("操作失败：关联设备不处于维修状态！");
+        }
+
+        if (currentRole == 2) {
+            String currentUnitCode = BaseContext.getCurrentUnitCode();
+            if (equipment.getUnitCode() == null || !equipment.getUnitCode().equals(currentUnitCode)) {
+                throw new ForbiddenException("越权操作：无权登记其他单位的设备维保工单");
+            }
+        }
+
+        int rows = maintenanceRecordDao.completeMaintenance(maintId, oldRecord.getEquipId(), record);
+        if (rows > 0) {
+            operationLogService.record("维保完工", "maintenance_record", maintId.toString(), 
+                "完成维保工单 " + maintId + "，维修费用: " + record.getMaintCost() + ", 检修内容: " + record.getMaintContent(), 1, null);
+        }
+        return rows;
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public boolean reviewMaintenance(Integer maintId, String reviewer, String reviewComments) {
+        MaintenanceRecord oldRecord = maintenanceRecordDao.getById(maintId);
+        if (oldRecord == null) {
+            throw new BusinessException("该维保工单不存在");
+        }
+
+        Integer currentRole = BaseContext.getCurrentRole();
+        if (currentRole == null || currentRole != 2) {
+            throw new ForbiddenException("越权操作：只有资产管理员可以复核工单");
+        }
+
+        if (oldRecord.getMaintStatus() == 0 || oldRecord.getMaintStatus() == 1) {
+            throw new BusinessException("操作失败：工单尚未登记完工，无法复核！");
+        }
+        if (oldRecord.getMaintStatus() == 3 || oldRecord.getMaintStatus() == 4) {
+            throw new BusinessException("操作失败：该工单已复核，禁止二次修改！");
+        }
+        if (oldRecord.getMaintStatus() != 2) {
+            throw new BusinessException("操作失败：当前工单状态不支持复核！");
+        }
+
+        Equipment equipment = equipmentDao.getEquipmentById(oldRecord.getEquipId());
+        if (equipment == null) {
+            throw new BusinessException("关联设备不存在");
+        }
+
+        String currentUnitCode = BaseContext.getCurrentUnitCode();
+        if (equipment.getUnitCode() == null || !equipment.getUnitCode().equals(currentUnitCode)) {
+            throw new ForbiddenException("越权操作：无权复核其他单位的设备维保工单");
+        }
+
+        boolean success = maintenanceRecordDao.reviewMaintenance(maintId, oldRecord.getEquipId(), reviewer, reviewComments);
+        if (success) {
+            operationLogService.record("维保复核", "maintenance_record", maintId.toString(),
+                "复核通过维保工单 " + maintId + "，结论：恢复在用。意见: " + reviewComments, 1, null);
+        }
+        return success;
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public boolean reviewToScrap(Integer maintId, String reviewer, String reviewComments, String scrapNo) {
+        MaintenanceRecord oldRecord = maintenanceRecordDao.getById(maintId);
+        if (oldRecord == null) {
+            throw new BusinessException("该维保工单不存在");
+        }
+
+        Integer currentRole = BaseContext.getCurrentRole();
+        if (currentRole == null || currentRole != 2) {
+            throw new ForbiddenException("越权操作：只有资产管理员可以复核工单");
+        }
+
+        if (oldRecord.getMaintStatus() == 0 || oldRecord.getMaintStatus() == 1) {
+            throw new BusinessException("操作失败：工单尚未登记完工，无法转报废！");
+        }
+        if (oldRecord.getMaintStatus() == 3 || oldRecord.getMaintStatus() == 4) {
+            throw new BusinessException("操作失败：该工单已复核，禁止二次修改！");
+        }
+        if (oldRecord.getMaintStatus() != 2) {
+            throw new BusinessException("操作失败：当前工单状态不支持转报废！");
+        }
+
+        Equipment equipment = equipmentDao.getEquipmentById(oldRecord.getEquipId());
+        if (equipment == null) {
+            throw new BusinessException("关联设备不存在");
+        }
+
+        String currentUnitCode = BaseContext.getCurrentUnitCode();
+        if (equipment.getUnitCode() == null || !equipment.getUnitCode().equals(currentUnitCode)) {
+            throw new ForbiddenException("越权操作：无权复核其他单位的设备维保工单");
+        }
+
+        if (scrapNo == null || scrapNo.trim().isEmpty()) {
+            scrapNo = "SCRAP-" + System.currentTimeMillis();
+        }
+
+        String oldCustodian = equipment.getCustodian();
+
+        boolean success = maintenanceRecordDao.reviewToScrap(maintId, oldRecord.getEquipId(), reviewer, reviewComments, scrapNo, oldCustodian);
+        if (success) {
+            operationLogService.record("维保复核转报废", "maintenance_record", maintId.toString(),
+                "复核维保工单 " + maintId + " 转报废，报废单号: " + scrapNo + "。意见: " + reviewComments, 1, null);
+            
+            operationLogService.record("设备报废", "equipment", oldRecord.getEquipId(),
+                "设备报废：" + oldRecord.getEquipId() + "，原保管人：" + (oldCustodian != null ? oldCustodian : "无") + "，报废原因：" + reviewComments, 1, null);
+        }
+        return success;
     }
 }

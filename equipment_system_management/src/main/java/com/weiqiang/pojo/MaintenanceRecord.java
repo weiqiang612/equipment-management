@@ -26,6 +26,10 @@ public class MaintenanceRecord {
     private String maintPerson; // 检修人
     private String reporter; // 报修人用户名
     private String faultDescription; // 故障描述
-    private Integer maintStatus; // 维修工单状态: 0-待指派, 1-维修中, 2-已完成
+    private Integer maintStatus; // 维修工单状态: 0-待指派, 1-维修中, 2-已完成(待复核), 3-已复核可用, 4-已复核转报废
     private Integer maintPersonId; // 指派维修工用户ID
+    private String reviewer; // 复核人用户名
+    private String reviewComments; // 复核意见
+    private java.time.LocalDateTime reviewDate; // 复核日期
+    private String scrapNo; // 仅在复核转报废时接收报废单号
 }

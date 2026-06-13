@@ -18,4 +18,12 @@ public interface MaintenanceRecordService {
     boolean deleteMaintenanceRecords(String equipId,Integer maintId);
 
     int putMaintenanceRecords(Integer maintId, MaintenanceRecord maintenanceRecord);
+
+    int assignMaintenance(Integer maintId, Integer maintPersonId);
+
+    int completeMaintenance(Integer maintId, MaintenanceRecord record);
+
+    boolean reviewMaintenance(Integer maintId, String reviewer, String reviewComments);
+
+    boolean reviewToScrap(Integer maintId, String reviewer, String reviewComments, String scrapNo);
 }

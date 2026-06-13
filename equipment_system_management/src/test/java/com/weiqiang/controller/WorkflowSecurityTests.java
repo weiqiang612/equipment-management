@@ -359,7 +359,7 @@ public class WorkflowSecurityTests {
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value("操作失败：您没有权限登记他人的维保工单！"));
 
-        // B. 正确被指派的维修工(1) 登记维修结果 -> 预期成功，工单流转为 2，设备改回 '在用'
+        // B. 正确被指派的维修工(1) 登记维修结果 -> 预期成功，工单流转为 2，设备依然为 '维修'
         mockMvc.perform(put("/maintenanceRecords/" + maintId)
                         .header("token", maintToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -371,7 +371,7 @@ public class WorkflowSecurityTests {
         assertEquals(2, finalMaintStatus);
 
         final String finalEquipStatus = (String) userDao.singleSelect(statusSql);
-        assertEquals("in-use".equalsIgnoreCase(finalEquipStatus) || "在用".equals(finalEquipStatus), true);
+        assertEquals("维修", finalEquipStatus);
 
         // ----------------------------------------------------
         // [6] 主数据及用户级联删除安全拦截校验
@@ -561,7 +561,7 @@ public class WorkflowSecurityTests {
                 .andExpect(jsonPath("$.code").value(1));
 
         assertEquals(2, userDao.singleSelect("SELECT maint_status FROM maintenance_record WHERE maint_id = ?", inProgressMaintId));
-        assertEquals("在用", userDao.singleSelect("SELECT status FROM equipment WHERE equip_id = 'TE013'"));
+        assertEquals("维修", userDao.singleSelect("SELECT status FROM equipment WHERE equip_id = 'TE013'"));
 
         mockMvc.perform(delete("/maintenanceRecords/" + inProgressMaintId)
                         .header("token", mgrToken)
@@ -598,5 +598,257 @@ public class WorkflowSecurityTests {
 
         assertEquals(1L, userDao.singleSelect("SELECT COUNT(*) FROM maintenance_record WHERE maint_id = ?", mismatchMaintId));
         assertEquals("维修", userDao.singleSelect("SELECT status FROM equipment WHERE equip_id = 'TE014'"));
+    }
+
+    @Test
+    public void testMaintenanceReviewAndScrapWorkflow() throws Exception {
+        // [准备工作] 创建测试设备
+        mockMvc.perform(post("/equipments")
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildEquipment("TE020", "复核测试设备A", "D98", OP1_USERNAME))))
+                .andExpect(status().isOk());
+
+        // [准备工作] 报修设备 TE020
+        mockMvc.perform(post("/equipments/maint/TE020")
+                        .header("token", op1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildFaultReport("主板烧毁"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        final String getMaintSql = "SELECT maint_id FROM maintenance_record WHERE equip_id = 'TE020' ORDER BY maint_id DESC LIMIT 1";
+        final Integer maintId = (Integer) userDao.singleSelect(getMaintSql);
+        assertNotNull(maintId);
+
+        // 此时工单状态为 0 (待指派)
+        assertEquals(0, userDao.singleSelect("SELECT maint_status FROM maintenance_record WHERE maint_id = ?", maintId));
+        assertEquals("维修", userDao.singleSelect("SELECT status FROM equipment WHERE equip_id = 'TE020'"));
+
+        // ==========================================
+        // 1. 非法状态流转防御：对待指派工单(0) 直接复核
+        // ==========================================
+        final MaintenanceRecord reviewReq = new MaintenanceRecord();
+        reviewReq.setMaintStatus(3); // 复核通过恢复在用
+        reviewReq.setReviewComments("尝试对待指派工单直接复核");
+
+        mockMvc.perform(put("/maintenanceRecords/review/" + maintId)
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(reviewReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("操作失败：工单尚未登记完工，无法复核！"));
+
+        // 对待指派工单(0) 直接转报废
+        reviewReq.setMaintStatus(4); // 转报废
+        reviewReq.setScrapNo("SCRAP-TEST-001");
+        reviewReq.setReviewComments("尝试对待指派工单直接转报废");
+
+        mockMvc.perform(put("/maintenanceRecords/review/" + maintId)
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(reviewReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("操作失败：工单尚未登记完工，无法转报废！"));
+
+        // ==========================================
+        // 2. 指派工单给 test_maint
+        // ==========================================
+        final MaintenanceRecord assignRec = new MaintenanceRecord();
+        assignRec.setMaintPersonId(this.maintId); // test_maint
+        mockMvc.perform(put("/maintenanceRecords/assign/" + maintId)
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(assignRec)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        // 此时工单状态为 1 (维修中)
+        assertEquals(1, userDao.singleSelect("SELECT maint_status FROM maintenance_record WHERE maint_id = ?", maintId));
+
+        // ==========================================
+        // 3. 非法状态流转防御：对维修中工单(1) 直接复核
+        // ==========================================
+        reviewReq.setMaintStatus(3);
+        reviewReq.setReviewComments("尝试对维修中工单直接复核");
+        mockMvc.perform(put("/maintenanceRecords/review/" + maintId)
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(reviewReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("操作失败：工单尚未登记完工，无法复核！"));
+
+        reviewReq.setMaintStatus(4);
+        reviewReq.setReviewComments("尝试对维修中工单直接转报废");
+        mockMvc.perform(put("/maintenanceRecords/review/" + maintId)
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(reviewReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("操作失败：工单尚未登记完工，无法转报废！"));
+
+        // ==========================================
+        // 4. 越权登记他人员工单：用 maintToken2 登记 maint 的工单
+        // ==========================================
+        final MaintenanceRecord completeRec = new MaintenanceRecord();
+        completeRec.setMaintContent("更换电容");
+        completeRec.setMaintCost(new java.math.BigDecimal("150.00"));
+        completeRec.setMaintPerson("测试维修工2");
+
+        mockMvc.perform(put("/maintenanceRecords/complete/" + maintId)
+                        .header("token", maintToken2)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(completeRec)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("操作失败：您没有权限登记他人的维保工单！"));
+
+        // ==========================================
+        // 5. 正确登记完工：用 maintToken 登记完工
+        // ==========================================
+        completeRec.setMaintPerson("测试维修工1");
+        mockMvc.perform(put("/maintenanceRecords/complete/" + maintId)
+                        .header("token", maintToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(completeRec)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        // 此时工单状态为 2 (已完成/待复核)，设备依然为 '维修'
+        assertEquals(2, userDao.singleSelect("SELECT maint_status FROM maintenance_record WHERE maint_id = ?", maintId));
+        assertEquals("维修", userDao.singleSelect("SELECT status FROM equipment WHERE equip_id = 'TE020'"));
+
+        // ==========================================
+        // 6. 越权复核拦截：跨单位资产管理员
+        //    将 test_op2 的角色临时改为 2（资产管理员），使其成为 D99 (测试单位B) 资产管理员
+        // ==========================================
+        userDao.update("UPDATE sys_user SET role = 2 WHERE username = 'test_op2'");
+        
+        reviewReq.setMaintStatus(3);
+        reviewReq.setReviewComments("跨单位复核");
+        mockMvc.perform(put("/maintenanceRecords/review/" + maintId)
+                        .header("token", op2Token) // op2Token 现在是 D99 资产管理员
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(reviewReq)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("权限不足"));
+
+        // 恢复 test_op2 的角色为 0
+        userDao.update("UPDATE sys_user SET role = 0 WHERE username = 'test_op2'");
+
+        // ==========================================
+        // 7. 资产管理员执行完工复核并通过
+        // ==========================================
+        reviewReq.setMaintStatus(3);
+        reviewReq.setReviewComments("复核通过，设备状况良好");
+        mockMvc.perform(put("/maintenanceRecords/review/" + maintId)
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(reviewReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        // 校验：工单状态为 3，设备状态恢复为 '在用'
+        assertEquals(3, userDao.singleSelect("SELECT maint_status FROM maintenance_record WHERE maint_id = ?", maintId));
+        assertEquals("在用", userDao.singleSelect("SELECT status FROM equipment WHERE equip_id = 'TE020'"));
+
+        // ==========================================
+        // 8. 完工复核转报废
+        // ==========================================
+        mockMvc.perform(post("/equipments")
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildEquipment("TE021", "复核测试设备B", "D98", OP1_USERNAME))))
+                .andExpect(status().isOk());
+
+        // [准备工作] 报修设备 TE021
+        mockMvc.perform(post("/equipments/maint/TE021")
+                        .header("token", op1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildFaultReport("无法开机"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        final Integer maintId2 = (Integer) userDao.singleSelect("SELECT maint_id FROM maintenance_record WHERE equip_id = 'TE021' ORDER BY maint_id DESC LIMIT 1");
+        
+        // 指派
+        assignRec.setMaintPersonId(this.maintId);
+        mockMvc.perform(put("/maintenanceRecords/assign/" + maintId2)
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(assignRec)))
+                .andExpect(status().isOk());
+
+        // 完工登记
+        mockMvc.perform(put("/maintenanceRecords/complete/" + maintId2)
+                        .header("token", maintToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(completeRec)))
+                .andExpect(status().isOk());
+
+        // 此时工单状态为 2，设备状态为 '维修'
+        assertEquals(2, userDao.singleSelect("SELECT maint_status FROM maintenance_record WHERE maint_id = ?", maintId2));
+
+        final MaintenanceRecord reviewScrapReq = new MaintenanceRecord();
+        reviewScrapReq.setMaintStatus(4); // 转报废
+        reviewScrapReq.setReviewComments("修复成本过高，做报废处置");
+        reviewScrapReq.setScrapNo("SCRAP-TEST-REV-001");
+
+        mockMvc.perform(put("/maintenanceRecords/review/" + maintId2)
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(reviewScrapReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        // 校验 A: 工单状态为 4
+        assertEquals(4, userDao.singleSelect("SELECT maint_status FROM maintenance_record WHERE maint_id = ?", maintId2));
+        // 校验 B: 设备状态为 '报废'，且保管人置空
+        assertEquals("报废", userDao.singleSelect("SELECT status FROM equipment WHERE equip_id = 'TE021'"));
+        String custodian = (String) userDao.singleSelect("SELECT custodian FROM equipment WHERE equip_id = 'TE021'");
+        assertTrue(custodian == null || custodian.trim().isEmpty());
+
+        // 校验 C: 自动生成报废记录
+        final Long scrapCount = (Long) userDao.singleSelect("SELECT COUNT(*) FROM scrap_record WHERE scrap_no = 'SCRAP-TEST-REV-001'");
+        assertEquals(1L, scrapCount);
+
+        // 校验 D: 自动清退保管人并添加领用退还流水 (status=4, applicant=test_op1)
+        final Long claimCount = (Long) userDao.singleSelect("SELECT COUNT(*) FROM t_equipment_claim WHERE equip_id = 'TE021' AND status = 4 AND applicant = ?", OP1_USERNAME);
+        assertEquals(1L, claimCount);
+
+        // ==========================================
+        // 9. 非法状态流转防御：对已复核工单进行二次修改拦截
+        // ==========================================
+        // 尝试对已复核工单(3) 登记完工
+        mockMvc.perform(put("/maintenanceRecords/complete/" + maintId)
+                        .header("token", maintToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(completeRec)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("操作失败：该维保工单已完成，禁止二次修改！"));
+
+        // 尝试对已报废工单(4) 登记完工
+        mockMvc.perform(put("/maintenanceRecords/complete/" + maintId2)
+                        .header("token", maintToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(completeRec)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("操作失败：该维保工单已完成，禁止二次修改！"));
+
+        // 尝试对已复核工单(3) 再次复核
+        mockMvc.perform(put("/maintenanceRecords/review/" + maintId)
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(reviewReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("操作失败：该工单已复核，禁止二次修改！"));
     }
 }

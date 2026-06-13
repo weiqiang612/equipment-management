@@ -97,6 +97,7 @@
 
 <script>
 import { draftOperationReport } from '@/api/aiAssistant'
+import { renderMarkdown } from '@/utils/markdown'
 
 export default {
   name: 'AiAssistant',
@@ -135,33 +136,8 @@ export default {
         this.generating = false
       }
     },
-    // 极简且稳健的 Markdown 转换 HTML
     renderMarkdown(text) {
-      if (!text) return ''
-      
-      let html = text
-        // 转义 HTML 特殊字符防止 XSS
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        // 渲染 H3
-        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-        // 渲染 H2
-        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-        // 渲染 H1
-        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-        // 渲染粗体
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        // 渲染无序列表
-        .replace(/^\s*-\s+(.*$)/gim, '<li>$1</li>')
-        // 渲染行内代码
-        .replace(/`(.*?)`/g, '<code>$1</code>')
-        // 渲染换行
-        .replace(/\n/g, '<br/>')
-
-      // 用 ul 包裹连续的 li 列表元素
-      html = html.replace(/(<li>.*?<\/li>)+/g, '<ul>$&</ul>')
-      return html
+      return renderMarkdown(text)
     },
     formatTime(timeArray) {
       if (!timeArray) return ''

@@ -238,6 +238,7 @@
 <script>
 import { getEquipmentDetail } from '@/api/equipment'
 import { getEquipmentAiSummary } from '@/api/aiAssistant'
+import { renderMarkdown } from '@/utils/markdown'
 
 export default {
   name: 'EquipmentDetail',
@@ -402,20 +403,7 @@ export default {
       document.body.removeChild(textArea)
     },
     renderMarkdown(text) {
-      if (!text) return ''
-      let html = text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-        .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-        .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/^\s*-\s+(.*$)/gim, '<li>$1</li>')
-        .replace(/`(.*?)`/g, '<code>$1</code>')
-        .replace(/\n/g, '<br/>')
-      html = html.replace(/(<li>.*?<\/li>)+/g, '<ul>$&</ul>')
-      return html
+      return renderMarkdown(text)
     }
   },
   computed: {

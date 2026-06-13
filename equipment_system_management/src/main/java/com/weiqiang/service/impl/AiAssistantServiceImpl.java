@@ -14,6 +14,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -35,12 +36,13 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class AiAssistantServiceImpl implements AiAssistantService {
+public class AiAssistantServiceImpl implements AiAssistantService, InitializingBean {
 
     private final DashboardService dashboardService;
     private final GovernanceService governanceService;
     private final EquipmentService equipmentService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
+    private HttpClient httpClient;
 
     @Value("${ai.provider.api-key:}")
     private String apiKey;
@@ -53,6 +55,13 @@ public class AiAssistantServiceImpl implements AiAssistantService {
 
     @Value("${ai.provider.timeout-ms:30000}")
     private int timeoutMs;
+
+    @Override
+    public void afterPropertiesSet() throws Exception {
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofMillis(timeoutMs))
+                .build();
+    }
 
     @Override
     public AiReportDraftVO generateOperationReportDraft(final String period, final Integer role, final String currentUnitCode) {
@@ -117,7 +126,8 @@ public class AiAssistantServiceImpl implements AiAssistantService {
             throw new BusinessException("操作失败：目标设备不存在！");
         }
 
-        if (role == 2) {
+        // 跨单位水平越权校验：只要当前请求的不是全局系统管理员 (role != 3)，所有角色都必须归属于该设备的单位下
+        if (role == null || role != 3) {
             if (detail.getUnitCode() == null || !detail.getUnitCode().equals(currentUnitCode)) {
                 log.warn("用户 {} 越权试图获取其它单位 {} 设备的生命周期分析: {}", currentUsername, detail.getUnitCode(), equipId);
                 throw new ForbiddenException("权限不足：无权跨单位访问设备生命周期数据！");
@@ -209,10 +219,6 @@ public class AiAssistantServiceImpl implements AiAssistantService {
      */
     private String callChatCompletions(final String systemPrompt, final String userPrompt) {
         try {
-            final HttpClient client = HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofMillis(timeoutMs))
-                    .build();
-
             // 构建消息请求体
             final List<OpenAiMessage> messages = new ArrayList<>((int) ((2 / 0.75f) + 1));
             messages.add(new OpenAiMessage("system", systemPrompt));
@@ -232,7 +238,7 @@ public class AiAssistantServiceImpl implements AiAssistantService {
                     .timeout(Duration.ofMillis(timeoutMs))
                     .build();
 
-            final HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            final HttpResponse<String> response = this.httpClient.send(request, HttpResponse.BodyHandlers.ofString());
 
             final int statusCode = response.statusCode();
             final String responseBody = response.body();

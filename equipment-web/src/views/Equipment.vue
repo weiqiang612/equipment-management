@@ -197,7 +197,7 @@
                 <el-dropdown-item
                   :disabled="scope.row.status !== '在用'"
                   @click.native="handleMaintenance(scope.row)"
-                  >维修</el-dropdown-item
+                  >代报修</el-dropdown-item
                 >
                 <el-dropdown-item
                   :disabled="scope.row.status !== '在用'"
@@ -333,7 +333,7 @@
     </el-dialog>
     <!-- 报修弹窗 -->
     <el-dialog
-      title="设备报修申请"
+      :title="maintenanceDialogTitle"
       :visible.sync="maintDialogVisible"
       width="500px"
       append-to-body
@@ -617,6 +617,9 @@ export default {
     dialogTitle() {
       return this.isEdit ? "修改设备" : "新增设备";
     },
+    maintenanceDialogTitle() {
+      return this.role === 2 ? "设备代报修" : "设备报修申请";
+    },
     operatorOptions() {
       // 过滤出本部门 (unitCode 相同) 的操作员 (role === 0)
       return this.users.filter(u => u.role === 0 && u.unitCode === this.form.unitCode);
@@ -782,7 +785,7 @@ export default {
             equipId,
             this.maintForm
           );
-          this.$message.success("设备报修申请成功");
+          this.$message.success(this.role === 2 ? "代报修已提交，待派单处理" : "报修申请已提交，等待管理员派单");
           this.maintDialogVisible = false;
           this.fetchEquipmentList();
         } catch (error) {

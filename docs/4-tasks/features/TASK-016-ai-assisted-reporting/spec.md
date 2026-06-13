@@ -1,8 +1,8 @@
-# TASK-014: AI 辅助报告与建议草案
+# TASK-016: AI 辅助报告与建议草案
 
 **Status**: Draft
 **Created**: 2026-06-12
-**Feature dir**: `docs/4-tasks/features/TASK-014-ai-assisted-reporting/`
+**Feature dir**: `docs/4-tasks/features/TASK-016-ai-assisted-reporting/`
 
 ## Objective
 在数据看板、操作审计、生命周期详情和数据治理能力稳定后，提供 AI 辅助的资产运营报告、异常解释、设备生命周期总结和处置建议草案。

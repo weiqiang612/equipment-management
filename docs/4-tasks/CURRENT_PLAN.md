@@ -4,7 +4,7 @@
 
 ## Active feature
 
-`docs/4-tasks/features/TASK-013-data-governance-risk/`
+`docs/4-tasks/features/TASK-014-maintenance-closure-loop/`
 - spec.md ✅ Ready
 - tasks.md → Not started
 
@@ -49,10 +49,20 @@
 ### TASK-013: 数据治理与运营风险分析
 - [x] Implementation (13 tasks)
 
-### TASK-014: AI 辅助报告与建议草案
+### TASK-014: 维修流转闭环与复核处置
+- [ ] Implementation (15 tasks)
+
+### TASK-015: 事找人 MVP 与消息中心
+- [ ] Implementation (12 tasks)
+
+### TASK-016: AI 辅助报告与建议草案
 - [ ] Implementation (14 tasks)
 
 ## Completed
+
+`docs/4-tasks/features/TASK-013-data-governance-risk/`
+- spec.md ✅ Ready
+- tasks.md ✅ 100% Complete
 
 `docs/4-tasks/features/TASK-012-operation-audit-lifecycle/`
 - spec.md ✅ Ready
@@ -104,5 +114,5 @@
 
 ## Notes for next session
 
-- Active remains `docs/4-tasks/features/TASK-013-data-governance-risk/`
-- Backlog: `docs/4-tasks/features/TASK-014-ai-assisted-reporting/`
+- TASK-013 confirmed complete after all acceptance criteria passed.
+- Active moves to `docs/4-tasks/features/TASK-014-maintenance-closure-loop/`

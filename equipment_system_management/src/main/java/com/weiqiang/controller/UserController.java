@@ -1,8 +1,11 @@
 package com.weiqiang.controller;
 
 import com.weiqiang.anno.RequiresRoles;
+import com.weiqiang.pojo.AdminResetPasswordRequest;
+import com.weiqiang.pojo.ChangePasswordRequest;
 import com.weiqiang.pojo.Result;
 import com.weiqiang.pojo.User;
+import com.weiqiang.pojo.UserProfileUpdateRequest;
 import com.weiqiang.pojo.UserVO;
 import com.weiqiang.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -52,6 +55,17 @@ public class UserController {
     }
 
     /**
+     * 统一更新用户资料接口（仅限系统管理员 role=3 访问）
+     */
+    @PutMapping("/{id}")
+    @RequiresRoles(3)
+    public Result updateUserProfile(@PathVariable("id") final Integer id,
+                                    @RequestBody final UserProfileUpdateRequest request) {
+        log.info("修改用户资料请求，目标用户ID: {}, 角色: {}, 所属单位: {}", id, request.getRole(), request.getUnitCode());
+        return userService.updateUserProfile(id, request);
+    }
+
+    /**
      * 获取用户列表接口（仅限资产管理员和系统管理员访问）
      */
     @GetMapping
@@ -77,6 +91,26 @@ public class UserController {
     public Result deleteUser(@PathVariable("id") final Integer id) {
         log.info("接收到删除用户请求，用户ID: {}", id);
         return userService.deleteUser(id);
+    }
+
+    /**
+     * 管理员重置他人密码
+     */
+    @PutMapping("/{id}/password/reset")
+    @RequiresRoles(3)
+    public Result resetUserPassword(@PathVariable("id") final Integer id,
+                                    @RequestBody final AdminResetPasswordRequest request) {
+        log.info("管理员重置密码请求，目标用户ID: {}", id);
+        return userService.resetUserPassword(id, request.getNewPassword());
+    }
+
+    /**
+     * 当前登录用户修改本人密码
+     */
+    @PutMapping("/password")
+    public Result changeCurrentPassword(@RequestBody final ChangePasswordRequest request) {
+        log.info("当前登录用户修改本人密码请求");
+        return userService.changeCurrentUserPassword(request.getOldPassword(), request.getNewPassword());
     }
 
     /**

@@ -15,15 +15,18 @@ import java.util.List;
 public class MaintenanceRecordDao extends BasicDao<MaintenanceRecord>{
 
     public List<MaintenanceRecord> getMaintenanceRecords() {
-        StringBuilder sql = new StringBuilder("SELECT maint_id maintId, equip_id equipId, maint_date maintDate, maint_content maintContent, " +
-                "maint_cost maintCost, maint_person maintPerson, reporter, fault_description faultDescription, maint_status maintStatus, maint_person_id maintPersonId " +
-                "FROM maintenance_record ");
+        StringBuilder sql = new StringBuilder("SELECT mr.maint_id maintId, mr.equip_id equipId, e.equip_name equipName, " +
+                "mr.maint_date maintDate, mr.maint_content maintContent, mr.maint_cost maintCost, " +
+                "mr.maint_person maintPerson, mr.reporter reporter, mr.fault_description faultDescription, " +
+                "mr.maint_status maintStatus, mr.maint_person_id maintPersonId " +
+                "FROM maintenance_record mr " +
+                "LEFT JOIN equipment e ON mr.equip_id = e.equip_id ");
         
         ArrayList<Object> params = new ArrayList<>();
         // 【P0 级数据隔离逻辑】若为操作员（role=0），仅能查询其作为报修人的维保记录
         Integer currentRole = BaseContext.getCurrentRole();
         if (currentRole != null && currentRole == 0) {
-            sql.append("WHERE reporter = ? ");
+            sql.append("WHERE mr.reporter = ? ");
             params.add(BaseContext.getCurrentName());
         }
         
@@ -33,9 +36,13 @@ public class MaintenanceRecordDao extends BasicDao<MaintenanceRecord>{
     }
 
     public MaintenanceRecord getById(Integer maintId) {
-        String sql = "SELECT maint_id maintId, equip_id equipId, maint_date maintDate, maint_content maintContent, " +
-                "maint_cost maintCost, maint_person maintPerson, reporter, fault_description faultDescription, maint_status maintStatus, maint_person_id maintPersonId " +
-                "FROM maintenance_record WHERE maint_id = ?";
+        String sql = "SELECT mr.maint_id maintId, mr.equip_id equipId, e.equip_name equipName, " +
+                "mr.maint_date maintDate, mr.maint_content maintContent, mr.maint_cost maintCost, " +
+                "mr.maint_person maintPerson, mr.reporter reporter, mr.fault_description faultDescription, " +
+                "mr.maint_status maintStatus, mr.maint_person_id maintPersonId " +
+                "FROM maintenance_record mr " +
+                "LEFT JOIN equipment e ON mr.equip_id = e.equip_id " +
+                "WHERE mr.maint_id = ?";
         return selectOne(sql, MaintenanceRecord.class, maintId);
     }
 
@@ -89,12 +96,13 @@ public class MaintenanceRecordDao extends BasicDao<MaintenanceRecord>{
         return success ? 1 : 0;
     }
 
-    // 先将记录从维修表中删除 后将设备状态设为在用
+    // 仅撤销待指派工单，并将设备状态恢复为在用
     public boolean deleteMaintenanceRecords(String equipId, Integer maintId) {
-        String sql1 = "DELETE FROM maintenance_record WHERE maint_id = ?";
+        String sql1 = "DELETE FROM maintenance_record WHERE maint_id = ? AND equip_id = ? AND maint_status = 0";
         String sql2 = "UPDATE equipment SET `status` = '在用' WHERE equip_id = ?";
         List<Object> params1 = new ArrayList<>();
         params1.add(maintId);
+        params1.add(equipId);
         List<Object> params2 = new ArrayList<>();
         params2.add(equipId);
         LinkedHashMap<String, List<Object>> sqlTasks = new LinkedHashMap<>();

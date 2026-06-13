@@ -177,7 +177,7 @@
     </el-row>
 
     <!-- 4. 底部风险设备清单表格 -->
-    <el-card shadow="hover" class="table-card">
+    <el-card ref="riskTableCard" shadow="hover" class="table-card">
       <div slot="header" class="card-header">
         <span><i class="el-icon-notebook-2 icon-margin"></i>风险设备治理清单</span>
       </div>
@@ -506,6 +506,72 @@ export default {
       this.queryForm.page = val
       this.loadRisks()
     },
+    resetQueryFormForChartFilter() {
+      this.queryForm.riskLevel = ''
+      this.queryForm.categoryId = ''
+      this.queryForm.unitCode = this.role === 2 ? (this.unitCode || '') : ''
+    },
+    async applyChartFilter(filter) {
+      const { riskLevel, unitCode, categoryId } = filter
+      this.resetQueryFormForChartFilter()
+      if (riskLevel !== undefined) {
+        this.queryForm.riskLevel = riskLevel
+      }
+      if (unitCode !== undefined) {
+        this.queryForm.unitCode = this.role === 2 ? (this.unitCode || '') : unitCode
+      }
+      if (categoryId !== undefined) {
+        this.queryForm.categoryId = categoryId
+      }
+      this.queryForm.page = 1
+      this.scrollToRiskTable()
+      this.loadRisks()
+    },
+    scrollToRiskTable() {
+      this.$nextTick(() => {
+        const cardRef = this.$refs.riskTableCard
+        const target = cardRef && cardRef.$el ? cardRef.$el : cardRef
+        if (target && typeof target.scrollIntoView === 'function') {
+          target.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+          })
+        }
+      })
+    },
+    bindChartClick(chart, handler) {
+      if (!chart) return
+      chart.off('click')
+      chart.on('click', handler)
+    },
+    handleRiskChartClick(params) {
+      if (!params || !params.name) return
+      this.applyChartFilter({
+        riskLevel: params.name
+      })
+    },
+    handleDeptChartClick(params) {
+      if (!params || !params.name) return
+      const dept = this.depts.find(item => item.unitName === params.name)
+      if (!dept) {
+        this.$message.warning('未找到对应单位，无法联动查询')
+        return
+      }
+      this.applyChartFilter({
+        unitCode: dept.unitCode
+      })
+    },
+    handleCategoryChartClick(params) {
+      if (!params || !params.name) return
+      const category = this.categories.find(item => item.categoryName === params.name)
+      if (!category) {
+        this.$message.warning('未找到对应分类，无法联动查询')
+        return
+      }
+      this.applyChartFilter({
+        categoryId: category.categoryId
+      })
+    },
     viewDetail(equipId) {
       this.$router.push(`/equipment/detail/${equipId}`)
     },
@@ -539,6 +605,7 @@ export default {
           {
             name: '风险等级',
             type: 'pie',
+            cursor: 'pointer',
             radius: ['45%', '70%'],
             avoidLabelOverlap: false,
             itemStyle: {
@@ -569,6 +636,7 @@ export default {
         ]
       }
       this.riskChartInstance.setOption(option)
+      this.bindChartClick(this.riskChartInstance, this.handleRiskChartClick)
     },
     renderDeptRiskChart() {
       const el = this.$refs.deptRiskChart
@@ -622,6 +690,7 @@ export default {
           {
             name: '高风险',
             type: 'bar',
+            cursor: 'pointer',
             stack: 'Total',
             emphasis: { focus: 'series' },
             data: highData
@@ -629,6 +698,7 @@ export default {
           {
             name: '中风险',
             type: 'bar',
+            cursor: 'pointer',
             stack: 'Total',
             emphasis: { focus: 'series' },
             data: mediumData
@@ -636,6 +706,7 @@ export default {
           {
             name: '低风险',
             type: 'bar',
+            cursor: 'pointer',
             stack: 'Total',
             emphasis: { focus: 'series' },
             data: lowData
@@ -643,6 +714,7 @@ export default {
         ]
       }
       this.deptChartInstance.setOption(option)
+      this.bindChartClick(this.deptChartInstance, this.handleDeptChartClick)
     },
     renderCategoryRiskChart() {
       const el = this.$refs.categoryRiskChart
@@ -691,6 +763,7 @@ export default {
           {
             name: '高风险',
             type: 'bar',
+            cursor: 'pointer',
             stack: 'Total',
             emphasis: { focus: 'series' },
             data: highData
@@ -698,6 +771,7 @@ export default {
           {
             name: '中风险',
             type: 'bar',
+            cursor: 'pointer',
             stack: 'Total',
             emphasis: { focus: 'series' },
             data: mediumData
@@ -705,6 +779,7 @@ export default {
           {
             name: '低风险',
             type: 'bar',
+            cursor: 'pointer',
             stack: 'Total',
             emphasis: { focus: 'series' },
             data: lowData
@@ -712,6 +787,7 @@ export default {
         ]
       }
       this.categoryChartInstance.setOption(option)
+      this.bindChartClick(this.categoryChartInstance, this.handleCategoryChartClick)
     },
     handleResize() {
       if (this.riskChartInstance) this.riskChartInstance.resize()

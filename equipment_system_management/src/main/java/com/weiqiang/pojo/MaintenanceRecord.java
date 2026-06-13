@@ -19,6 +19,7 @@ import java.time.LocalDate;
 public class MaintenanceRecord {
     private Integer maintId; // 维修单号
     private String equipId; // 设备编号
+    private String equipName; // 设备名称
     private LocalDate maintDate; // 检修日期
     private String maintContent; // 检修内容描述
     private BigDecimal maintCost; // 检修费用

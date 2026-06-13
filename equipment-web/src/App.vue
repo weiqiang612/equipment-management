@@ -1,11 +1,9 @@
 <template>
   <div id="app">
-    <!-- 全屏路由页面 (登录、注册、403) 直接渲染 -->
     <router-view v-slot="{ Component }" v-if="isFullScreen">
       <component :is="Component" />
     </router-view>
 
-    <!-- 带侧边栏与头部的后台常规布局 -->
     <el-container v-else style="height: 100vh">
       <el-aside width="200px" style="background-color: #304156">
         <el-menu
@@ -15,7 +13,6 @@
           text-color="#fff"
           unique-opened
         >
-          <!-- 1. 设备操作员菜单 (role === 0) -->
           <template v-if="role === 0">
             <el-menu-item index="/dashboard">
               <i class="el-icon-data-line"></i>
@@ -35,7 +32,6 @@
             </el-menu-item>
           </template>
 
-          <!-- 2. 非操作员菜单 (role === 1, 2, 3) -->
           <template v-else>
             <el-menu-item index="/dashboard">
               <i class="el-icon-data-line"></i>
@@ -89,53 +85,125 @@
       </el-aside>
 
       <el-container>
-        <el-header
-          style="
-            border-bottom: 1px solid #ddd;
-            line-height: 60px;
-            background-color: #fff;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0 20px;
-          "
-        >
+        <el-header class="app-header">
           <strong style="font-size: 18px">设备管理系统</strong>
-          
-          <!-- 当前登录用户信息及登出按钮 -->
+
           <div v-if="username" class="user-info">
-            <span class="user-name">
-              欢迎您，{{ realName || username }}
-              <el-tag size="mini" :type="getRoleTagType(role)" style="margin-left: 5px">
-                {{ formatRole(role) }}
-              </el-tag>
-            </span>
-            <el-button
-              type="text"
-              icon="el-icon-switch-button"
-              style="margin-left: 20px; color: #f56c6c; font-weight: bold;"
-              @click="handleLogout"
-            >
-              退出登录
-            </el-button>
+            <el-dropdown trigger="click" @command="handleUserCommand">
+              <span class="user-dropdown-trigger">
+                <span class="user-name">{{ realName || username }}</span>
+                <el-tag :type="getRoleTagType(role)" effect="plain" class="role-tag">
+                  {{ formatRole(role) }}
+                </el-tag>
+                <i class="el-icon-arrow-down el-icon--right"></i>
+              </span>
+              <el-dropdown-menu slot="dropdown">
+                <el-dropdown-item command="change-password" icon="el-icon-lock">
+                  修改密码
+                </el-dropdown-item>
+                <el-dropdown-item command="logout" icon="el-icon-switch-button" divided>
+                  退出登录
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </el-dropdown>
           </div>
         </el-header>
         <el-main style="background-color: #f0f2f5">
-          <router-view></router-view>
+          <router-view />
         </el-main>
       </el-container>
     </el-container>
+
+    <el-dialog
+      title="修改密码"
+      :visible.sync="passwordDialogVisible"
+      width="420px"
+      @closed="resetPasswordForm"
+    >
+      <el-form
+        ref="passwordForm"
+        :model="passwordForm"
+        :rules="passwordRules"
+        label-position="top"
+      >
+        <el-form-item label="旧密码" prop="oldPassword">
+          <el-input
+            v-model="passwordForm.oldPassword"
+            type="password"
+            show-password
+            clearable
+            autocomplete="new-password"
+          />
+        </el-form-item>
+        <el-form-item label="新密码" prop="newPassword">
+          <el-input
+            v-model="passwordForm.newPassword"
+            type="password"
+            show-password
+            clearable
+            autocomplete="new-password"
+          />
+        </el-form-item>
+        <el-form-item label="确认新密码" prop="confirmPassword">
+          <el-input
+            v-model="passwordForm.confirmPassword"
+            type="password"
+            show-password
+            clearable
+            autocomplete="new-password"
+          />
+        </el-form-item>
+      </el-form>
+      <div slot="footer">
+        <el-button @click="passwordDialogVisible = false">取消</el-button>
+        <el-button type="primary" :loading="passwordLoading" @click="submitPasswordChange">
+          确认修改
+        </el-button>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script>
+import { changeCurrentPassword } from '@/api/user'
+
 export default {
   name: 'App',
   data() {
+    const validateConfirmPassword = (rule, value, callback) => {
+      if (!value) {
+        callback(new Error('请再次输入新密码'))
+      } else if (value !== this.passwordForm.newPassword) {
+        callback(new Error('两次输入的新密码不一致'))
+      } else {
+        callback()
+      }
+    }
+
     return {
       role: null,
       realName: '',
-      username: ''
+      username: '',
+      passwordDialogVisible: false,
+      passwordLoading: false,
+      passwordForm: {
+        oldPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      },
+      passwordRules: {
+        oldPassword: [
+          { required: true, message: '请输入旧密码', trigger: 'blur' },
+          { min: 6, max: 20, message: '长度必须在 6 到 20 个字符之间', trigger: 'blur' }
+        ],
+        newPassword: [
+          { required: true, message: '请输入新密码', trigger: 'blur' },
+          { min: 6, max: 20, message: '长度必须在 6 到 20 个字符之间', trigger: 'blur' }
+        ],
+        confirmPassword: [
+          { required: true, validator: validateConfirmPassword, trigger: 'blur' }
+        ]
+      }
     }
   },
   computed: {
@@ -159,6 +227,13 @@ export default {
       this.realName = localStorage.getItem('realName') || ''
       this.username = localStorage.getItem('username') || ''
     },
+    clearAuth() {
+      localStorage.removeItem('token')
+      localStorage.removeItem('role')
+      localStorage.removeItem('realName')
+      localStorage.removeItem('username')
+      localStorage.removeItem('unitCode')
+    },
     handleLogout() {
       this.$confirm('确定要退出登录吗?', '提示', {
         confirmButtonText: '确定',
@@ -166,11 +241,7 @@ export default {
         type: 'warning'
       })
         .then(() => {
-          localStorage.removeItem('token')
-          localStorage.removeItem('role')
-          localStorage.removeItem('realName')
-          localStorage.removeItem('username')
-          localStorage.removeItem('unitCode')
+          this.clearAuth()
           this.$message({
             type: 'success',
             message: '已安全退出登录'
@@ -178,6 +249,59 @@ export default {
           this.$router.push('/login')
         })
         .catch(() => {})
+    },
+    handleUserCommand(command) {
+      if (command === 'change-password') {
+        this.openPasswordDialog()
+        return
+      }
+      if (command === 'logout') {
+        this.handleLogout()
+      }
+    },
+    openPasswordDialog() {
+      this.passwordDialogVisible = true
+      this.$nextTick(() => {
+        if (this.$refs.passwordForm) {
+          this.$refs.passwordForm.clearValidate()
+        }
+      })
+    },
+    resetPasswordForm() {
+      this.passwordLoading = false
+      this.passwordForm = {
+        oldPassword: '',
+        newPassword: '',
+        confirmPassword: ''
+      }
+      if (this.$refs.passwordForm) {
+        this.$refs.passwordForm.resetFields()
+      }
+    },
+    submitPasswordChange() {
+      this.$refs.passwordForm.validate(valid => {
+        if (!valid) {
+          return false
+        }
+        this.passwordLoading = true
+        changeCurrentPassword({
+          oldPassword: this.passwordForm.oldPassword,
+          newPassword: this.passwordForm.newPassword
+        })
+          .then(() => {
+            this.passwordLoading = false
+            this.passwordDialogVisible = false
+            this.clearAuth()
+            this.$message({
+              type: 'success',
+              message: '密码修改成功，请重新登录'
+            })
+            this.$router.push('/login')
+          })
+          .catch(() => {
+            this.passwordLoading = false
+          })
+      })
     },
     formatRole(role) {
       const roleMap = {
@@ -202,38 +326,44 @@ export default {
 </script>
 
 <style>
-/* 1. 彻底清除浏览器默认的外边距和内边距 */
 html,
 body,
 #app {
   margin: 0;
   padding: 0;
-  height: 100%; /* 确保高度铺满 */
+  height: 100%;
 }
 
-/* 2. 移除 el-header 左右默认的 20px 内边距（如果需要紧贴的话） */
 .el-header {
   padding: 0 20px;
   background-color: #fff;
   display: flex;
-  align-items: center; /* 让文字垂直居中 */
+  align-items: center;
 }
 
-/* 3. 确保侧边栏高度撑满，且没有边框缝隙 */
 .el-aside {
   background-color: #304156;
   color: #333;
-  height: 100vh; /* 视口高度 */
+  height: 100vh;
 }
 
 .el-menu {
-  border-right: none; /* 去掉菜单右侧自带的 1px 细线缝隙 */
+  border-right: none;
 }
 
-/* 4. 优化主区域背景 */
 .el-main {
   background-color: #f0f2f5;
-  padding: 20px; /* 内部内容留白 */
+  padding: 20px;
+}
+
+.app-header {
+  border-bottom: 1px solid #ddd;
+  line-height: 60px;
+  background-color: #fff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
 }
 
 .user-info {
@@ -243,8 +373,30 @@ body,
   align-items: center;
 }
 
-.user-name {
-  display: flex;
+.user-dropdown-trigger {
+  display: inline-flex;
   align-items: center;
+  color: #409eff;
+  cursor: pointer;
+  outline: none;
+  padding: 6px 0;
+}
+
+.user-name {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.role-tag {
+  margin-left: 10px;
+  height: 28px;
+  line-height: 26px;
+  border-radius: 14px;
+  padding: 0 10px;
+}
+
+.user-dropdown-trigger:hover .user-name,
+.user-dropdown-trigger:hover .el-icon-arrow-down {
+  color: #66b1ff;
 }
 </style>

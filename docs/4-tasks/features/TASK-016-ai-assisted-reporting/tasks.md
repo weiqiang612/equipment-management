@@ -1,10 +1,10 @@
-# TASK-014: Tasks
+# TASK-016: Tasks
 
 **Spec**: `spec.md`
 **Status**: Backlog
 
 ## Key decisions
-- 本任务是四期 AI 辅助能力，作为 TASK-012 和 TASK-013 之后的待办任务，不覆盖当前 Active feature。
+- 本任务是六期 AI 辅助能力，作为维修闭环和事找人 MVP 之后的增强任务。
 - 第一版 AI 只生成草案、摘要和建议，不执行任何业务写操作。
 - 第一版不新增数据库表；AI 生成内容不持久化。
 - AI Provider、模型、API Key 配置和是否新增依赖属于实施前确认项。
@@ -24,11 +24,11 @@
 - [ ] T11 — Run `cd equipment_system_management && mvn test` — all tests must pass
 - [ ] T12 — Run `cd equipment-web && npm run lint` — frontend lint must pass
 - [ ] T13 — Verify ACs: update `passes` to `true` in spec.md for each passing criterion
-- [ ] T14 — Update `docs/4-tasks/CURRENT_PLAN.md` — keep TASK-012 active and leave this task in Backlog until implementation starts
+- [ ] T14 — Update `docs/4-tasks/CURRENT_PLAN.md` — keep TASK-015 active and leave this task in Backlog until implementation starts
 
 ## Dependencies
 - T4 requires T1 and T2
-- T5 requires TASK-011, TASK-012, and TASK-013 data contracts to be available
+- T5 requires TASK-011, TASK-012, TASK-013, TASK-014, and TASK-015 data contracts to be available
 - T6 requires T4 and T5
 - T7 requires T6
 - T8 requires T2 and T7

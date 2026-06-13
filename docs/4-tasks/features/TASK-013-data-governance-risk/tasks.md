@@ -1,10 +1,10 @@
 # TASK-013: Tasks
 
 **Spec**: `spec.md`
-**Status**: Backlog
+**Status**: Complete
 
 ## Key decisions
-- 本任务是三期“数据治理与运营分析”，作为 TASK-012 之后的待办任务，不覆盖当前 Active feature。
+- 本任务是三期“数据治理与运营分析”，已在 TASK-012 之后完成并确认验收通过。
 - 第一版不新增数据库结构，不新增依赖，不接 AI。
 - 风险阈值使用后端命名常量，不做数据库配置化。
 - Role 2 按单位边界查看治理数据，Role 3 全局只读，Role 0/1 禁止访问。
@@ -23,7 +23,7 @@
 - [x] T10 — Run `cd equipment_system_management && mvn test` — all tests must pass
 - [x] T11 — Run `cd equipment-web && npm run lint` — frontend lint must pass
 - [x] T12 — Verify ACs: update `passes` to `true` in spec.md for each passing criterion
-- [x] T13 — Update `docs/4-tasks/CURRENT_PLAN.md` — keep TASK-012 active and leave this task in Backlog until implementation starts
+- [x] T13 — Update `docs/4-tasks/CURRENT_PLAN.md` — mark TASK-013 complete and move active feature to TASK-014
 
 ## Dependencies
 - T3 requires T1 and T2

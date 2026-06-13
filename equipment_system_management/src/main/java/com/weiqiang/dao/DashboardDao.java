@@ -128,7 +128,7 @@ public class DashboardDao extends BasicDao<Object> {
     }
 
     public List<DashboardChartData> getDepartmentDistributionByUnit(String unitCode) {
-        String sql = "SELECT d.unit_name AS name, COUNT(*) AS value " +
+        String sql = "SELECT d.unit_name AS name, SUM(e.original_value) AS value " +
                 "FROM equipment e " +
                 "JOIN department d ON e.unit_code = d.unit_code " +
                 "WHERE e.unit_code = ? " +

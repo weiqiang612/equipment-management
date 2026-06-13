@@ -30,11 +30,23 @@
         <el-table-column prop="equipId" label="设备编号" width="120" />
         <el-table-column prop="equipName" label="设备名称" />
         <el-table-column prop="maintDate" label="检修日期" width="130" />
-        <el-table-column
-          prop="maintContent"
-          label="内容"
-          show-overflow-tooltip
-        />
+        <el-table-column label="工单状态" width="110" align="center">
+          <template slot-scope="scope">
+            <el-tag :type="formatStatusType(scope.row.maintStatus)" size="mini">
+              {{ formatStatusLabel(scope.row.maintStatus) }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="faultDescription" label="故障描述" show-overflow-tooltip min-width="180">
+          <template slot-scope="scope">
+            {{ scope.row.faultDescription || "-" }}
+          </template>
+        </el-table-column>
+        <el-table-column label="检修内容" show-overflow-tooltip min-width="180">
+          <template slot-scope="scope">
+            {{ scope.row.maintContent || "-" }}
+          </template>
+        </el-table-column>
         <el-table-column prop="maintCost" label="费用(元)" width="100">
           <template slot-scope="scope">
             {{ scope.row.maintCost | formatMoney }}
@@ -45,7 +57,7 @@
           <template slot-scope="scope">
             <!-- 维修工(1)只能修改自己负责的名下工单，资产管理员(2)可以修改所有 -->
             <el-button
-              v-if="role === 2 || (role === 1 && scope.row.maintPerson === realName)"
+              v-if="canEdit(scope.row)"
               size="mini"
               type="primary"
               @click="handleEdit(scope.row)"
@@ -53,7 +65,7 @@
             >
             <!-- 只有资产管理员(2)可以删除 -->
             <el-button
-              v-if="role === 2"
+              v-if="canDelete(scope.row)"
               size="mini"
               type="danger"
               @click="confirmDelete(scope.row)"
@@ -208,6 +220,34 @@ export default {
     this.fetchMaintainers();
   },
   methods: {
+    formatStatusLabel(status) {
+      const statusMap = {
+        0: "待指派",
+        1: "维修中",
+        2: "已完成",
+      };
+      return statusMap[status] || "未知";
+    },
+    formatStatusType(status) {
+      const statusMap = {
+        0: "info",
+        1: "warning",
+        2: "success",
+      };
+      return statusMap[status] || "info";
+    },
+    canEdit(row) {
+      if (row.maintStatus === 2) {
+        return false;
+      }
+      if (this.role === 2) {
+        return true;
+      }
+      return this.role === 1 && row.maintStatus === 1 && row.maintPerson === this.realName;
+    },
+    canDelete(row) {
+      return this.role === 2 && row.maintStatus === 0;
+    },
     async fetchMaintainers() {
       try {
         const res = await getMaintainers();
@@ -275,12 +315,12 @@ export default {
       });
     },
     confirmDelete(row) {
-      this.$confirm('删除记录将尝试恢复设备为"在用"状态，确定吗？', "提示", {
+      this.$confirm('仅可撤销待指派工单，撤销后设备将恢复为在用，确认继续？', "提示", {
         type: "warning",
       })
         .then(async () => {
           await deleteMaintenance(row.maintId, row.equipId);
-          this.$message.success("已删除并恢复状态");
+          this.$message.success("工单已撤销，设备已恢复为在用");
           this.loadList();
         })
         .catch(() => {});

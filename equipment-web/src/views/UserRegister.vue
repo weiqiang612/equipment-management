@@ -1,11 +1,8 @@
 <template>
   <div class="register-container">
-    <!-- 左侧全屏深色插图（背景图已自带文字像素） -->
     <div class="register-left"></div>
 
-    <!-- 右侧白底表单 -->
     <div class="register-right">
-      <!-- 右上角快捷返回登录 -->
       <div class="header-link">
         <span>Already have an account? </span>
         <router-link to="/login" class="login-link">Log In</router-link>
@@ -29,7 +26,16 @@
               placeholder="e.g., equipman"
               prefix-icon="el-icon-user"
               clearable
-            ></el-input>
+            />
+          </el-form-item>
+
+          <el-form-item label="Real Name" prop="realName">
+            <el-input
+              v-model="registerForm.realName"
+              placeholder="Enter your real name"
+              prefix-icon="el-icon-postcard"
+              clearable
+            />
           </el-form-item>
 
           <el-form-item label="Password" prop="password">
@@ -40,7 +46,7 @@
               prefix-icon="el-icon-lock"
               show-password
               clearable
-            ></el-input>
+            />
           </el-form-item>
 
           <el-form-item label="Confirm Password" prop="confirmPassword">
@@ -51,7 +57,7 @@
               prefix-icon="el-icon-lock"
               show-password
               clearable
-            ></el-input>
+            />
           </el-form-item>
 
           <el-form-item label="Department" prop="unitCode">
@@ -66,7 +72,7 @@
                 :key="item.unitCode"
                 :label="item.unitName"
                 :value="item.unitCode"
-              ></el-option>
+              />
             </el-select>
           </el-form-item>
 
@@ -107,6 +113,7 @@ export default {
       departments: [],
       registerForm: {
         username: '',
+        realName: '',
         password: '',
         confirmPassword: '',
         unitCode: ''
@@ -115,6 +122,10 @@ export default {
         username: [
           { required: true, message: 'Please enter your username', trigger: 'blur' },
           { min: 3, max: 20, message: 'Length must be between 3 and 20 characters', trigger: 'blur' }
+        ],
+        realName: [
+          { required: true, message: 'Please enter your real name', trigger: 'blur' },
+          { min: 2, max: 20, message: 'Length must be between 2 and 20 characters', trigger: 'blur' }
         ],
         password: [
           { required: true, message: 'Please enter your password', trigger: 'blur' },
@@ -134,7 +145,6 @@ export default {
     this.fetchDepartments()
   },
   methods: {
-    // 获取所有部门列表
     fetchDepartments() {
       getDepts()
         .then(data => {
@@ -148,10 +158,8 @@ export default {
           return false
         }
         this.loading = true
-        // 设计稿无 realName，我们将 realName 默认传入和 username 相同以匹配后端参数校验
-        const { username, password, unitCode } = this.registerForm
-        const realName = username
-        
+        const { username, realName, password, unitCode } = this.registerForm
+
         register({ username, realName, password, unitCode })
           .then(() => {
             this.loading = false
@@ -181,10 +189,9 @@ export default {
   background-color: #ffffff;
   overflow: hidden;
   position: relative;
-  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* 左侧全屏分栏占 50.6% */
 .register-left {
   width: 50.6%;
   height: 100%;
@@ -194,7 +201,6 @@ export default {
   background-repeat: no-repeat;
 }
 
-/* 右侧白底表单占 49.4% */
 .register-right {
   width: 49.4%;
   height: 100%;
@@ -208,7 +214,6 @@ export default {
   position: relative;
 }
 
-/* 右上角 Log In 链接 */
 .header-link {
   position: absolute;
   top: 40px;
@@ -235,7 +240,6 @@ export default {
   max-width: 400px;
 }
 
-/* 表单标题 */
 .form-title {
   font-size: 24px;
   font-weight: 700;
@@ -244,7 +248,6 @@ export default {
   text-align: left;
 }
 
-/* Form Item overrides */
 .register-form :deep(.el-form-item__label) {
   font-weight: 600;
   color: #4a5d65;
@@ -278,13 +281,12 @@ export default {
   margin-top: 36px;
 }
 
-/* 按钮样式还原 */
 .register-btn {
   width: 100%;
   height: 44px;
   font-size: 15px;
   font-weight: 700;
-  border-radius: 22px; /* 完美半圆角 */
+  border-radius: 22px;
   background-color: #0fad5b !important;
   border-color: #0fad5b !important;
   color: #ffffff !important;
@@ -307,9 +309,11 @@ export default {
   .register-left {
     display: none;
   }
+
   .register-right {
     width: 100%;
   }
+
   .header-link {
     top: 24px;
     right: 24px;

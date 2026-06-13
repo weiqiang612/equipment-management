@@ -20,6 +20,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -158,6 +159,27 @@ public class WorkflowSecurityTests {
         return (String) objectMapper.readValue(res.getResponse().getContentAsString(), Result.class).getData();
     }
 
+    private Equipment buildEquipment(String equipId, String equipName, String unitCode, String custodian) {
+        final Equipment equipment = new Equipment();
+        equipment.setEquipId(equipId);
+        equipment.setEquipName(equipName);
+        equipment.setModel("Test-Model");
+        equipment.setStatus("在用");
+        equipment.setPurchaseDate(LocalDate.now());
+        equipment.setOriginalValue(new BigDecimal("10000.00"));
+        equipment.setUnitCode(unitCode);
+        equipment.setCategoryId("C99");
+        equipment.setCustodian(custodian);
+        return equipment;
+    }
+
+    private MaintenanceRecord buildFaultReport(String faultDescription) {
+        final MaintenanceRecord record = new MaintenanceRecord();
+        record.setFaultDescription(faultDescription);
+        record.setMaintDate(LocalDate.now());
+        return record;
+    }
+
     @Test
     public void testFullWorkflowSecurity() throws Exception {
 
@@ -274,6 +296,13 @@ public class WorkflowSecurityTests {
         final String getMaintStatusSql = "SELECT maint_status FROM maintenance_record WHERE maint_id = ?";
         final Integer maintStatus = (Integer) userDao.singleSelect(getMaintStatusSql, maintId);
         assertEquals(0, maintStatus);
+
+        mockMvc.perform(get("/maintenanceRecords")
+                        .header("token", mgrToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data[?(@.equipId=='TE002')].equipName").value(hasItem("测试设备2")))
+                .andExpect(jsonPath("$.data[?(@.equipId=='TE002')].faultDescription").value(hasItem("屏幕开裂")));
 
         // ----------------------------------------------------
         // [4] 工单指派（派工）校验
@@ -418,5 +447,156 @@ public class WorkflowSecurityTests {
         final String checkClaimSql = "SELECT count(*) FROM t_equipment_claim WHERE equip_id = 'TE002' AND status = 4 AND applicant = 'test_op1' AND remark = '用户被删除导致保管关系自动清退'";
         final Long claimCount = (Long) userDao.singleSelect(checkClaimSql);
         assertEquals(1L, claimCount);
+    }
+
+    @Test
+    public void testMaintenanceLifecycleDeletionAndManagerProxyFlow() throws Exception {
+        mockMvc.perform(post("/equipments")
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildEquipment("TE010", "同单位设备", "D98", OP1_USERNAME))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/equipments/maint/TE010")
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildFaultReport("管理员巡检发现异响"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        Integer proxyMaintId = (Integer) userDao.singleSelect(
+                "SELECT maint_id FROM maintenance_record WHERE equip_id = 'TE010' ORDER BY maint_id DESC LIMIT 1");
+        assertNotNull(proxyMaintId);
+        assertEquals("维修", userDao.singleSelect("SELECT status FROM equipment WHERE equip_id = 'TE010'"));
+        assertEquals(0, userDao.singleSelect("SELECT maint_status FROM maintenance_record WHERE maint_id = ?", proxyMaintId));
+        assertEquals(MGR_USERNAME, userDao.singleSelect("SELECT reporter FROM maintenance_record WHERE maint_id = ?", proxyMaintId));
+
+        mockMvc.perform(post("/equipments")
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildEquipment("TE011", "跨单位设备", "D99", OP2_USERNAME))))
+                .andExpect(status().isOk());
+        userDao.update("UPDATE equipment SET unit_code = 'D99', custodian = ? WHERE equip_id = 'TE011'", OP2_USERNAME);
+
+        mockMvc.perform(post("/equipments/maint/TE011")
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildFaultReport("跨单位代报修"))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("权限不足"));
+
+        mockMvc.perform(post("/equipments")
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildEquipment("TE012", "待撤销设备", "D98", OP1_USERNAME))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/equipments/maint/TE012")
+                        .header("token", op1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildFaultReport("误报待撤销"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        Integer pendingMaintId = (Integer) userDao.singleSelect(
+                "SELECT maint_id FROM maintenance_record WHERE equip_id = 'TE012' ORDER BY maint_id DESC LIMIT 1");
+        assertNotNull(pendingMaintId);
+
+        mockMvc.perform(delete("/maintenanceRecords/" + pendingMaintId)
+                        .header("token", mgrToken)
+                        .param("equipId", "TE012"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        assertEquals(0L, userDao.singleSelect("SELECT COUNT(*) FROM maintenance_record WHERE maint_id = ?", pendingMaintId));
+        assertEquals("在用", userDao.singleSelect("SELECT status FROM equipment WHERE equip_id = 'TE012'"));
+
+        mockMvc.perform(post("/equipments")
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildEquipment("TE013", "维修中设备", "D98", OP1_USERNAME))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/equipments/maint/TE013")
+                        .header("token", op1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildFaultReport("需要继续维修"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        Integer inProgressMaintId = (Integer) userDao.singleSelect(
+                "SELECT maint_id FROM maintenance_record WHERE equip_id = 'TE013' ORDER BY maint_id DESC LIMIT 1");
+        assertNotNull(inProgressMaintId);
+
+        final MaintenanceRecord assignRec = new MaintenanceRecord();
+        assignRec.setMaintPersonId(this.maintId);
+        mockMvc.perform(put("/maintenanceRecords/" + inProgressMaintId)
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(assignRec)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        mockMvc.perform(delete("/maintenanceRecords/" + inProgressMaintId)
+                        .header("token", mgrToken)
+                        .param("equipId", "TE013"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("操作失败：维修中的工单不允许删除，请先完工登记。"));
+
+        assertEquals(1, userDao.singleSelect("SELECT maint_status FROM maintenance_record WHERE maint_id = ?", inProgressMaintId));
+        assertEquals("维修", userDao.singleSelect("SELECT status FROM equipment WHERE equip_id = 'TE013'"));
+
+        final MaintenanceRecord completeRec = new MaintenanceRecord();
+        completeRec.setMaintDate(LocalDate.now());
+        completeRec.setMaintContent("维修完成");
+        completeRec.setMaintCost(new BigDecimal("66.00"));
+        completeRec.setMaintPerson("测试维修工");
+        mockMvc.perform(put("/maintenanceRecords/" + inProgressMaintId)
+                        .header("token", maintToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(completeRec)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        assertEquals(2, userDao.singleSelect("SELECT maint_status FROM maintenance_record WHERE maint_id = ?", inProgressMaintId));
+        assertEquals("在用", userDao.singleSelect("SELECT status FROM equipment WHERE equip_id = 'TE013'"));
+
+        mockMvc.perform(delete("/maintenanceRecords/" + inProgressMaintId)
+                        .header("token", mgrToken)
+                        .param("equipId", "TE013"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("操作失败：已完成的工单不允许删除。"));
+
+        assertEquals(1L, userDao.singleSelect("SELECT COUNT(*) FROM maintenance_record WHERE maint_id = ?", inProgressMaintId));
+
+        mockMvc.perform(post("/equipments")
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildEquipment("TE014", "工单匹配设备", "D98", OP1_USERNAME))))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(post("/equipments/maint/TE014")
+                        .header("token", op1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildFaultReport("匹配校验"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        Integer mismatchMaintId = (Integer) userDao.singleSelect(
+                "SELECT maint_id FROM maintenance_record WHERE equip_id = 'TE014' ORDER BY maint_id DESC LIMIT 1");
+        assertNotNull(mismatchMaintId);
+
+        mockMvc.perform(delete("/maintenanceRecords/" + mismatchMaintId)
+                        .header("token", mgrToken)
+                        .param("equipId", "TE010"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("操作失败：工单与设备不匹配，无法撤销！"));
+
+        assertEquals(1L, userDao.singleSelect("SELECT COUNT(*) FROM maintenance_record WHERE maint_id = ?", mismatchMaintId));
+        assertEquals("维修", userDao.singleSelect("SELECT status FROM equipment WHERE equip_id = 'TE014'"));
     }
 }

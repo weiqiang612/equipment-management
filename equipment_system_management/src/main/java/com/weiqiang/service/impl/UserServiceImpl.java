@@ -2,10 +2,12 @@ package com.weiqiang.service.impl;
 
 import com.weiqiang.dao.UserDao;
 import com.weiqiang.exception.BusinessException;
+import com.weiqiang.pojo.UserProfileUpdateRequest;
 import com.weiqiang.pojo.Result;
 import com.weiqiang.pojo.User;
 import com.weiqiang.service.UserService;
 import com.weiqiang.utils.JwtUtils;
+import com.weiqiang.utils.BaseContext;
 import lombok.RequiredArgsConstructor;
 import com.weiqiang.service.OperationLogService;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +40,8 @@ public class UserServiceImpl implements UserService {
 
     private static final int DEFAULT_ROLE = 0;
     private static final int CLAIMS_MAP_CAPACITY = 5;
+    private static final int PASSWORD_MIN_LENGTH = 6;
+    private static final int PASSWORD_MAX_LENGTH = 20;
 
     // 角色及系统状态常量定义
     private static final int ROLE_ADMIN = 3;
@@ -80,6 +84,9 @@ public class UserServiceImpl implements UserService {
         if (user == null || !StringUtils.hasText(user.getUsername()) || !StringUtils.hasText(user.getPassword())) {
             return Result.error("用户名和密码不能为空");
         }
+        if (!StringUtils.hasText(user.getRealName())) {
+            return Result.error("真实姓名不能为空");
+        }
 
         // 强制校验所属单位
         if (!StringUtils.hasText(user.getUnitCode())) {
@@ -117,54 +124,110 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Result updateRole(final Integer id, final Integer role, final String unitCode) {
-        if (id == null || role == null) {
-            return Result.error("用户ID或角色值不能为空");
-        }
-
-        if (role < DEFAULT_ROLE || role > ROLE_ADMIN) {
-            return Result.error("非法的角色值");
-        }
-
-        // 1. 获取原用户信息
         final User oldUser = userDao.getById(id);
         if (oldUser == null) {
             log.warn("修改用户角色失败：未找到ID为 {} 的用户", id);
             return Result.error("修改用户角色失败，用户不存在");
         }
 
-        // 2. 校验所属单位 unitCode 并确定最终值
-        String finalUnitCode = unitCode;
-        if (role == ROLE_ADMIN) {
-            // 系统管理员强制定为全局，不关联单位
-            finalUnitCode = null;
-        } else {
-            // 其他角色强制要求分配单位
-            if (!StringUtils.hasText(unitCode)) {
-                return Result.error("该角色必须绑定所属单位");
-            }
-            if (departmentDao.getDeptById(unitCode) == null) {
-                return Result.error("指定的所属单位不存在");
-            }
+        final UserProfileUpdateRequest request = new UserProfileUpdateRequest();
+        request.setRealName(oldUser.getRealName());
+        request.setRole(role);
+        request.setUnitCode(unitCode);
+        return updateUserProfile(id, request);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Result updateUserProfile(final Integer id, final UserProfileUpdateRequest request) {
+        if (id == null || request == null) {
+            return Result.error("用户ID或请求参数不能为空");
+        }
+        if (request.getRole() == null) {
+            return Result.error("角色值不能为空");
+        }
+        if (!StringUtils.hasText(request.getRealName())) {
+            return Result.error("真实姓名不能为空");
         }
 
-        // 3. 强阻断校验：如果部门发生变更，且名下有未归还的保管设备，则拦截
-        final boolean isDeptChanged = !Objects.equals(oldUser.getUnitCode(), finalUnitCode);
-        if (isDeptChanged) {
-            final String checkEquipSql = "SELECT COUNT(*) FROM equipment WHERE custodian = ?";
-            final Long equipCount = (Long) userDao.singleSelect(checkEquipSql, oldUser.getUsername());
-            if (equipCount != null && equipCount > 0) {
-                log.warn("部门变更拦截：用户 {} 尚有 {} 台未清退保管设备，拒绝修改单位", oldUser.getUsername(), equipCount);
-                throw new BusinessException("操作失败：该用户尚有未清退的保管设备，请先去设备管理处退还或交接设备！");
-            }
+        final User oldUser = userDao.getById(id);
+        if (oldUser == null) {
+            log.warn("修改用户资料失败：未找到ID为 {} 的用户", id);
+            return Result.error("修改用户资料失败，用户不存在");
         }
 
-        // 4. 更新角色与所属单位
-        final int rows = userDao.updateRoleAndDept(id, role, finalUnitCode);
+        final Integer role = request.getRole();
+        if (role < DEFAULT_ROLE || role > ROLE_ADMIN) {
+            return Result.error("非法的角色值");
+        }
+
+        final String finalUnitCode = validateAndResolveUnitCode(role, request.getUnitCode());
+        validateCustodianBeforeUnitChange(oldUser, finalUnitCode);
+
+        final int rows = userDao.updateUserProfile(id, request.getRealName(), role, finalUnitCode);
         if (rows > 0) {
-            log.info("修改用户角色与所属单位成功，用户ID: {}, 角色: {}, 单位: {}", id, role, finalUnitCode);
+            log.info("修改用户资料成功，用户ID: {}, 角色: {}, 单位: {}", id, role, finalUnitCode);
             return Result.success();
         }
-        return Result.error("修改用户角色与所属单位失败");
+        return Result.error("修改用户资料失败");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Result resetUserPassword(final Integer id, final String newPassword) {
+        if (id == null) {
+            return Result.error("用户ID不能为空");
+        }
+        final Integer currentUserId = BaseContext.getCurrentId();
+        if (currentUserId != null && currentUserId.equals(id)) {
+            throw new BusinessException("操作失败：请通过右上角“修改密码”入口修改本人密码！");
+        }
+        if (!isPasswordLengthValid(newPassword)) {
+            return Result.error("密码长度必须在6到20位之间");
+        }
+
+        final User targetUser = userDao.getById(id);
+        if (targetUser == null) {
+            return Result.error("用户不存在");
+        }
+
+        final int rows = userDao.updatePassword(id, md5(newPassword));
+        if (rows > 0) {
+            log.info("管理员重置用户密码成功，用户ID: {}", id);
+            return Result.success();
+        }
+        return Result.error("重置密码失败");
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Result changeCurrentUserPassword(final String oldPassword, final String newPassword) {
+        if (!StringUtils.hasText(oldPassword) || !StringUtils.hasText(newPassword)) {
+            return Result.error("旧密码和新密码不能为空");
+        }
+        if (!isPasswordLengthValid(newPassword)) {
+            return Result.error("密码长度必须在6到20位之间");
+        }
+        final String currentUsername = BaseContext.getCurrentName();
+        if (!StringUtils.hasText(currentUsername)) {
+            throw new BusinessException("未获取到当前登录用户，请重新登录");
+        }
+
+        final User currentUser = userDao.getByUsername(currentUsername);
+        if (currentUser == null) {
+            throw new BusinessException("当前登录用户不存在，请重新登录");
+        }
+
+        if (!Objects.equals(currentUser.getPassword(), md5(oldPassword))) {
+            return Result.error("旧密码错误");
+        }
+
+        final int rows = userDao.updatePassword(currentUser.getId(), md5(newPassword));
+        if (rows > 0) {
+            log.info("当前登录用户修改本人密码成功，用户ID: {}", currentUser.getId());
+            return Result.success();
+        }
+        return Result.error("修改密码失败");
     }
 
     @Override
@@ -220,5 +283,42 @@ public class UserServiceImpl implements UserService {
             return Result.success();
         }
         return Result.error("删除用户失败");
+    }
+
+    private String validateAndResolveUnitCode(final Integer role, final String unitCode) {
+        String finalUnitCode = unitCode;
+        if (role == ROLE_ADMIN) {
+            finalUnitCode = null;
+        } else {
+            if (!StringUtils.hasText(unitCode)) {
+                throw new BusinessException("该角色必须绑定所属单位");
+            }
+            if (departmentDao.getDeptById(unitCode) == null) {
+                throw new BusinessException("指定的所属单位不存在");
+            }
+        }
+        return finalUnitCode;
+    }
+
+    private void validateCustodianBeforeUnitChange(final User oldUser, final String finalUnitCode) {
+        final boolean isDeptChanged = !Objects.equals(oldUser.getUnitCode(), finalUnitCode);
+        if (isDeptChanged) {
+            final String checkEquipSql = "SELECT COUNT(*) FROM equipment WHERE custodian = ?";
+            final Long equipCount = (Long) userDao.singleSelect(checkEquipSql, oldUser.getUsername());
+            if (equipCount != null && equipCount > 0) {
+                log.warn("部门变更拦截：用户 {} 尚有 {} 台未清退保管设备，拒绝修改单位", oldUser.getUsername(), equipCount);
+                throw new BusinessException("操作失败：该用户尚有未清退的保管设备，请先去设备管理处退还或交接设备！");
+            }
+        }
+    }
+
+    private boolean isPasswordLengthValid(final String password) {
+        return StringUtils.hasText(password)
+                && password.length() >= PASSWORD_MIN_LENGTH
+                && password.length() <= PASSWORD_MAX_LENGTH;
+    }
+
+    private String md5(final String rawPassword) {
+        return DigestUtils.md5DigestAsHex(rawPassword.getBytes(StandardCharsets.UTF_8));
     }
 }

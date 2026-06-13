@@ -9,7 +9,7 @@ export const addMaintenance = (equipId, data) => request.post(`/maintenanceRecor
 // 修改检修记录
 export const updateMaintenance = (maintId, data) => request.put(`/maintenanceRecords/${maintId}`, data)
 
-// 删除检修记录（并恢复状态）
+// 删除待指派检修记录（撤销误报并恢复状态）
 export const deleteMaintenance = (maintId, equipId) => request.delete(`/maintenanceRecords/${maintId}`, {
     params: {
         equipId

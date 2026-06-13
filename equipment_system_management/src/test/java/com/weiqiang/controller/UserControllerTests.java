@@ -13,6 +13,9 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -32,6 +35,8 @@ public class UserControllerTests {
 
     private static final String TEST_USERNAME = "test_new_user";
     private static final String TEST_PASSWORD = "myPassword123";
+    private static final String TEST_REAL_NAME = "测试新用户";
+    private static final String TEST_UNIT_CODE = "DEPT001";
 
     @BeforeEach
     public void setup() {
@@ -89,8 +94,8 @@ public class UserControllerTests {
         final User registerUser = new User();
         registerUser.setUsername(TEST_USERNAME);
         registerUser.setPassword(TEST_PASSWORD);
-        registerUser.setRealName("测试新用户");
-        registerUser.setUnitCode("DEPT001");
+        registerUser.setRealName(TEST_REAL_NAME);
+        registerUser.setUnitCode(TEST_UNIT_CODE);
 
         mockMvc.perform(post("/users/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -104,6 +109,7 @@ public class UserControllerTests {
         assertEquals(0, dbUser.getRole());
         assertNotEquals(TEST_PASSWORD, dbUser.getPassword());
         assertEquals("487753b954871b5b05f854060de151d8", dbUser.getPassword()); // MD5(myPassword123)
+        assertEquals(TEST_REAL_NAME, dbUser.getRealName());
 
         // 7. 再次使用相同用户名注册，预期被拦截返回 0，提示用户名已存在
         mockMvc.perform(post("/users/register")
@@ -140,7 +146,7 @@ public class UserControllerTests {
         final User roleUpdateUser = new User();
         roleUpdateUser.setId(dbUser.getId());
         roleUpdateUser.setRole(1);
-        roleUpdateUser.setUnitCode("DEPT001");
+        roleUpdateUser.setUnitCode(TEST_UNIT_CODE);
 
         mockMvc.perform(put("/users/role")
                         .header("token", adminToken)
@@ -152,7 +158,7 @@ public class UserControllerTests {
         // 验证数据库角色确实变为了 1 且单位变为了 DEPT001
         final User dbUserUpdated = userDao.getByUsername(TEST_USERNAME);
         assertEquals(1, dbUserUpdated.getRole());
-        assertEquals("DEPT001", dbUserUpdated.getUnitCode());
+        assertEquals(TEST_UNIT_CODE, dbUserUpdated.getUnitCode());
 
         // 11. 以普通操作员/工程师角色 Token 修改自己或其他用户的角色，预期被拦截返回 403
         mockMvc.perform(put("/users/role")
@@ -198,7 +204,7 @@ public class UserControllerTests {
         final User backToOpUser = new User();
         backToOpUser.setId(dbUser.getId());
         backToOpUser.setRole(0);
-        backToOpUser.setUnitCode("DEPT001");
+        backToOpUser.setUnitCode(TEST_UNIT_CODE);
         mockMvc.perform(put("/users/role")
                         .header("token", adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -226,5 +232,114 @@ public class UserControllerTests {
             // 恢复设备 EQ2024001 保管关系，避免污染
             userDao.update("UPDATE equipment SET custodian = NULL WHERE equip_id = 'EQ2024001'");
         }
+    }
+
+    @Test
+    public void testUserProfileAndPasswordManagementFlow() throws Exception {
+        final ObjectMapper objectMapper = new ObjectMapper();
+        final String adminToken = loginAndGetToken(objectMapper, "admin", "123456");
+
+        final User registerUser = new User();
+        registerUser.setUsername(TEST_USERNAME);
+        registerUser.setPassword(TEST_PASSWORD);
+        registerUser.setRealName(TEST_REAL_NAME);
+        registerUser.setUnitCode(TEST_UNIT_CODE);
+
+        mockMvc.perform(post("/users/register")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(registerUser)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        final User dbUser = userDao.getByUsername(TEST_USERNAME);
+        assertNotNull(dbUser);
+
+        final User updateRequest = new User();
+        updateRequest.setId(dbUser.getId());
+        updateRequest.setUsername("should_not_change");
+        updateRequest.setRealName("测试新用户-已修改");
+        updateRequest.setRole(1);
+        updateRequest.setUnitCode(TEST_UNIT_CODE);
+
+        mockMvc.perform(put("/users/" + dbUser.getId())
+                        .header("token", adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updateRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        final User updatedUser = userDao.getById(dbUser.getId());
+        assertEquals(TEST_USERNAME, updatedUser.getUsername());
+        assertEquals("测试新用户-已修改", updatedUser.getRealName());
+        assertEquals(1, updatedUser.getRole());
+        assertEquals(TEST_UNIT_CODE, updatedUser.getUnitCode());
+
+        final Map<String, String> resetPasswordRequest = new HashMap<>();
+        resetPasswordRequest.put("newPassword", "ResetPass123");
+
+        mockMvc.perform(put("/users/" + dbUser.getId() + "/password/reset")
+                        .header("token", adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(resetPasswordRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        mockMvc.perform(post("/users/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildLoginUser(TEST_USERNAME, TEST_PASSWORD))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("用户名或密码错误"));
+
+        final String resetPasswordToken = loginAndGetToken(objectMapper, TEST_USERNAME, "ResetPass123");
+        assertNotNull(resetPasswordToken);
+
+        final Map<String, String> selfPasswordRequest = new HashMap<>();
+        selfPasswordRequest.put("oldPassword", "ResetPass123");
+        selfPasswordRequest.put("newPassword", "SelfPass123");
+
+        mockMvc.perform(put("/users/password")
+                        .header("token", resetPasswordToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(selfPasswordRequest)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        mockMvc.perform(post("/users/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildLoginUser(TEST_USERNAME, "ResetPass123"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("用户名或密码错误"));
+
+        final String newPasswordToken = loginAndGetToken(objectMapper, TEST_USERNAME, "SelfPass123");
+        assertNotNull(newPasswordToken);
+
+        mockMvc.perform(put("/users/" + dbUser.getId() + "/password/reset")
+                        .header("token", newPasswordToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(resetPasswordRequest)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("权限不足"));
+    }
+
+    private String loginAndGetToken(final ObjectMapper objectMapper, final String username, final String password) throws Exception {
+        final MvcResult loginResult = mockMvc.perform(post("/users/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildLoginUser(username, password))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andReturn();
+
+        final Result resultObj = objectMapper.readValue(loginResult.getResponse().getContentAsString(), Result.class);
+        return (String) resultObj.getData();
+    }
+
+    private User buildLoginUser(final String username, final String password) {
+        final User user = new User();
+        user.setUsername(username);
+        user.setPassword(password);
+        return user;
     }
 }

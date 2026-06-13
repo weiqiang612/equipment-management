@@ -1,6 +1,6 @@
 # TASK-013: 数据治理与运营风险分析
 
-**Status**: Draft
+**Status**: Complete
 **Created**: 2026-06-12
 **Feature dir**: `docs/4-tasks/features/TASK-013-data-governance-risk/`
 
@@ -127,4 +127,4 @@
 ### Explicit non-maintenance
 - `docs/2-designs/db_schema.md` is not updated because this task does not add tables, fields, indexes, constraints, or migrations.
 - `AGENTS.md`, `.codex/session-start.js`, `init.sh`, and `init.ps1` do not need maintenance because this task does not change ports, startup commands, health checks, test/lint commands, or runnable submodules.
-- AI reports, exception explanation, and natural language Q&A are reserved for TASK-014 or later.
+- AI reports, exception explanation, natural language Q&A, and AI event explanations are reserved for TASK-016 or later.

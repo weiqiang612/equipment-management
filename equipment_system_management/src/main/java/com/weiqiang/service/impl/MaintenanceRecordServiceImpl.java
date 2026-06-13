@@ -96,12 +96,39 @@ public class MaintenanceRecordServiceImpl implements MaintenanceRecordService {
     }
 
     @Override
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
     public boolean deleteMaintenanceRecords(String equipId, Integer maintId) {
         MaintenanceRecord record = maintenanceRecordDao.getById(maintId);
         if (record == null) {
             throw new BusinessException("该维保工单不存在");
         }
-        return maintenanceRecordDao.deleteMaintenanceRecords(equipId, maintId);
+        if (!record.getEquipId().equals(equipId)) {
+            throw new BusinessException("操作失败：工单与设备不匹配，无法撤销！");
+        }
+        if (record.getMaintStatus() == null) {
+            throw new BusinessException("操作失败：工单状态缺失，无法撤销！");
+        }
+        if (record.getMaintStatus() == 1) {
+            throw new BusinessException("操作失败：维修中的工单不允许删除，请先完工登记。");
+        }
+        if (record.getMaintStatus() == 2) {
+            throw new BusinessException("操作失败：已完成的工单不允许删除。");
+        }
+
+        Equipment equipment = equipmentDao.getEquipmentById(equipId);
+        if (equipment == null) {
+            throw new BusinessException("操作失败：关联设备不存在，无法撤销工单！");
+        }
+        if (!"维修".equals(equipment.getStatus())) {
+            throw new BusinessException("操作失败：关联设备当前未处于维修状态，无法撤销工单！");
+        }
+
+        boolean success = maintenanceRecordDao.deleteMaintenanceRecords(equipId, maintId);
+        if (success) {
+            operationLogService.record("维保撤销", "maintenance_record", maintId.toString(),
+                    "撤销待指派维保工单 " + maintId + "，设备 " + equipId + " 恢复为在用", 1, null);
+        }
+        return success;
     }
 
     @Override

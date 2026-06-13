@@ -14,6 +14,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
+import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -23,6 +24,9 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 public class DashboardControllerTest {
+
+    private static final String TEST_UNIT_CODE = "DDASH98";
+    private static final String TEST_CATEGORY_ID = "CDASH99";
 
     @Autowired
     private MockMvc mockMvc;
@@ -35,11 +39,13 @@ public class DashboardControllerTest {
     @BeforeEach
     public void setup() {
         cleanup();
-        // 初始化测试用户数据 (使用数据库已预置的 DEPT001 部门)
+        userDao.update("INSERT INTO department (unit_code, unit_name, manager) VALUES ('DDASH98', '测试部门A', '经理A')");
+        userDao.update("INSERT INTO category (category_id, category_name, useful_life, residual_rate) VALUES ('CDASH99', '测试分类', 5, 0.05)");
+
         userDao.update("INSERT INTO sys_user (username, password, real_name, role, create_time, update_time, unit_code) VALUES " +
-                "('test_operator', 'e10adc3949ba59abbe56e057f20f883e', '操作员小张', 0, NOW(), NOW(), 'DEPT001')," +
-                "('test_maintainer', 'e10adc3949ba59abbe56e057f20f883e', '维修工小李', 1, NOW(), NOW(), 'DEPT001')," +
-                "('test_manager', 'e10adc3949ba59abbe56e057f20f883e', '管理员小王', 2, NOW(), NOW(), 'DEPT001')," +
+                "('test_operator', 'e10adc3949ba59abbe56e057f20f883e', '操作员小张', 0, NOW(), NOW(), 'DDASH98')," +
+                "('test_maintainer', 'e10adc3949ba59abbe56e057f20f883e', '维修工小李', 1, NOW(), NOW(), 'DDASH98')," +
+                "('test_manager', 'e10adc3949ba59abbe56e057f20f883e', '管理员小王', 2, NOW(), NOW(), 'DDASH98')," +
                 "('test_admin', 'e10adc3949ba59abbe56e057f20f883e', '超级管理员', 3, NOW(), NOW(), NULL)");
     }
 
@@ -53,8 +59,14 @@ public class DashboardControllerTest {
         userDao.update("UPDATE equipment SET custodian = NULL WHERE custodian LIKE 'test_%'");
         // 清理维保单关联用户外键 (防止外键约束报错)
         userDao.update("UPDATE maintenance_record SET maint_person_id = NULL WHERE maint_person_id IN (SELECT id FROM sys_user WHERE username LIKE 'test_%')");
-        // 清理测试用户 (DEPT001 为种子数据，不进行物理删除以免报错)
+        userDao.update("DELETE FROM maintenance_record WHERE equip_id LIKE 'TD%'");
+        userDao.update("DELETE FROM transfer_record WHERE equip_id LIKE 'TD%'");
+        userDao.update("DELETE FROM scrap_record WHERE equip_id LIKE 'TD%'");
+        userDao.update("DELETE FROM t_equipment_claim WHERE equip_id LIKE 'TD%'");
+        userDao.update("DELETE FROM equipment WHERE equip_id LIKE 'TD%'");
         userDao.update("DELETE FROM sys_user WHERE username LIKE 'test_%'");
+        userDao.update("DELETE FROM department WHERE unit_code = 'DDASH98'");
+        userDao.update("DELETE FROM category WHERE category_id = 'CDASH99'");
     }
 
     private String getLoginToken(String username, String password) throws Exception {
@@ -148,6 +160,21 @@ public class DashboardControllerTest {
 
         String content = result.getResponse().getContentAsString();
         System.out.println("Asset Manager Dashboard Response: " + content);
+    }
+
+    @Test
+    public void testAssetManagerDepartmentDistributionUsesOriginalValueSum() throws Exception {
+        userDao.update("INSERT INTO equipment (equip_id, equip_name, model, status, purchase_date, original_value, unit_code, category_id, custodian) VALUES " +
+                "('TD01', '测试设备1', 'Model-1', '在用', '2026-01-01', 1000.00, 'DDASH98', 'CDASH99', NULL)," +
+                "('TD02', '测试设备2', 'Model-2', '在用', '2026-02-01', 2500.00, 'DDASH98', 'CDASH99', NULL)");
+
+        String token = getLoginToken("test_manager", "123456");
+        assertNotNull(token);
+
+        mockMvc.perform(get("/dashboard/summary").header("token", token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1))
+                .andExpect(jsonPath("$.data.charts.departmentDistribution[?(@.name=='测试部门A')].value").value(hasItem(3500.0)));
     }
 
     @Test

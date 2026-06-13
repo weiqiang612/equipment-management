@@ -88,7 +88,7 @@
 
 ### 3. 获取用户列表 (Get User List)
 
-仅限 **系统管理员 (role=3)** 调用，用于在用户管理后台展示所有系统账户（出参必须剔除密码字段，防安全泄露）。
+限 **资产管理员 (role=2)** 与 **系统管理员 (role=3)** 调用。该接口既用于系统管理员的“用户权限管理”后台，也用于资产管理员在设备分配等业务场景中获取可选人员列表。出参必须剔除密码字段，防止敏感信息泄露。
 
 *   **请求路径**：`GET /users`
 *   **请求头**：
@@ -133,7 +133,7 @@
 
 ### 4. 修改用户角色 (Update User Role)
 
-仅限 **系统管理员 (role=3)** 调用，用于在管理后台变更某用户的岗位权限。
+仅限 **系统管理员 (role=3)** 调用，用于兼容旧版前端按角色/单位分别提交的更新方式。新前端主流程改用统一资料更新接口。
 
 *   **请求路径**：`PUT /users/role`
 *   **请求头**：
@@ -167,7 +167,136 @@
 
 ---
 
-### 5. 提交领用申请 (Apply Equipment Claim)
+### 5. 统一更新用户资料 (Update User Profile)
+
+仅限 **系统管理员 (role=3)** 调用，用于在管理后台统一修改某用户的真实姓名、角色与所属单位。`username` 为稳定登录标识，不支持修改。
+
+*   **请求路径**：`PUT /users/{id}`
+*   **请求头**：
+    *   `Content-Type: application/json`
+    *   `token: <JWT_TOKEN_STRING>`
+*   **路径参数**：
+    *   `id`：目标用户主键 ID
+*   **请求体 (RequestBody - JSON)**：
+    ```json
+    {
+      "realName": "张三",
+      "role": 2,
+      "unitCode": "D001"
+    }
+    ```
+*   **规则说明**：
+    *   当 `role = 3` 时，后端强制将 `unitCode` 置为 `null`。
+    *   当 `role != 3` 时，`unitCode` 为必填且必须是有效单位编码。
+    *   若单位发生变更且用户名下仍有保管设备，后端阻断本次更新。
+*   **响应示例**：
+    *   **成功 (Result.code = 1)**：
+        ```json
+        {
+          "code": 1,
+          "msg": "success",
+          "data": null
+        }
+        ```
+
+---
+
+### 6. 管理员重置用户密码 (Admin Reset User Password)
+
+仅限 **系统管理员 (role=3)** 调用，用于为其他账号直接设置新密码。当前登录管理员本人不允许通过此接口修改自己的密码，应改走右上角“修改密码”入口。
+
+*   **请求路径**：`PUT /users/{id}/password/reset`
+*   **请求头**：
+    *   `Content-Type: application/json`
+    *   `token: <JWT_TOKEN_STRING>`
+*   **路径参数**：
+    *   `id`：目标用户主键 ID
+*   **请求体 (RequestBody - JSON)**：
+    ```json
+    {
+      "newPassword": "ResetPass123"
+    }
+    ```
+*   **响应示例**：
+    *   **成功 (Result.code = 1)**：
+        ```json
+        {
+          "code": 1,
+          "msg": "success",
+          "data": null
+        }
+        ```
+
+---
+
+### 7. 当前登录用户修改本人密码 (Change Current User Password)
+
+所有已登录用户均可调用，用于验证旧密码后修改本人密码。
+
+*   **请求路径**：`PUT /users/password`
+*   **请求头**：
+    *   `Content-Type: application/json`
+    *   `token: <JWT_TOKEN_STRING>`
+*   **请求体 (RequestBody - JSON)**：
+    ```json
+    {
+      "oldPassword": "ResetPass123",
+      "newPassword": "SelfPass123"
+    }
+    ```
+*   **响应示例**：
+    *   **成功 (Result.code = 1)**：
+        ```json
+        {
+          "code": 1,
+          "msg": "success",
+          "data": null
+        }
+        ```
+    *   **失败 (旧密码错误)**：
+        ```json
+        {
+          "code": 0,
+          "msg": "旧密码错误",
+          "data": null
+        }
+        ```
+
+---
+
+### 8. 删除用户 (Delete User)
+
+仅限 **系统管理员 (role=3)** 调用，用于删除某一系统账号。删除时遵循以下后端规则：
+
+*   若该用户名下仍有关联设备保管关系，系统会先自动清空对应设备的 `custodian`，并写入一条状态为 `4-已退还` 的领用流水，备注为“用户被删除导致保管关系自动清退”。
+*   若该用户仍有关联的未完结检修工单（作为报修人或被指派维修人），后端阻断删除并返回业务错误。
+
+*   **请求路径**：`DELETE /users/{id}`
+*   **请求头**：
+    *   `token: <JWT_TOKEN_STRING>`
+*   **路径参数**：
+    *   `id`：目标用户主键 ID
+*   **响应示例**：
+    *   **成功 (Result.code = 1)**：
+        ```json
+        {
+          "code": 1,
+          "msg": "success",
+          "data": null
+        }
+        ```
+    *   **失败 (仍有未完结检修工单)**：
+        ```json
+        {
+          "code": 0,
+          "msg": "操作失败：该用户尚有未完结的检修工单，无法删除！",
+          "data": null
+        }
+        ```
+
+---
+
+### 9. 提交领用申请 (Apply Equipment Claim)
 
 供操作员或管理员对本部门内无保管人的空闲设备发起领用申请。
 
@@ -194,7 +323,7 @@
 
 ---
 
-### 6. 撤回领用申请 (Cancel Equipment Claim)
+### 10. 撤回领用申请 (Cancel Equipment Claim)
 
 供申请人自主撤回处于“待审批”状态的领用申请。
 
@@ -213,7 +342,7 @@
 
 ---
 
-### 7. 审批领用申请 (Approve Equipment Claim)
+### 11. 审批领用申请 (Approve Equipment Claim)
 
 供资产管理员/系统管理员审批本部门操作员发起的领用申请。
 
@@ -240,7 +369,7 @@
 
 ---
 
-### 8. 主动退还设备 (Return Equipment)
+### 12. 主动退还设备 (Return Equipment)
 
 供保管人本人主动归还已领用的设备，将其保管人重置为空。
 
@@ -267,7 +396,7 @@
 
 ---
 
-### 9. 查询领用记录列表 (Get Claim List)
+### 13. 查询领用记录列表 (Get Claim List)
 
 分页查询领用申请/历史审计列表。操作员仅能看到自己的记录，管理员能看到本部门的全部记录。
 
@@ -308,7 +437,7 @@
 
 ---
 
-### 10. 获取看板数据 (Get Dashboard Summary)
+### 14. 获取看板数据 (Get Dashboard Summary)
 
 获取当前登录角色的聚合数据看板。后端根据 Token 解析出的角色、用户名及所属单位动态裁剪数据。
 
@@ -450,7 +579,7 @@
 
 ---
 
-### 11. 查询审计日志流水 (Get Operation Log List)
+### 15. 查询审计日志流水 (Get Operation Log List)
 
 仅限 **系统管理员 (role=3)** 调用，用于在操作审计后台展示系统关键操作。
 
@@ -492,7 +621,7 @@
 
 ---
 
-### 12. 查询设备生命周期聚合详情 (Get Equipment Lifecycle Detail)
+### 16. 查询设备生命周期聚合详情 (Get Equipment Lifecycle Detail)
 
 查询单台设备的全生命周期流转历史。各角色访问严格受到 RBAC 越权校验：普通用户（Role 0）仅能访问自己保管的设备；维修工和管理员（Role 1/2）仅能访问本单位的设备；系统管理员（Role 3）无限制。
 
@@ -586,7 +715,7 @@
 
 ---
 
-### 13. 获取数据治理总览 (Get Governance Summary)
+### 17. 获取数据治理总览 (Get Governance Summary)
 
 获取当前登录部门的数据治理与运营风险总览。Role 2 资产管理员只能查看本单位数据，Role 3 系统管理员可查看全局数据。Role 0/1 拒绝访问。
 
@@ -618,7 +747,7 @@
 
 ---
 
-### 14. 查询风险设备清单 (Get Equipment Risk List)
+### 18. 查询风险设备清单 (Get Equipment Risk List)
 
 分页查询受风险影响的设备列表，支持根据风险等级、使用单位、分类编码筛选。Role 2 资产管理员仅能过滤本单位的数据，Role 3 系统管理员可获取全局数据。Role 0/1 拒绝访问。
 

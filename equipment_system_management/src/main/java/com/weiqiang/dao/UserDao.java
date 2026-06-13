@@ -69,6 +69,32 @@ public class UserDao extends BasicDao<User> {
     }
 
     /**
+     * 更新用户资料
+     *
+     * @param id 用户ID
+     * @param realName 真实姓名
+     * @param role 角色
+     * @param unitCode 所属单位
+     * @return 影响行数
+     */
+    public int updateUserProfile(final Integer id, final String realName, final Integer role, final String unitCode) {
+        final String sql = "UPDATE sys_user SET real_name = ?, role = ?, unit_code = ?, update_time = NOW() WHERE id = ?";
+        return update(sql, realName, role, unitCode, id);
+    }
+
+    /**
+     * 更新用户密码
+     *
+     * @param id 用户ID
+     * @param password 密码MD5
+     * @return 影响行数
+     */
+    public int updatePassword(final Integer id, final String password) {
+        final String sql = "UPDATE sys_user SET password = ?, update_time = NOW() WHERE id = ?";
+        return update(sql, password, id);
+    }
+
+    /**
      * 查询所有用户
      *
      * @return 用户列表

@@ -55,14 +55,15 @@
         <el-table-column prop="maintPerson" label="检修人" width="100" />
         <el-table-column v-if="role !== 3" label="操作" align="center" width="200">
           <template slot-scope="scope">
-            <!-- 维修工(1)只能修改自己负责的名下工单，资产管理员(2)可以修改所有 -->
+            <!-- 维修工(1)只能登记名下负责工单，资产管理员(2)可以派工指派或登记完工 -->
             <el-button
               v-if="canEdit(scope.row)"
               size="mini"
-              type="primary"
+              :type="scope.row.maintStatus === 0 ? 'primary' : 'success'"
               @click="handleEdit(scope.row)"
-              >修改</el-button
             >
+              {{ scope.row.maintStatus === 0 ? '派工指派' : '登记完工' }}
+            </el-button>
             <!-- 复核按钮：对于状态为 2 且登录用户是资产管理员 (role=2) 展示 -->
             <el-button
               v-if="scope.row.maintStatus === 2 && role === 2"
@@ -204,11 +205,12 @@
       <div slot="footer">
         <el-button @click="reviewDialogVisible = false">取 消</el-button>
         <el-button
-          type="primary"
+          :type="reviewForm.action === 4 ? 'danger' : 'primary'"
           @click="submitReview"
           :loading="reviewSubmitLoading"
-          >确 定</el-button
         >
+          {{ reviewForm.action === 4 ? '确认转报废' : '批准恢复在用' }}
+        </el-button>
       </div>
     </el-dialog>
   </div>

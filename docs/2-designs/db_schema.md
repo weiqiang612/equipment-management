@@ -32,7 +32,7 @@
         *   `equip_id` 参照设备表 `equipment.equip_id`
         *   `out_unit_code` 和 `in_unit_code` 参照单位表 `department.unit_code`
 *   **设备检修信息表 (maintenance_record)**
-    *   关系模式：检修(<u>maint_id</u>, *equip_id*, maint_date, maint_content, maint_cost, maint_person, *reporter*, fault_description, maint_status)
+    *   关系模式：检修(<u>maint_id</u>, *equip_id*, maint_date, maint_content, maint_cost, maint_person, *reporter*, fault_description, maint_status, *maint_person_id*, reviewer, review_comments, review_date)
     *   *外键说明*：
         *   `equip_id` 参照设备表 `equipment.equip_id`
         *   `reporter` 逻辑参照用户表 `sys_user.username` (故障申报人)
@@ -53,7 +53,7 @@
 ### 3.1 完整性设计
 *   **参照完整性**：业务记录中的 `equip_id` 必须在设备表中存在；设备表中的 `unit_code` 和 `category_id` 分别在单位和分类表中存在；`custodian` 和 `reporter` 必须存在于 `sys_user.username` 中。
 *   **用户定义完整性**：
-    *   状态约束：设备状态限于：在用、维修、报废。工单状态限于：0-待指派, 1-维修中, 2-已完成。
+    *   状态约束：设备状态限于：在用、维修、报废。工单状态限于：0-待指派, 1-维修中, 2-待复核, 3-已复核可用, 4-已复核转报废。
     *   数值约束：原值、预计使用年限必须大于 0。
     *   唯一约束：报废单号 (`scrap_no`) 全局唯一。
 
@@ -165,8 +165,11 @@ CREATE TABLE `maintenance_record` (
   `maint_person` varchar(20) DEFAULT NULL COMMENT '检修人',
   `reporter` varchar(50) DEFAULT NULL COMMENT '报修人用户名(关联 sys_user.username)',
   `fault_description` text COMMENT '故障描述(操作员报修填写)',
-  `maint_status` tinyint(4) NOT NULL DEFAULT '0' COMMENT '工单状态: 0-待指派, 1-维修中, 2-已完成',
+  `maint_status` tinyint(4) NOT NULL DEFAULT '0' COMMENT '工单状态: 0-待指派, 1-维修中, 2-待复核, 3-已复核可用, 4-已复核转报废',
   `maint_person_id` int(11) DEFAULT NULL COMMENT '指定维保工用户ID',
+  `reviewer` varchar(50) DEFAULT NULL COMMENT '复核人用户名',
+  `review_comments` varchar(500) DEFAULT NULL COMMENT '复核意见',
+  `review_date` datetime DEFAULT NULL COMMENT '复核时间',
   PRIMARY KEY (`maint_id`),
   KEY `idx_maint_equip` (`equip_id`),
   CONSTRAINT `maintenance_record_ibfk_1` FOREIGN KEY (`equip_id`) REFERENCES `equipment` (`equip_id`),

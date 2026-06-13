@@ -4,7 +4,7 @@
 
 ## Active feature
 
-`docs/4-tasks/features/TASK-014-maintenance-closure-loop/`
+`docs/4-tasks/features/TASK-015-event-notification-mvp/`
 - spec.md ✅ Ready
 - tasks.md → Not started
 
@@ -50,7 +50,7 @@
 - [x] Implementation (13 tasks)
 
 ### TASK-014: 维修流转闭环与复核处置
-- [ ] Implementation (15 tasks)
+- [x] Implementation (15 tasks)
 
 ### TASK-015: 事找人 MVP 与消息中心
 - [ ] Implementation (12 tasks)
@@ -59,6 +59,10 @@
 - [ ] Implementation (14 tasks)
 
 ## Completed
+
+`docs/4-tasks/features/TASK-014-maintenance-closure-loop/`
+- spec.md ✅ Ready
+- tasks.md ✅ 100% Complete
 
 `docs/4-tasks/features/TASK-013-data-governance-risk/`
 - spec.md ✅ Ready
@@ -114,5 +118,5 @@
 
 ## Notes for next session
 
-- TASK-013 confirmed complete after all acceptance criteria passed.
-- Active moves to `docs/4-tasks/features/TASK-014-maintenance-closure-loop/`
+- TASK-014 confirmed complete after all acceptance criteria passed.
+- Active moves to `docs/4-tasks/features/TASK-015-event-notification-mvp/`

@@ -793,3 +793,94 @@
         }
         ```
 
+---
+
+### 19. 指派维保工单 (Assign Maintenance)
+
+限 **资产管理员 (role=2)** 调用，用于指派待处理工单给本单位维修工程师。
+
+*   **请求路径**：`PUT /maintenanceRecords/assign/{maintId}`
+*   **请求头**：
+    *   `token: <JWT_TOKEN_STRING>`
+    *   `Content-Type: application/json`
+*   **请求体 (RequestBody - JSON)**：
+    ```json
+    {
+      "maintPersonId": 3
+    }
+    ```
+*   **响应示例**：
+    *   **成功 (Result.code = 1)**：
+        ```json
+        {
+          "code": 1,
+          "msg": "success",
+          "data": null
+        }
+        ```
+
+---
+
+### 20. 登记维保完工 (Complete Maintenance)
+
+限 **被指派的维修工程师 (role=1)** 或 **资产管理员 (role=2)** 调用，登记实际维修数据，更新工单为“待复核”状态，设备依然保持“维修”态。
+
+*   **请求路径**：`PUT /maintenanceRecords/complete/{maintId}`
+*   **请求头**：
+    *   `token: <JWT_TOKEN_STRING>`
+    *   `Content-Type: application/json`
+*   **请求体 (RequestBody - JSON)**：
+    ```json
+    {
+      "maintDate": "2026-06-13",
+      "maintContent": "更换电容，加固电路板",
+      "maintCost": 150.00,
+      "maintPerson": "维修工小张"
+    }
+    ```
+*   **响应示例**：
+    *   **成功 (Result.code = 1)**：
+        ```json
+        {
+          "code": 1,
+          "msg": "success",
+          "data": null
+        }
+        ```
+
+---
+
+### 21. 完工复核处置 (Review Maintenance)
+
+限 **资产管理员 (role=2)** 调用，对本单位待复核的工单进行结案处置，分流为“恢复可用”或“转报废”。
+
+*   **请求路径**：`PUT /maintenanceRecords/review/{maintId}`
+*   **请求头**：
+    *   `token: <JWT_TOKEN_STRING>`
+    *   `Content-Type: application/json`
+*   **请求体 (RequestBody - JSON)**：
+    *   **恢复可用分支**：
+        ```json
+        {
+          "maintStatus": 3,
+          "reviewComments": "复核合格，设备运行正常"
+        }
+        ```
+    *   **转报废分支**：
+        ```json
+        {
+          "maintStatus": 4,
+          "reviewComments": "无法修复，老化严重",
+          "scrapNo": "BF2606130000001" // 可选，为空时后端将自动生成
+        }
+        ```
+*   **响应示例**：
+    *   **成功 (Result.code = 1)**：
+        ```json
+        {
+          "code": 1,
+          "msg": "success",
+          "data": null
+        }
+        ```
+

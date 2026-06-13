@@ -30,6 +30,13 @@
               <i class="el-icon-s-tools"></i>
               <span slot="title">报修申请</span>
             </el-menu-item>
+            <el-menu-item index="/message-center">
+              <i class="el-icon-bell"></i>
+              <span slot="title" class="menu-title-container">
+                消息中心
+                <el-badge v-if="unreadCount > 0" :value="unreadCount" :max="99" class="menu-badge" />
+              </span>
+            </el-menu-item>
           </template>
 
           <template v-else>
@@ -80,6 +87,13 @@
               <i class="el-icon-document"></i>
               <span>操作审计</span>
             </el-menu-item>
+            <el-menu-item index="/message-center">
+              <i class="el-icon-bell"></i>
+              <span slot="title" class="menu-title-container">
+                消息中心
+                <el-badge v-if="unreadCount > 0" :value="unreadCount" :max="99" class="menu-badge" />
+              </span>
+            </el-menu-item>
           </template>
         </el-menu>
       </el-aside>
@@ -89,6 +103,11 @@
           <strong style="font-size: 18px">设备管理系统</strong>
 
           <div v-if="username" class="user-info">
+            <div class="header-bell-wrapper" @click="$router.push('/message-center').catch(() => {})">
+              <el-badge :value="unreadCount" :max="99" :hidden="unreadCount === 0" class="bell-badge">
+                <i class="el-icon-bell bell-icon"></i>
+              </el-badge>
+            </div>
             <el-dropdown trigger="click" @command="handleUserCommand">
               <span class="user-dropdown-trigger">
                 <span class="user-name">{{ realName || username }}</span>
@@ -109,7 +128,7 @@
           </div>
         </el-header>
         <el-main style="background-color: #f0f2f5">
-          <router-view />
+          <router-view @refresh-unread="fetchUnreadCount" />
         </el-main>
       </el-container>
     </el-container>
@@ -166,6 +185,7 @@
 
 <script>
 import { changeCurrentPassword } from '@/api/user'
+import { getUnreadCount } from '@/api/message'
 
 export default {
   name: 'App',
@@ -184,6 +204,8 @@ export default {
       role: null,
       realName: '',
       username: '',
+      unreadCount: 0,
+      pollingTimer: null,
       passwordDialogVisible: false,
       passwordLoading: false,
       passwordForm: {
@@ -215,10 +237,16 @@ export default {
   watch: {
     $route() {
       this.updateUserInfo()
+      this.fetchUnreadCount()
     }
   },
   created() {
     this.updateUserInfo()
+    this.fetchUnreadCount()
+    this.startUnreadPolling()
+  },
+  beforeDestroy() {
+    this.stopUnreadPolling()
   },
   methods: {
     updateUserInfo() {
@@ -320,6 +348,31 @@ export default {
         3: 'success'
       }
       return tagMap[role] || ''
+    },
+    async fetchUnreadCount() {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        this.unreadCount = 0
+        return
+      }
+      try {
+        const count = await getUnreadCount()
+        this.unreadCount = typeof count === 'number' ? count : 0
+      } catch (err) {
+        console.error('Failed to fetch unread count in App.vue:', err)
+      }
+    },
+    startUnreadPolling() {
+      this.stopUnreadPolling()
+      this.pollingTimer = setInterval(() => {
+        this.fetchUnreadCount()
+      }, 30000)
+    },
+    stopUnreadPolling() {
+      if (this.pollingTimer) {
+        clearInterval(this.pollingTimer)
+        this.pollingTimer = null
+      }
     }
   }
 }
@@ -333,7 +386,9 @@ body,
   padding: 0;
   height: 100%;
 }
+</style>
 
+<style scoped>
 .el-header {
   padding: 0 20px;
   background-color: #fff;
@@ -371,6 +426,36 @@ body,
   color: #606266;
   display: flex;
   align-items: center;
+}
+
+.header-bell-wrapper {
+  margin-right: 22px;
+  cursor: pointer;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: opacity 0.2s;
+}
+
+.header-bell-wrapper:hover {
+  opacity: 0.85;
+}
+
+.bell-icon {
+  font-size: 20px;
+  color: #606266;
+}
+
+.menu-title-container {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 120px;
+}
+
+.menu-badge {
+  margin-left: auto;
 }
 
 .user-dropdown-trigger {

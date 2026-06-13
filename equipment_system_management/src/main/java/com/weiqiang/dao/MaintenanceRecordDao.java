@@ -19,7 +19,8 @@ public class MaintenanceRecordDao extends BasicDao<MaintenanceRecord>{
                 "mr.maint_date maintDate, mr.maint_content maintContent, mr.maint_cost maintCost, " +
                 "mr.maint_person maintPerson, mr.reporter reporter, mr.fault_description faultDescription, " +
                 "mr.maint_status maintStatus, mr.maint_person_id maintPersonId, mr.reviewer reviewer, " +
-                "mr.review_comments reviewComments, mr.review_date reviewDate " +
+                "mr.review_comments reviewComments, mr.review_date reviewDate, " +
+                "mr.assign_time assignTime, mr.complete_time completeTime " +
                 "FROM maintenance_record mr " +
                 "LEFT JOIN equipment e ON mr.equip_id = e.equip_id ");
         
@@ -44,7 +45,8 @@ public class MaintenanceRecordDao extends BasicDao<MaintenanceRecord>{
                 "mr.maint_date maintDate, mr.maint_content maintContent, mr.maint_cost maintCost, " +
                 "mr.maint_person maintPerson, mr.reporter reporter, mr.fault_description faultDescription, " +
                 "mr.maint_status maintStatus, mr.maint_person_id maintPersonId, mr.reviewer reviewer, " +
-                "mr.review_comments reviewComments, mr.review_date reviewDate " +
+                "mr.review_comments reviewComments, mr.review_date reviewDate, " +
+                "mr.assign_time assignTime, mr.complete_time completeTime " +
                 "FROM maintenance_record mr " +
                 "LEFT JOIN equipment e ON mr.equip_id = e.equip_id " +
                 "WHERE mr.maint_id = ?";
@@ -76,18 +78,19 @@ public class MaintenanceRecordDao extends BasicDao<MaintenanceRecord>{
 
     // 指派工单逻辑：将工单状态置为 1 (维修中)，并设定指派的维修工ID与姓名
     public int assignMaintenance(Integer maintId, Integer maintPersonId, String maintPersonName) {
-        String sql = "UPDATE maintenance_record SET maint_status = 1, maint_person_id = ?, maint_person = ? WHERE maint_id = ?";
-        return update(sql, maintPersonId, maintPersonName, maintId);
+        String sql = "UPDATE maintenance_record SET maint_status = 1, maint_person_id = ?, maint_person = ?, assign_time = ? WHERE maint_id = ?";
+        return update(sql, maintPersonId, maintPersonName, java.time.LocalDateTime.now(), maintId);
     }
 
     // 完成维保逻辑：登记维修结果并完结工单 (状态置为 2)，设备保持维修态
     public int completeMaintenance(Integer maintId, String equipId, MaintenanceRecord record) {
-        String sql = "UPDATE maintenance_record SET maint_date = ?, maint_content = ?, maint_cost = ?, maint_person = ?, maint_status = 2 WHERE maint_id = ?";
+        String sql = "UPDATE maintenance_record SET maint_date = ?, maint_content = ?, maint_cost = ?, maint_person = ?, maint_status = 2, complete_time = ? WHERE maint_id = ?";
         return update(sql, 
                 record.getMaintDate() != null ? record.getMaintDate() : java.time.LocalDate.now(),
                 record.getMaintContent(),
                 record.getMaintCost(),
                 record.getMaintPerson(),
+                java.time.LocalDateTime.now(),
                 maintId);
     }
 
@@ -164,5 +167,11 @@ public class MaintenanceRecordDao extends BasicDao<MaintenanceRecord>{
         }
 
         return updateWithTransaction(sqlTasks);
+    }
+
+    // 驳回重新检修：工单状态回退为 1，清空登记的完工数据，并记录驳回信息作为退回理由
+    public boolean reviewReject(Integer maintId, String reviewer, String reviewComments) {
+        String sql = "UPDATE maintenance_record SET maint_status = 1, reviewer = ?, review_comments = ?, review_date = ?, maint_content = NULL, maint_cost = 0.00, complete_time = NULL WHERE maint_id = ?";
+        return update(sql, reviewer, reviewComments, java.time.LocalDateTime.now(), maintId) > 0;
     }
 }

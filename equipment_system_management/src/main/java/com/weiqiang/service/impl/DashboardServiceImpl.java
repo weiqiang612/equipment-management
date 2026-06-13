@@ -146,7 +146,7 @@ public class DashboardServiceImpl implements DashboardService {
         final Long pendingMaintCount = dashboardDao.countMaintenancesByPersonAndStatus(userId, 1);
         kpis.put("myPendingMaint", pendingMaintCount); // 分配我的待处理数
         kpis.put("myInMaint", pendingMaintCount);      // 维修中数 (系统中工单流程指派后直接为状态1，故这两项等同)
-        kpis.put("myCompletedMaint", dashboardDao.countMaintenancesByPersonAndStatus(userId, 2));
+        kpis.put("myCompletedMaint", dashboardDao.countCompletedMaintenancesByPerson(userId));
 
         // charts
         charts.put("maintCostTrend", dashboardDao.getMaintCostTrendByPerson(userId));

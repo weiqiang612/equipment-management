@@ -31,5 +31,7 @@ public class MaintenanceRecord {
     private String reviewer; // 复核人用户名
     private String reviewComments; // 复核意见
     private java.time.LocalDateTime reviewDate; // 复核日期
+    private java.time.LocalDateTime assignTime; // 指派时间
+    private java.time.LocalDateTime completeTime; // 完工时间
     private String scrapNo; // 仅在复核转报废时接收报废单号
 }

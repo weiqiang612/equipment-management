@@ -20,6 +20,7 @@
         v-loading="loading"
         size="small"
         stripe
+        :row-class-name="tableRowClassName"
       >
         <el-table-column
           prop="maintId"
@@ -32,9 +33,49 @@
         <el-table-column prop="maintDate" label="检修日期" width="130" />
         <el-table-column label="工单状态" width="110" align="center">
           <template slot-scope="scope">
-            <el-tag :type="formatStatusType(scope.row.maintStatus)" size="mini">
-              {{ formatStatusLabel(scope.row.maintStatus) }}
-            </el-tag>
+            <el-popover
+              placement="right-start"
+              title="工单流转时间线"
+              width="250"
+              trigger="hover"
+              popper-class="maint-popover"
+              :open-delay="100"
+              :close-delay="100"
+              :disabled="!scope.row.assignTime && !scope.row.completeTime && !scope.row.reviewDate"
+            >
+              <el-timeline size="mini" class="maint-timeline">
+                <el-timeline-item :timestamp="scope.row.maintDate" placement="top">
+                  发起报修 (报修人: {{ scope.row.reporter || '-' }})
+                </el-timeline-item>
+                <el-timeline-item 
+                  v-if="scope.row.assignTime" 
+                  :timestamp="formatDateTime(scope.row.assignTime)" 
+                  placement="top" 
+                  type="primary"
+                >
+                  工单指派 (维修工: {{ scope.row.maintPerson || '-' }})
+                </el-timeline-item>
+                <el-timeline-item 
+                  v-if="scope.row.completeTime" 
+                  :timestamp="formatDateTime(scope.row.completeTime)" 
+                  placement="top" 
+                  type="success"
+                >
+                  登记完工 (费用: ￥{{ scope.row.maintCost || 0 }})
+                </el-timeline-item>
+                <el-timeline-item 
+                  v-if="scope.row.reviewDate" 
+                  :timestamp="formatDateTime(scope.row.reviewDate)" 
+                  placement="top" 
+                  :type="scope.row.maintStatus === 4 ? 'danger' : 'warning'"
+                >
+                  {{ scope.row.maintStatus === 4 ? '复核转报废' : '复核通过 (恢复在用)' }}
+                </el-timeline-item>
+              </el-timeline>
+              <el-tag slot="reference" :type="formatStatusType(scope.row.maintStatus)" size="mini" style="cursor: pointer">
+                {{ formatStatusLabel(scope.row.maintStatus) }}
+              </el-tag>
+            </el-popover>
           </template>
         </el-table-column>
         <el-table-column prop="faultDescription" label="故障描述" show-overflow-tooltip min-width="180">
@@ -53,6 +94,11 @@
           </template>
         </el-table-column>
         <el-table-column prop="maintPerson" label="检修人" width="100" />
+        <el-table-column prop="reviewComments" label="管理员意见" show-overflow-tooltip min-width="150">
+          <template slot-scope="scope">
+            {{ scope.row.reviewComments || "-" }}
+          </template>
+        </el-table-column>
         <el-table-column v-if="role !== 3" label="操作" align="center" width="200">
           <template slot-scope="scope">
             <!-- 维修工(1)只能登记名下负责工单，资产管理员(2)可以派工指派或登记完工 -->
@@ -98,6 +144,15 @@
         label-width="100px"
         size="small"
       >
+        <el-alert
+          v-if="isEdit && form.maintStatus === 1 && form.reviewComments"
+          title="该工单曾被驳回重修"
+          type="warning"
+          :description="`退回原因：${form.reviewComments}`"
+          show-icon
+          :closable="false"
+          style="margin-bottom: 15px;"
+        />
         <el-form-item v-if="!isEdit" label="选择设备" prop="equipId">
           <el-select
             v-model="form.equipId"
@@ -176,6 +231,7 @@
         <el-form-item label="复核结论" prop="action">
           <el-radio-group v-model="reviewForm.action">
             <el-radio :label="3">复核通过恢复可用</el-radio>
+            <el-radio :label="1">驳回重新检修</el-radio>
             <el-radio :label="4">转报废</el-radio>
           </el-radio-group>
         </el-form-item>
@@ -185,7 +241,7 @@
             type="textarea"
             v-model="reviewForm.reviewComments"
             :rows="3"
-            placeholder="请输入复核意见"
+            :placeholder="reviewForm.action === 1 ? '请输入退回重新检修的原因' : '请输入复核意见'"
           />
         </el-form-item>
 
@@ -205,11 +261,11 @@
       <div slot="footer">
         <el-button @click="reviewDialogVisible = false">取 消</el-button>
         <el-button
-          :type="reviewForm.action === 4 ? 'danger' : 'primary'"
+          :type="reviewForm.action === 4 ? 'danger' : (reviewForm.action === 1 ? 'warning' : 'primary')"
           @click="submitReview"
           :loading="reviewSubmitLoading"
         >
-          {{ reviewForm.action === 4 ? '确认转报废' : '批准恢复在用' }}
+          {{ reviewForm.action === 4 ? '确认转报废' : (reviewForm.action === 1 ? '退回重新检修' : '批准恢复在用') }}
         </el-button>
       </div>
     </el-dialog>
@@ -282,7 +338,22 @@ export default {
       },
       reviewRules: {
         action: [{ required: true, message: "请选择复核结论", trigger: "change" }],
-        reviewComments: [{ required: true, message: "请输入复核意见", trigger: "blur" }],
+        reviewComments: [
+          {
+            validator: (rule, value, callback) => {
+              if (!value) {
+                if (this.reviewForm.action === 1) {
+                  callback(new Error("请输入退回重新检修的原因"));
+                } else {
+                  callback(new Error("请输入复核意见"));
+                }
+              } else {
+                callback();
+              }
+            },
+            trigger: "blur",
+          },
+        ],
         reason: [
           {
             validator: (rule, value, callback) => {
@@ -311,6 +382,11 @@ export default {
     this.fetchMaintainers();
   },
   methods: {
+    formatDateTime(dateTimeStr) {
+      if (!dateTimeStr) return "-";
+      // 将 "2026-06-13T15:21:40" 转换为 "2026-06-13 15:21"
+      return dateTimeStr.replace("T", " ").substring(0, 16);
+    },
     formatStatusLabel(status) {
       const statusMap = {
         0: "待指派",
@@ -475,6 +551,54 @@ export default {
         maintPersonId: null,
       };
     },
+    tableRowClassName({ row }) {
+      const maintId = this.$route.query.maintId;
+      if (maintId && String(row.maintId) === String(maintId)) {
+        return 'highlight-row';
+      }
+      return '';
+    },
   },
 };
 </script>
+
+<style>
+/* 维保时间线悬浮框全局样式优化 */
+.maint-popover {
+  pointer-events: none !important; /* 避免悬浮框抢占鼠标焦点导致闪烁与残留 */
+  padding: 14px 16px !important;
+  border-radius: 8px !important;
+  border: 1px solid #ebeef5 !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+}
+.maint-popover .el-popover__title {
+  font-size: 13px !important;
+  font-weight: bold !important;
+  color: #303133 !important;
+  margin-bottom: 12px !important;
+  padding-bottom: 6px !important;
+  border-bottom: 1px solid #ebeef5 !important;
+}
+.maint-timeline {
+  padding: 4px 0 0 4px !important;
+}
+.maint-timeline .el-timeline-item {
+  padding-bottom: 10px !important;
+}
+.maint-timeline .el-timeline-item__content {
+  font-size: 12px !important;
+  color: #303133 !important;
+  font-weight: bold !important;
+}
+.maint-timeline .el-timeline-item__timestamp {
+  font-size: 11px !important;
+  color: #909399 !important;
+  margin-top: 4px !important;
+}
+</style>
+
+<style scoped>
+::v-deep .el-table .highlight-row {
+  background: #fdf6ec !important;
+}
+</style>

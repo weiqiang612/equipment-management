@@ -56,7 +56,7 @@ public class ScrapRecordServiceImpl implements ScrapRecordService {
         }
 
         // 生成报废单号
-        String ts = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMddHHmmssSSS"));
+        String ts = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyMMddHHmmss"));
         String rand = UUID.randomUUID().toString().replaceAll("-", "").substring(0, 4).toUpperCase();
         String generatedNo = "BF" + ts + rand;
         scrapRecord.setScrapNo(generatedNo);

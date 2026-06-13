@@ -995,11 +995,13 @@ export default {
       return roleMap[role] !== undefined ? roleMap[role] : '未知角色'
     },
     formatMaintStatus(status) {
-      // 0-待指派, 1-维修中, 2-已完成
+      // 0-待指派, 1-维修中, 2-待复核, 3-已复核可用, 4-转报废
       const statusMap = {
         0: '待指派',
         1: '维修中',
-        2: '已完成'
+        2: '待复核',
+        3: '已复核可用',
+        4: '转报废'
       }
       return statusMap[status] !== undefined ? statusMap[status] : '未知'
     },

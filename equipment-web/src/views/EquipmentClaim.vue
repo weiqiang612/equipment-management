@@ -22,7 +22,7 @@
           <el-button type="primary" size="small" icon="el-icon-refresh" @click="fetchOperatorClaims">刷新</el-button>
         </div>
 
-        <el-table :data="operatorClaims" border v-loading="loading" style="width: 100%">
+        <el-table :data="operatorClaims" border v-loading="loading" style="width: 100%" :row-class-name="tableRowClassName">
           <el-table-column prop="createTime" label="申请时间" width="160" />
           <el-table-column prop="equipId" label="设备编号" width="120" />
           <el-table-column prop="equipName" label="设备名称">
@@ -84,7 +84,7 @@
             <el-button type="primary" size="small" icon="el-icon-refresh" @click="fetchPendingClaims">刷新</el-button>
           </div>
 
-          <el-table :data="pendingClaims" border v-loading="loading" style="width: 100%">
+          <el-table :data="pendingClaims" border v-loading="loading" style="width: 100%" :row-class-name="tableRowClassName">
             <el-table-column prop="createTime" label="申请时间" width="160" />
             <el-table-column prop="applicant" label="申请人" width="120" />
             <el-table-column prop="equipId" label="设备编号" width="120" />
@@ -157,7 +157,7 @@
             </el-form>
           </div>
 
-          <el-table :data="historyClaims" border v-loading="loading" style="width: 100%">
+          <el-table :data="historyClaims" border v-loading="loading" style="width: 100%" :row-class-name="tableRowClassName">
             <el-table-column prop="updateTime" label="操作时间" width="160" />
             <el-table-column prop="equipId" label="设备编号" width="120" />
             <el-table-column prop="equipName" label="设备名称" width="150">
@@ -484,6 +484,13 @@ export default {
         5: 'primary'
       }
       return tagMap[status] || 'info'
+    },
+    tableRowClassName({ row }) {
+      const claimId = this.$route.query.claimId
+      if (claimId && String(row.claimId) === String(claimId)) {
+        return 'highlight-row'
+      }
+      return ''
     }
   }
 }
@@ -532,5 +539,9 @@ export default {
   padding: 10px 15px 0 15px;
   border-radius: 4px;
   border: 1px dashed #e4e7ed;
+}
+
+::v-deep .el-table .highlight-row {
+  background: #fdf6ec !important;
 }
 </style>

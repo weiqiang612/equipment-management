@@ -53,12 +53,16 @@
 - [x] Implementation (15 tasks)
 
 ### TASK-015: 事找人 MVP 与消息中心
-- [ ] Implementation (12 tasks)
+- [x] Implementation (12 tasks)
 
 ### TASK-016: AI 辅助报告与建议草案
 - [ ] Implementation (14 tasks)
 
 ## Completed
+
+`docs/4-tasks/features/TASK-015-event-notification-mvp/`
+- spec.md ✅ Ready
+- tasks.md ✅ 100% Complete
 
 `docs/4-tasks/features/TASK-014-maintenance-closure-loop/`
 - spec.md ✅ Ready

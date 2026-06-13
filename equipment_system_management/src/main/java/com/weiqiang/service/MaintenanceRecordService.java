@@ -26,4 +26,6 @@ public interface MaintenanceRecordService {
     boolean reviewMaintenance(Integer maintId, String reviewer, String reviewComments);
 
     boolean reviewToScrap(Integer maintId, String reviewer, String reviewComments, String scrapNo);
+
+    boolean reviewReject(Integer maintId, String reviewer, String reviewComments);
 }

@@ -32,7 +32,7 @@
         *   `equip_id` 参照设备表 `equipment.equip_id`
         *   `out_unit_code` 和 `in_unit_code` 参照单位表 `department.unit_code`
 *   **设备检修信息表 (maintenance_record)**
-    *   关系模式：检修(<u>maint_id</u>, *equip_id*, maint_date, maint_content, maint_cost, maint_person, *reporter*, fault_description, maint_status, *maint_person_id*, reviewer, review_comments, review_date)
+    *   关系模式：检修(<u>maint_id</u>, *equip_id*, maint_date, maint_content, maint_cost, maint_person, *reporter*, fault_description, maint_status, *maint_person_id*, reviewer, review_comments, review_date, assign_time, complete_time)
     *   *外键说明*：
         *   `equip_id` 参照设备表 `equipment.equip_id`
         *   `reporter` 逻辑参照用户表 `sys_user.username` (故障申报人)
@@ -170,6 +170,8 @@ CREATE TABLE `maintenance_record` (
   `reviewer` varchar(50) DEFAULT NULL COMMENT '复核人用户名',
   `review_comments` varchar(500) DEFAULT NULL COMMENT '复核意见',
   `review_date` datetime DEFAULT NULL COMMENT '复核时间',
+  `assign_time` datetime DEFAULT NULL COMMENT '指派时间',
+  `complete_time` datetime DEFAULT NULL COMMENT '完工登记时间',
   PRIMARY KEY (`maint_id`),
   KEY `idx_maint_equip` (`equip_id`),
   CONSTRAINT `maintenance_record_ibfk_1` FOREIGN KEY (`equip_id`) REFERENCES `equipment` (`equip_id`),

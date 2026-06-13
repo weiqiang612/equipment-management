@@ -183,10 +183,10 @@ public class BasicDao<T> {
                     log.error("删除失败：该记录已被其他表引用（如单位下仍有设备），请先清理关联数据。");
                     throw new RuntimeException("该记录正在使用中，无法删除");
                 }
-                throw new RuntimeException("事务执行失败，数据已回滚", e);
+                throw new RuntimeException("事务执行失败，数据已回滚: " + e.getMessage(), e);
             }
         } catch (SQLException e) {
-            throw new RuntimeException("获取数据库连接失败", e);
+            throw new RuntimeException("获取数据库连接失败: " + e.getMessage(), e);
         }
     }
 }

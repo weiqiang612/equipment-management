@@ -7,6 +7,7 @@ import com.weiqiang.pojo.MaintenanceRecord;
 import com.weiqiang.pojo.Result;
 import com.weiqiang.pojo.User;
 import com.weiqiang.pojo.TransferRecord;
+import com.weiqiang.pojo.ScrapRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -260,7 +261,7 @@ public class WorkflowSecurityTests {
                         .content(objectMapper.writeValueAsString(equip2)))
                 .andExpect(status().isOk());
 
-        // A. 用 test_op2 (不是保管人) 发起报修 -> 预期被拦截阻断
+        // A. 用 test_op2 (不是保管人) 发起报修 -> 预期被拦截阻断（提示已被他人保管）
         final MaintenanceRecord maintRec = new MaintenanceRecord();
         maintRec.setFaultDescription("屏幕开裂");
         maintRec.setMaintContent("计划返厂维修");
@@ -273,7 +274,7 @@ public class WorkflowSecurityTests {
                         .content(objectMapper.writeValueAsString(maintRec)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
-                .andExpect(jsonPath("$.msg").value("您不是该设备的保管人，无权发起报修！"));
+                .andExpect(jsonPath("$.msg").value("操作失败：该设备已被他人保管，无权发起报修！"));
 
         // B. 用 test_op1 (是保管人) 发起报修 -> 预期成功
         mockMvc.perform(post("/equipments/maint/TE002")
@@ -303,6 +304,39 @@ public class WorkflowSecurityTests {
                 .andExpect(jsonPath("$.code").value(1))
                 .andExpect(jsonPath("$.data[?(@.equipId=='TE002')].equipName").value(hasItem("测试设备2")))
                 .andExpect(jsonPath("$.data[?(@.equipId=='TE002')].faultDescription").value(hasItem("屏幕开裂")));
+
+        // ----------------------------------------------------
+        // [3.1] 无保管人设备报修联动校验 (方案二)
+        // ----------------------------------------------------
+        // A. 创建同单位无保管人设备 TE004 (单位 D98)
+        userDao.update("INSERT INTO equipment (equip_id, equip_name, model, status, purchase_date, original_value, unit_code, category_id, custodian) " +
+                "VALUES ('TE004', '公用设备4', 'Model-A', '在用', ?, 5000.00, 'D98', 'C99', NULL)", java.time.LocalDate.now());
+
+        // B. 用 test_op1 (单位 D98) 报修本单位无保管人设备 TE004 -> 预期成功
+        mockMvc.perform(post("/equipments/maint/TE004")
+                        .header("token", op1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(maintRec)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+        assertEquals("维修", userDao.singleSelect("SELECT status FROM equipment WHERE equip_id = 'TE004'"));
+
+        // C. 创建跨单位无保管人设备 TE005 (单位 D99)
+        userDao.update("INSERT INTO equipment (equip_id, equip_name, model, status, purchase_date, original_value, unit_code, category_id, custodian) " +
+                "VALUES ('TE005', '公用设备5', 'Model-B', '在用', ?, 6000.00, 'D99', 'C99', NULL)", java.time.LocalDate.now());
+
+        // D. 用 test_op1 (单位 D98) 报修跨单位无保管人设备 TE005 -> 预期被拦截阻断
+        mockMvc.perform(post("/equipments/maint/TE005")
+                        .header("token", op1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(maintRec)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("操作失败：无权跨单位报修无保管人设备！"));
+
+        // 清理测试临时数据，防止干扰后续的测试用例执行（如用户级联删除时的未完结维保单拦截）
+        userDao.update("DELETE FROM maintenance_record WHERE equip_id IN ('TE004', 'TE005')");
+        userDao.update("DELETE FROM equipment WHERE equip_id IN ('TE004', 'TE005')");
 
         // ----------------------------------------------------
         // [4] 工单指派（派工）校验
@@ -860,5 +894,162 @@ public class WorkflowSecurityTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(0))
                 .andExpect(jsonPath("$.msg").value("操作失败：该工单已复核，禁止二次修改！"));
+
+        // ==========================================
+        // 10. 完工复核驳回与重新检修流转集成测试
+        // ==========================================
+        // 创建新设备 TE022
+        mockMvc.perform(post("/equipments")
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildEquipment("TE022", "复核驳回测试设备", "D98", OP1_USERNAME))))
+                .andExpect(status().isOk());
+
+        // 报修 TE022
+        mockMvc.perform(post("/equipments/maint/TE022")
+                        .header("token", op1Token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildFaultReport("按键失效"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        final Integer maintId3 = (Integer) userDao.singleSelect("SELECT maint_id FROM maintenance_record WHERE equip_id = 'TE022' ORDER BY maint_id DESC LIMIT 1");
+        assertNotNull(maintId3);
+
+        // 指派给维修工
+        assignRec.setMaintPersonId(this.maintId);
+        mockMvc.perform(put("/maintenanceRecords/assign/" + maintId3)
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(assignRec)))
+                .andExpect(status().isOk());
+
+        // 维修工首次登记完工
+        final MaintenanceRecord completeRec3 = new MaintenanceRecord();
+        completeRec3.setMaintContent("更换微动开关");
+        completeRec3.setMaintCost(new java.math.BigDecimal("50.00"));
+        completeRec3.setMaintPerson("测试维修工");
+        mockMvc.perform(put("/maintenanceRecords/complete/" + maintId3)
+                        .header("token", maintToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(completeRec3)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        // 验证当前状态为 2 (待复核)
+        assertEquals(2, userDao.singleSelect("SELECT maint_status FROM maintenance_record WHERE maint_id = ?", maintId3));
+
+        // 资产管理员执行驳回：结论状态传入 1，录入驳回理由
+        final MaintenanceRecord rejectReq = new MaintenanceRecord();
+        rejectReq.setMaintStatus(1); // 驳回/退回至维修中
+        rejectReq.setReviewComments("按键手感依然较差，驳回重修");
+        mockMvc.perform(put("/maintenanceRecords/review/" + maintId3)
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(rejectReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        // 验证 A: 工单状态回退为 1
+        assertEquals(1, userDao.singleSelect("SELECT maint_status FROM maintenance_record WHERE maint_id = ?", maintId3));
+        // 验证 B: 设备状态依然为 '维修'
+        assertEquals("维修", userDao.singleSelect("SELECT status FROM equipment WHERE equip_id = 'TE022'"));
+        // 验证 C: 登记的数据已被清空
+        assertNull(userDao.singleSelect("SELECT maint_content FROM maintenance_record WHERE maint_id = ?", maintId3));
+        assertEquals(0.00, ((java.math.BigDecimal) userDao.singleSelect("SELECT maint_cost FROM maintenance_record WHERE maint_id = ?", maintId3)).doubleValue());
+
+        // 验证 D: 审计日志是否记录
+        final Long rejectLogCount = (Long) userDao.singleSelect("SELECT COUNT(*) FROM operation_log WHERE op_type = '维保复核驳回' AND target_id = ?", maintId3.toString());
+        assertEquals(1L, rejectLogCount);
+
+        // A. 非法流转防御：当工单回退到 1 时，再次尝试对其进行复核 -> 预期拦截（提示尚未完工）
+        mockMvc.perform(put("/maintenanceRecords/review/" + maintId3)
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(reviewReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(0))
+                .andExpect(jsonPath("$.msg").value("操作失败：工单尚未登记完工，无法复核！"));
+
+        // 维修工二次登记完工
+        completeRec3.setMaintContent("重新调校并更换优质弹片");
+        completeRec3.setMaintCost(new java.math.BigDecimal("80.00"));
+        mockMvc.perform(put("/maintenanceRecords/complete/" + maintId3)
+                        .header("token", maintToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(completeRec3)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        // 再次校验状态为 2 (待复核)
+        assertEquals(2, userDao.singleSelect("SELECT maint_status FROM maintenance_record WHERE maint_id = ?", maintId3));
+
+        // 资产管理员二次复核通过
+        rejectReq.setMaintStatus(3); // 复核通过恢复在用
+        rejectReq.setReviewComments("按键正常，通过");
+        mockMvc.perform(put("/maintenanceRecords/review/" + maintId3)
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(rejectReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(1));
+
+        // 最终校验：工单状态为 3，设备在用
+        assertEquals(3, userDao.singleSelect("SELECT maint_status FROM maintenance_record WHERE maint_id = ?", maintId3));
+        assertEquals("在用", userDao.singleSelect("SELECT status FROM equipment WHERE equip_id = 'TE022'"));
+    }
+
+    @Test
+    public void testScrapCancelWorkflow() throws Exception {
+        // 1. 创建待测试设备 TE099
+        mockMvc.perform(post("/equipments")
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildEquipment("TE099", "报废撤销测试设备", "D98", OP1_USERNAME))))
+                .andExpect(status().isOk());
+
+        // 2. 将设备报废
+        final ScrapRecord scrapRecord = new ScrapRecord();
+        scrapRecord.setReason("严重锈蚀");
+        scrapRecord.setApprover("test_mgr");
+        scrapRecord.setScrapDate(LocalDate.now());
+
+        MvcResult postResult = mockMvc.perform(post("/equipments/scrap/TE099")
+                        .header("token", mgrToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(scrapRecord)))
+                .andReturn();
+
+        System.out.println("====== POST SCRAP RESPONSE BODY ======");
+        System.out.println(postResult.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8));
+        System.out.println("======================================");
+
+        assertTrue(postResult.getResponse().getContentAsString().contains("\"code\":1"), 
+                "Post scrap failed: " + postResult.getResponse().getContentAsString());
+
+        // 验证报废记录存在且设备状态为 '报废'
+        assertEquals("报废", userDao.singleSelect("SELECT status FROM equipment WHERE equip_id = 'TE099'"));
+        final String scrapNo = (String) userDao.singleSelect("SELECT scrap_no FROM scrap_record WHERE equip_id = 'TE099'");
+        assertNotNull(scrapNo);
+
+        // 3. 执行撤销报废
+        MvcResult mvcResult = mockMvc.perform(delete("/scrapRecords/" + scrapNo)
+                        .header("token", mgrToken)
+                        .param("equipId", "TE099"))
+                .andReturn();
+
+        System.out.println("====== RESPONSE BODY ======");
+        System.out.println(mvcResult.getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8));
+        System.out.println("===========================");
+
+        // 断言 code 为 1
+        String responseContent = mvcResult.getResponse().getContentAsString();
+        assertTrue(responseContent.contains("\"code\":1"), "Expected code 1 but got response: " + responseContent);
+
+        // 验证设备状态恢复为 '在用'，并且报废记录已被删除
+        assertEquals("在用", userDao.singleSelect("SELECT status FROM equipment WHERE equip_id = 'TE099'"));
+        final Long count = (Long) userDao.singleSelect("SELECT COUNT(*) FROM scrap_record WHERE equip_id = 'TE099'");
+        assertEquals(0L, count);
     }
 }
+

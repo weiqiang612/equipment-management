@@ -79,7 +79,7 @@ public class DashboardDao extends BasicDao<Object> {
     public List<DashboardMaintTrend> getMaintCostTrendByPerson(Integer personId) {
         String sql = "SELECT DATE_FORMAT(maint_date, '%Y-%m') AS month, SUM(maint_cost) AS cost " +
                 "FROM maintenance_record " +
-                "WHERE maint_person_id = ? AND maint_status = 2 " +
+                "WHERE maint_person_id = ? AND maint_status IN (2, 3, 4) " +
                 "GROUP BY DATE_FORMAT(maint_date, '%Y-%m') " +
                 "ORDER BY month ASC";
         return mutiSelect(sql, DashboardMaintTrend.class, personId);
@@ -88,9 +88,15 @@ public class DashboardDao extends BasicDao<Object> {
     public List<MaintenanceRecord> getMaintenancesByPerson(Integer personId) {
         String sql = "SELECT maint_id AS maintId, equip_id AS equipId, fault_description AS faultDescription, maint_status AS maintStatus " +
                 "FROM maintenance_record " +
-                "WHERE maint_person_id = ? " +
+                "WHERE maint_person_id = ? AND maint_status = 1 " +
                 "ORDER BY maint_id DESC LIMIT 10";
         return mutiSelect(sql, MaintenanceRecord.class, personId);
+    }
+
+    public Long countCompletedMaintenancesByPerson(Integer personId) {
+        String sql = "SELECT COUNT(*) FROM maintenance_record WHERE maint_person_id = ? AND maint_status IN (2, 3, 4)";
+        Object result = singleSelect(sql, personId);
+        return result != null ? (Long) result : 0L;
     }
 
     // ==========================================
@@ -140,7 +146,7 @@ public class DashboardDao extends BasicDao<Object> {
         String sql = "SELECT DATE_FORMAT(mr.maint_date, '%Y-%m') AS month, SUM(mr.maint_cost) AS cost, COUNT(*) AS count " +
                 "FROM maintenance_record mr " +
                 "JOIN equipment e ON mr.equip_id = e.equip_id " +
-                "WHERE e.unit_code = ? AND mr.maint_status = 2 " +
+                "WHERE e.unit_code = ? AND mr.maint_status IN (2, 3, 4) " +
                 "GROUP BY DATE_FORMAT(mr.maint_date, '%Y-%m') " +
                 "ORDER BY month ASC";
         return mutiSelect(sql, DashboardMaintTrend.class, unitCode);

@@ -68,10 +68,20 @@ public class MaintenanceRecordServiceImpl implements MaintenanceRecordService {
             }
         }
 
-        // 报修人约束：普通操作员发起报修时，校验设备保管人是否是自己
+        // 报修人约束：普通操作员发起报修时，校验设备保管关系与单位归属
         if (currentRole != null && currentRole == 0) {
-            if (equipment.getCustodian() == null || !equipment.getCustodian().equals(currentUsername)) {
-                throw new BusinessException("您不是该设备的保管人，无权发起报修！");
+            boolean isCustodian = equipment.getCustodian() != null && equipment.getCustodian().equals(currentUsername);
+            boolean hasNoCustodian = equipment.getCustodian() == null || equipment.getCustodian().trim().isEmpty();
+            String currentUnitCode = BaseContext.getCurrentUnitCode();
+            boolean sameUnit = equipment.getUnitCode() != null && equipment.getUnitCode().equals(currentUnitCode);
+
+            if (!isCustodian) {
+                if (!hasNoCustodian) {
+                    throw new BusinessException("操作失败：该设备已被他人保管，无权发起报修！");
+                }
+                if (!sameUnit) {
+                    throw new BusinessException("操作失败：无权跨单位报修无保管人设备！");
+                }
             }
         }
 
@@ -340,6 +350,47 @@ public class MaintenanceRecordServiceImpl implements MaintenanceRecordService {
             
             operationLogService.record("设备报废", "equipment", oldRecord.getEquipId(),
                 "设备报废：" + oldRecord.getEquipId() + "，原保管人：" + (oldCustodian != null ? oldCustodian : "无") + "，报废原因：" + reviewComments, 1, null);
+        }
+        return success;
+    }
+
+    @Override
+    @org.springframework.transaction.annotation.Transactional(rollbackFor = Exception.class)
+    public boolean reviewReject(Integer maintId, String reviewer, String reviewComments) {
+        MaintenanceRecord oldRecord = maintenanceRecordDao.getById(maintId);
+        if (oldRecord == null) {
+            throw new BusinessException("该维保工单不存在");
+        }
+
+        Integer currentRole = BaseContext.getCurrentRole();
+        if (currentRole == null || currentRole != 2) {
+            throw new ForbiddenException("越权操作：只有资产管理员可以复核或驳工单");
+        }
+
+        if (oldRecord.getMaintStatus() == 0 || oldRecord.getMaintStatus() == 1) {
+            throw new BusinessException("操作失败：工单尚未登记完工，无法驳回！");
+        }
+        if (oldRecord.getMaintStatus() == 3 || oldRecord.getMaintStatus() == 4) {
+            throw new BusinessException("操作失败：该工单已复核，禁止二次修改！");
+        }
+        if (oldRecord.getMaintStatus() != 2) {
+            throw new BusinessException("操作失败：当前工单状态不支持驳回！");
+        }
+
+        Equipment equipment = equipmentDao.getEquipmentById(oldRecord.getEquipId());
+        if (equipment == null) {
+            throw new BusinessException("关联设备不存在");
+        }
+
+        String currentUnitCode = BaseContext.getCurrentUnitCode();
+        if (equipment.getUnitCode() == null || !equipment.getUnitCode().equals(currentUnitCode)) {
+            throw new ForbiddenException("越权操作：无权复核或驳回其他单位的设备维保工单");
+        }
+
+        boolean success = maintenanceRecordDao.reviewReject(maintId, reviewer, reviewComments);
+        if (success) {
+            operationLogService.record("维保复核驳回", "maintenance_record", maintId.toString(),
+                "驳回维保工单 " + maintId + "，结论：退回重新检修。意见: " + reviewComments, 1, null);
         }
         return success;
     }

@@ -210,7 +210,7 @@ export default {
         await deleteScrapRecord(row.scrapNo, row.equipId);
         this.$message.success("已撤销并恢复设备状态");
         this.fetchScrapRecords();
-      });
+      }).catch(() => {});
     },
     // 4. 重置表单方法
     resetForm() {

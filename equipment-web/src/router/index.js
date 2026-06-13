@@ -155,6 +155,15 @@ const routes = [
             requiresAuth: true,
             roles: [2, 3]
         }
+    },
+    {
+        path: '/message-center',
+        name: 'MessageCenter',
+        component: () => import('../views/MessageCenter.vue'),
+        meta: {
+            title: '消息中心',
+            requiresAuth: true
+        }
     }
 ]
 

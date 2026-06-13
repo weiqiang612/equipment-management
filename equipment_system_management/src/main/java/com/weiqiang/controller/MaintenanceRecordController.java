@@ -90,6 +90,9 @@ public class MaintenanceRecordController {
             String scrapNo = record.getScrapNo();
             boolean success = maintenanceRecordService.reviewToScrap(maintId, reviewer, reviewComments, scrapNo);
             return success ? Result.success() : Result.error("复核转报废失败！");
+        } else if (maintStatus == 1) {
+            boolean success = maintenanceRecordService.reviewReject(maintId, reviewer, reviewComments);
+            return success ? Result.success() : Result.error("驳回重新检修失败！");
         } else {
             return Result.error("无效的复核结论状态！");
         }

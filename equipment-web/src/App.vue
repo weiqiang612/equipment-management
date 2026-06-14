@@ -123,17 +123,71 @@
           </div>
 
           <div v-if="username" class="user-info">
-            <div class="header-bell-wrapper" @click="goToMessageCenter">
-              <div class="bell-icon-container">
-                <i class="el-icon-bell bell-icon"></i>
-                <span
-                  v-if="unreadCount > 0"
-                  class="app-notification-badge app-notification-badge--floating"
-                >
-                  {{ formatUnreadCount(unreadCount) }}
-                </span>
+            <el-popover
+              placement="bottom"
+              width="320"
+              v-model="messagePreviewVisible"
+              trigger="manual"
+              popper-class="message-preview-popover"
+            >
+              <div
+                class="message-preview-panel"
+                @mouseenter="handlePreviewMouseEnter"
+                @mouseleave="handlePreviewMouseLeave"
+              >
+                <div class="message-preview-header">
+                  <div>
+                    <strong>消息概览</strong>
+                    <p>优先查看最近的未读待处理消息</p>
+                  </div>
+                  <el-tag size="mini" type="danger">{{ unreadCount }}</el-tag>
+                </div>
+
+                <div v-if="unreadPreviewLoading" class="message-preview-loading">
+                  正在加载...
+                </div>
+
+                <div v-else-if="unreadPreviewList.length > 0" class="message-preview-list">
+                  <button
+                    v-for="item in unreadPreviewList"
+                    :key="item.id"
+                    type="button"
+                    class="message-preview-item"
+                    @click="handlePreviewProcess(item)"
+                  >
+                    <span class="message-preview-item-title">{{ item.title }}</span>
+                    <span class="message-preview-item-meta">
+                      {{ getPreviewTypeLabel(item.refType) }} · {{ formatPreviewTime(item.createTime) }}
+                    </span>
+                  </button>
+                </div>
+
+                <div v-else class="message-preview-empty">
+                  暂无未读消息
+                </div>
+
+                <el-button type="primary" size="mini" plain class="message-preview-action" @click="goToMessageCenter">
+                  进入消息中心
+                </el-button>
               </div>
-            </div>
+
+              <div
+                slot="reference"
+                class="header-bell-wrapper"
+                @mouseenter="handleBellMouseEnter"
+                @mouseleave="handleBellMouseLeave"
+              >
+                <div class="bell-icon-container" @click="goToMessageCenter">
+                  <i class="el-icon-bell bell-icon"></i>
+                  <span
+                    v-if="unreadCount > 0"
+                    class="app-notification-badge app-notification-badge--floating"
+                  >
+                    {{ formatUnreadCount(unreadCount) }}
+                  </span>
+                </div>
+              </div>
+            </el-popover>
             <el-dropdown trigger="click" @command="handleUserCommand">
               <span class="user-dropdown-trigger">
                 <span class="user-name">{{ realName || username }}</span>
@@ -211,7 +265,7 @@
 
 <script>
 import { changeCurrentPassword } from '@/api/user'
-import { getUnreadCount } from '@/api/message'
+import { getMessages, getUnreadCount } from '@/api/message'
 
 const PAGE_META = {
   '/dashboard': {
@@ -290,6 +344,10 @@ export default {
       realName: '',
       username: '',
       unreadCount: 0,
+      messagePreviewVisible: false,
+      unreadPreviewLoading: false,
+      unreadPreviewList: [],
+      messagePreviewHideTimer: null,
       pollingTimer: null,
       passwordDialogVisible: false,
       passwordLoading: false,
@@ -347,6 +405,7 @@ export default {
     this.startUnreadPolling()
   },
   beforeDestroy() {
+    this.clearMessagePreviewHideTimer()
     this.stopUnreadPolling()
   },
   methods: {
@@ -453,6 +512,34 @@ export default {
     goToMessageCenter() {
       this.$router.push('/message-center').catch(() => {})
     },
+    handleBellMouseEnter() {
+      this.clearMessagePreviewHideTimer()
+      if (!this.messagePreviewVisible) {
+        this.messagePreviewVisible = true
+        this.loadUnreadPreview()
+      }
+    },
+    handleBellMouseLeave() {
+      this.scheduleMessagePreviewHide(80)
+    },
+    handlePreviewMouseEnter() {
+      this.clearMessagePreviewHideTimer()
+    },
+    handlePreviewMouseLeave() {
+      this.scheduleMessagePreviewHide(60)
+    },
+    scheduleMessagePreviewHide(delay) {
+      this.clearMessagePreviewHideTimer()
+      this.messagePreviewHideTimer = setTimeout(() => {
+        this.messagePreviewVisible = false
+      }, delay)
+    },
+    clearMessagePreviewHideTimer() {
+      if (this.messagePreviewHideTimer) {
+        clearTimeout(this.messagePreviewHideTimer)
+        this.messagePreviewHideTimer = null
+      }
+    },
     formatUnreadCount(count) {
       if (typeof count !== 'number' || count <= 0) {
         return ''
@@ -463,6 +550,7 @@ export default {
       const token = localStorage.getItem('token')
       if (!token) {
         this.unreadCount = 0
+        this.unreadPreviewList = []
         return
       }
       try {
@@ -471,6 +559,64 @@ export default {
       } catch (err) {
         console.error('Failed to fetch unread count in App.vue:', err)
       }
+    },
+    async loadUnreadPreview() {
+      const token = localStorage.getItem('token')
+      if (!token) {
+        this.unreadPreviewList = []
+        return
+      }
+      this.unreadPreviewLoading = true
+      try {
+        const res = await getMessages({
+          status: 0,
+          page: 1,
+          pageSize: 3
+        })
+        this.unreadPreviewList = (res && res.rows) || []
+      } catch (err) {
+        this.unreadPreviewList = []
+      } finally {
+        this.unreadPreviewLoading = false
+      }
+    },
+    getPreviewTypeLabel(refType) {
+      const labelMap = {
+        equipment: '设备风险',
+        claim: '领用审批',
+        maintenance: '检修待办'
+      }
+      return labelMap[refType] || '系统通知'
+    },
+    formatPreviewTime(value) {
+      if (!value) {
+        return ''
+      }
+      return value.replace('T', ' ').substring(5, 16)
+    },
+    handlePreviewProcess(item) {
+      if (!item) {
+        return
+      }
+      if (item.refType === 'equipment' && item.refId) {
+        this.$router.push(`/equipment/detail/${item.refId}`).catch(() => {})
+        return
+      }
+      if (item.refType === 'claim' && item.refId) {
+        this.$router.push({
+          path: '/equipment/claim',
+          query: { claimId: item.refId }
+        }).catch(() => {})
+        return
+      }
+      if (item.refType === 'maintenance' && item.refId) {
+        this.$router.push({
+          path: '/equipment/maintenance',
+          query: { maintId: item.refId }
+        }).catch(() => {})
+        return
+      }
+      this.goToMessageCenter()
     },
     startUnreadPolling() {
       this.stopUnreadPolling()
@@ -495,6 +641,13 @@ body,
   margin: 0;
   padding: 0;
   height: 100%;
+}
+
+.message-preview-popover {
+  padding: 0;
+  border-radius: 12px;
+  border: 1px solid #e6ebf2;
+  box-shadow: 0 10px 28px rgba(31, 45, 61, 0.12);
 }
 </style>
 
@@ -633,18 +786,19 @@ body,
 }
 
 .app-notification-badge {
-  min-width: 20px;
-  height: 20px;
-  padding: 0 6px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
   margin-left: 12px;
-  border-radius: 10px;
+  border-radius: 9px;
   background: #f56c6c;
   color: #fff;
-  font-size: 12px;
-  line-height: 20px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 18px;
   text-align: center;
   box-sizing: border-box;
-  border: 2px solid #304156;
+  border: none;
   flex-shrink: 0;
 }
 
@@ -661,9 +815,8 @@ body,
   top: -8px;
   right: -14px;
   margin-left: auto;
-  border-color: #fff;
-  min-width: 22px;
-  height: 22px;
+  min-width: 18px;
+  height: 18px;
   line-height: 18px;
 }
 
@@ -692,6 +845,79 @@ body,
 .user-dropdown-trigger:hover .user-name,
 .user-dropdown-trigger:hover .el-icon-arrow-down {
   color: #66b1ff;
+}
+
+.message-preview-panel {
+  padding: 14px;
+}
+
+.message-preview-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.message-preview-header strong {
+  color: #1f2d3d;
+  font-size: 14px;
+}
+
+.message-preview-header p {
+  margin: 4px 0 0;
+  color: #7a8797;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.message-preview-loading,
+.message-preview-empty {
+  color: #7a8797;
+  font-size: 12px;
+  padding: 10px 0 14px;
+}
+
+.message-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.message-preview-item {
+  width: 100%;
+  border: 1px solid #edf1f6;
+  background: #fafbfd;
+  border-radius: 10px;
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 0.2s ease, border-color 0.2s ease;
+}
+
+.message-preview-item:hover {
+  background: #f3f8ff;
+  border-color: #d9ecff;
+}
+
+.message-preview-item-title {
+  display: block;
+  color: #1f2d3d;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.message-preview-item-meta {
+  display: block;
+  color: #7a8797;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.message-preview-action {
+  width: 100%;
+  margin-top: 12px;
 }
 
 @media (max-width: 1280px) {

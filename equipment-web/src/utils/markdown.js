@@ -1,105 +1,236 @@
+const TABLE_BLOCK_PREFIX = '<div class="table-responsive">'
+
 export function renderMarkdown(text) {
   if (!text) return ''
 
-  // 1. 进行基础的 HTML 转义，防止 HTML 注入
-  let escapedText = text
+  const escapedText = escapeHtml(text)
+  const parsedLines = parseTables(escapedText)
+  const blocks = buildBlocks(parsedLines)
+
+  return blocks.join('')
+}
+
+function escapeHtml(text) {
+  return text
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
+}
 
-  // 2. 表格语法解析
-  const lines = escapedText.split('\n')
+function parseTables(text) {
+  const lines = text.split('\n')
   let inTable = false
   let tableHeader = []
   let tableRows = []
-  let parsedLines = []
+  const parsedLines = []
 
-  for (let i = 0; i < lines.length; i++) {
+  for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i]
     const trimmed = line.trim()
-    
-    // 匹配符合表格特性的行，以 | 开头并以 | 结尾
+
     if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
-      const cells = trimmed.split('|').map(c => c.trim()).slice(1, -1)
-      
+      const cells = trimmed.split('|').map(cell => cell.trim()).slice(1, -1)
       if (!inTable) {
         inTable = true
         tableHeader = cells
-      } else if (cells.every(c => /^:?-+:?$/.test(c))) {
-        // 这是表格的分隔行（如 | :--- | :--- |），忽略
+      } else if (cells.every(cell => /^:?-+:?$/.test(cell))) {
         continue
       } else {
         tableRows.push(cells)
       }
-    } else {
-      if (inTable) {
-        parsedLines.push(buildTableHtml(tableHeader, tableRows))
-        inTable = false
-        tableHeader = []
-        tableRows = []
-      }
-      parsedLines.push(line)
+      continue
     }
+
+    if (inTable) {
+      parsedLines.push(buildTableHtml(tableHeader, tableRows))
+      inTable = false
+      tableHeader = []
+      tableRows = []
+    }
+
+    parsedLines.push(line)
   }
-  
+
   if (inTable) {
     parsedLines.push(buildTableHtml(tableHeader, tableRows))
   }
 
-  let html = parsedLines.join('\n')
+  return parsedLines
+}
 
-  // 3. 其它 Markdown 语法渲染
-  html = html
-    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-    .replace(/^\s*[-*_]{3,}\s*$/gim, '<hr/>') // 渲染 ---, ***, ___ 为分割线
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/^\s*[-*]\s+(.*$)/gim, '<li>$1</li>') // 支持 - 开头或 * 开头的列表项
-    .replace(/`(.*?)`/g, '<code>$1</code>')
-    .replace(/\n/g, '<br/>')
+function buildBlocks(lines) {
+  const blocks = []
+  let paragraphLines = []
+  let listType = ''
+  let listItems = []
 
-  // 合并连续的 <li> 为一个 <ul> 标签包裹
-  html = html.replace(/(<li>.*?<\/li>)+/g, '<ul>$&</ul>')
+  const flushParagraph = () => {
+    if (!paragraphLines.length) {
+      return
+    }
+    const content = paragraphLines.map(line => renderInlineMarkdown(line.trim())).join('<br/>')
+    blocks.push(`<p>${content}</p>`)
+    paragraphLines = []
+  }
 
-  // 4. 精细清洗：移除表格与列表等块级元素内部因 \n 转义意外引入的多余 <br/>，保持排版工整
-  html = html
-    .replace(/(<table[^>]*>[\s\S]*?<\/table>)/gi, function(match) {
-      return match.replace(/<br\s*\/?>/gi, '')
-    })
-    .replace(/<\/ul><br\s*\/?>/gi, '</ul>')
-    .replace(/<\/hr><br\s*\/?>/gi, '<hr/>')
-    .replace(/<hr\s*\/?><br\s*\/?>/gi, '<hr/>')
-    .replace(/<br\s*\/?><li>/gi, '<li>')
-    .replace(/<\/li><br\s*\/?>/gi, '</li>')
+  const flushList = () => {
+    if (!listItems.length || !listType) {
+      return
+    }
+    const itemsHtml = listItems.map(item => buildListItemHtml(item)).join('')
+    blocks.push(`<${listType}>${itemsHtml}</${listType}>`)
+    listItems = []
+    listType = ''
+  }
 
-  return html
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i]
+    const trimmed = line.trim()
+
+    if (line.startsWith(TABLE_BLOCK_PREFIX)) {
+      flushParagraph()
+      flushList()
+      blocks.push(line)
+      continue
+    }
+
+    if (!trimmed) {
+      flushParagraph()
+      flushList()
+      continue
+    }
+
+    const headingLevel = getHeadingLevel(trimmed)
+    if (headingLevel > 0) {
+      flushParagraph()
+      flushList()
+      const content = renderInlineMarkdown(trimmed.replace(/^#{1,3}\s+/, ''))
+      blocks.push(`<h${headingLevel}>${content}</h${headingLevel}>`)
+      continue
+    }
+
+    if (/^\s*[-*_]{3,}\s*$/.test(trimmed)) {
+      flushParagraph()
+      flushList()
+      blocks.push('<hr/>')
+      continue
+    }
+
+    if (/^\s*[-*]\s+/.test(line)) {
+      flushParagraph()
+      if (listType !== 'ul') {
+        flushList()
+        listType = 'ul'
+      }
+      listItems.push(parseListItem(line.replace(/^\s*[-*]\s+/, '').trim()))
+      continue
+    }
+
+    if (/^\s*\d+\.\s+/.test(line)) {
+      flushParagraph()
+      if (listType !== 'ol') {
+        flushList()
+        listType = 'ol'
+      }
+      listItems.push(parseListItem(line.replace(/^\s*\d+\.\s+/, '').trim()))
+      continue
+    }
+
+    if (listType && listItems.length) {
+      const lastItem = listItems[listItems.length - 1]
+      lastItem.lines.push(trimmed)
+      continue
+    }
+
+    flushList()
+    paragraphLines.push(line)
+  }
+
+  flushParagraph()
+  flushList()
+
+  return blocks
+}
+
+function getHeadingLevel(line) {
+  if (/^###\s+/.test(line)) {
+    return 3
+  }
+  if (/^##\s+/.test(line)) {
+    return 2
+  }
+  if (/^#\s+/.test(line)) {
+    return 1
+  }
+  return 0
 }
 
 function buildTableHtml(headers, rows) {
   let html = '<div class="table-responsive"><table class="markdown-table">'
   html += '<thead><tr>'
-  headers.forEach(h => {
-    const renderedH = renderInlineMarkdown(h)
-    html += `<th>${renderedH}</th>`
+  headers.forEach(header => {
+    html += `<th>${renderInlineMarkdown(header)}</th>`
   })
-  html += '</tr></thead>'
-  html += '<tbody>'
+  html += '</tr></thead><tbody>'
+
   rows.forEach(row => {
     html += '<tr>'
     row.forEach(cell => {
-      const renderedCell = renderInlineMarkdown(cell)
-      html += `<td>${renderedCell}</td>`
+      html += `<td>${renderInlineMarkdown(cell)}</td>`
     })
     html += '</tr>'
   })
+
   html += '</tbody></table></div>'
   return html
 }
 
+function parseListItem(text) {
+  const taskMatch = text.match(/^\[( |x|X)\]\s+(.*)$/)
+  if (taskMatch) {
+    return {
+      type: 'task',
+      checked: taskMatch[1].toLowerCase() === 'x',
+      lines: [taskMatch[2]]
+    }
+  }
+
+  return {
+    type: 'plain',
+    checked: false,
+    lines: [text]
+  }
+}
+
+function buildListItemHtml(item) {
+  const content = item.lines.map(line => renderInlineMarkdown(line)).join('<br/>')
+  if (item.type !== 'task') {
+    return `<li>${content}</li>`
+  }
+
+  return `<li class="task-list-item"><span class="task-checkbox${item.checked ? ' is-checked' : ''}"></span><span class="task-text">${content}</span></li>`
+}
+
 function renderInlineMarkdown(text) {
   if (!text) return ''
-  return text
+  const codeTokens = []
+  let normalizedText = text.replace(/`([^`]+)`/g, (_, content) => {
+    const token = `@@CODE_TOKEN_${codeTokens.length}@@`
+    codeTokens.push(`<code>${content}</code>`)
+    return token
+  })
+
+  normalizedText = normalizedText
+    .replace(/(^|\s)`+/g, '$1')
+    .replace(/`+(\s|$)/g, '$1')
+    .replace(/`/g, '')
+
+  normalizedText = normalizedText
     .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`(.*?)`/g, '<code>$1</code>')
+
+  codeTokens.forEach((tokenValue, index) => {
+    normalizedText = normalizedText.replace(`@@CODE_TOKEN_${index}@@`, tokenValue)
+  })
+
+  return normalizedText
 }

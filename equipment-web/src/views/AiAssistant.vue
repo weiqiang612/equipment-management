@@ -3,10 +3,12 @@
     <!-- 顶栏头部 -->
     <div class="page-header">
       <div class="header-left">
-        <i class="el-icon-cpu ai-icon-animate"></i>
+        <div class="header-icon-shell">
+          <i class="el-icon-cpu ai-icon"></i>
+        </div>
         <div class="header-text">
-          <h1>AI 智能辅助决策系统</h1>
-          <p>基于数据看板与资产治理结果，一键生成资产运营报告草案与设备健康诊断建议</p>
+          <h1>AI 建议草案</h1>
+          <p>基于数据看板与资产治理结果生成可阅读、可导出的资产运营报告草案，仅作解释与建议。</p>
         </div>
       </div>
     </div>
@@ -40,7 +42,7 @@
         <el-card class="glass-card" shadow="never">
           <div slot="header" class="card-header">
             <span><i class="el-icon-document"></i> 运营报告一键生成</span>
-            <el-tag type="success" size="small" effect="dark">AI Draft</el-tag>
+            <el-tag type="success" size="small" effect="plain">AI Draft</el-tag>
           </div>
 
           <div class="control-panel">
@@ -101,21 +103,38 @@
               <div class="report-meta">
                 <div class="title-bar">
                   <h3>{{ currentReport.data.title }}</h3>
-                  <span class="time"><i class="el-icon-time"></i> 生成时间：{{ formatTime(currentReport.data.generatedTime) }}</span>
+                  <div class="meta-row">
+                    <span class="period-badge">{{ currentPeriodLabel }}</span>
+                    <span class="time"><i class="el-icon-time"></i> 生成时间：{{ formatTime(currentReport.data.generatedTime) }}</span>
+                  </div>
                 </div>
                 <el-button 
-                  type="success" 
-                  plain 
-                  size="mini" 
-                  icon="el-icon-document-copy"
-                  @click="copyReportContent"
+                  class="report-action-button"
+                  type="primary"
+                  size="mini"
+                  icon="el-icon-download"
+                  @click="exportPdf"
                 >
-                  复制 Markdown 原文
+                  导出 PDF
                 </el-button>
               </div>
-              <div class="report-content-box">
+              <article class="report-content-box report-print-surface">
+                <div class="report-summary-grid">
+                  <div class="summary-item">
+                    <span class="summary-label">报告周期</span>
+                    <strong>{{ currentPeriodLabel }}</strong>
+                  </div>
+                  <div class="summary-item">
+                    <span class="summary-label">适用用途</span>
+                    <strong>内部汇报与人工复核</strong>
+                  </div>
+                  <div class="summary-item">
+                    <span class="summary-label">输出性质</span>
+                    <strong>AI 建议草案</strong>
+                  </div>
+                </div>
                 <div class="report-content" v-html="renderedContent"></div>
-              </div>
+              </article>
             </div>
 
             <!-- 空白状态 -->
@@ -144,6 +163,8 @@
         </el-card>
       </el-col>
     </el-row>
+
+    <iframe ref="printFrame" class="print-frame"></iframe>
   </div>
 </template>
 
@@ -173,6 +194,9 @@ export default {
   computed: {
     currentReport() {
       return this.reports[this.period]
+    },
+    currentPeriodLabel() {
+      return this.period === 'weekly' ? '资产运营周报' : '资产运营月报'
     },
     renderedContent() {
       if (!this.currentReport || !this.currentReport.data || !this.currentReport.data.content) {
@@ -226,42 +250,275 @@ export default {
       }
       return timeArray.replace('T', ' ').substring(0, 16)
     },
-    copyReportContent() {
+    exportPdf() {
       const report = this.currentReport.data
-      if (!report || !report.content) return
-      
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(report.content)
-          .then(() => {
-            this.$message({
-              message: 'Markdown 原文已成功复制至剪贴板',
-              type: 'success'
-            })
-          })
-          .catch(() => {
-            this.fallbackCopy(report.content)
-          })
-      } else {
-        this.fallbackCopy(report.content)
+      if (!report) return
+
+      const printFrame = this.$refs.printFrame
+      if (!printFrame || !printFrame.contentWindow) {
+        this.$message.error('打印容器初始化失败，请刷新页面后重试')
+        return
       }
+
+      const printTitle = report.title || this.currentPeriodLabel
+      const cleanedContent = this.buildPrintContentHtml(report)
+      const printDocument = this.buildPrintDocument(printTitle, cleanedContent)
+      const frameWindow = printFrame.contentWindow
+      const frameDocument = frameWindow.document
+
+      frameDocument.open()
+      frameDocument.write(printDocument)
+      frameDocument.close()
+
+      frameWindow.focus()
+      setTimeout(() => {
+        frameWindow.print()
+      }, 120)
     },
-    fallbackCopy(text) {
-      const textArea = document.createElement('textarea')
-      textArea.value = text
-      textArea.style.position = 'fixed'
-      document.body.appendChild(textArea)
-      textArea.focus()
-      textArea.select()
-      try {
-        document.execCommand('copy')
-        this.$message({
-          message: 'Markdown 原文已成功复制至剪贴板',
-          type: 'success'
-        })
-      } catch (err) {
-        this.$message.error('复制失败，请手动选择复制内容')
+    buildPrintContentHtml(report) {
+      const parser = new window.DOMParser()
+      const doc = parser.parseFromString(`<div>${this.renderedContent}</div>`, 'text/html')
+      const root = doc.body.firstElementChild
+      if (!root) {
+        return ''
       }
-      document.body.removeChild(textArea)
+
+      const firstHeading = root.querySelector('h1')
+      if (firstHeading) {
+        const headingText = this.normalizeText(firstHeading.textContent)
+        const reportTitleText = this.normalizeText(report.title || '')
+        if (headingText && reportTitleText && headingText.indexOf(reportTitleText) !== -1) {
+          firstHeading.remove()
+        }
+      }
+
+      root.querySelectorAll('p').forEach(node => {
+        if (!this.normalizeText(node.textContent)) {
+          node.remove()
+        }
+      })
+
+      root.querySelectorAll('br').forEach(node => {
+        if (!node.previousSibling && !node.nextSibling) {
+          node.remove()
+        }
+      })
+
+      return root.innerHTML
+    },
+    buildPrintDocument(printTitle, cleanedContent) {
+      const formattedTime = this.formatTime(this.currentReport.data.generatedTime)
+      const periodLabel = this.currentPeriodLabel
+      return `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>${this.escapePrintHtml(printTitle)}</title>
+  <style>
+    @page {
+      size: A4 portrait;
+      margin: 14mm 12mm 16mm;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    html, body {
+      margin: 0;
+      padding: 0;
+      background: #ffffff;
+      color: #111827;
+      font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+    }
+    body {
+      padding: 0;
+    }
+    .print-report {
+      width: 100%;
+    }
+    .print-header {
+      border-bottom: 1px solid #dbe2ea;
+      padding-bottom: 14px;
+      margin-bottom: 18px;
+    }
+    .print-title {
+      margin: 0 0 10px;
+      font-size: 26px;
+      line-height: 1.25;
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .print-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 18px;
+      align-items: center;
+      font-size: 12px;
+      color: #475569;
+    }
+    .print-badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 999px;
+      background: #eff6ff;
+      color: #2563eb;
+      font-weight: 600;
+    }
+    .print-content {
+      font-size: 14px;
+      line-height: 1.8;
+      color: #1f2937;
+    }
+    .print-content h1 {
+      margin: 0 0 18px;
+      padding-bottom: 10px;
+      border-bottom: 2px solid #e2e8f0;
+      font-size: 22px;
+      color: #0f172a;
+      break-after: avoid;
+    }
+    .print-content h2 {
+      margin: 26px 0 12px;
+      font-size: 18px;
+      color: #111827;
+      break-after: avoid;
+    }
+    .print-content h3 {
+      margin: 20px 0 10px;
+      font-size: 16px;
+      color: #1f2937;
+      break-after: avoid;
+    }
+    .print-content p {
+      margin: 0 0 14px;
+    }
+    .print-content ul,
+    .print-content ol {
+      margin: 10px 0 16px;
+      padding-left: 24px;
+    }
+    .print-content li {
+      margin-bottom: 8px;
+    }
+    .print-content .task-list-item {
+      list-style: none;
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-left: -22px;
+    }
+    .print-content .task-checkbox {
+      width: 14px;
+      height: 14px;
+      margin-top: 5px;
+      border: 1.5px solid #cbd5e1;
+      border-radius: 4px;
+      background: #fff;
+      flex: 0 0 auto;
+    }
+    .print-content .task-checkbox.is-checked {
+      background: #2563eb;
+      border-color: #2563eb;
+      position: relative;
+    }
+    .print-content .task-checkbox.is-checked::after {
+      content: "";
+      position: absolute;
+      left: 3px;
+      top: 0px;
+      width: 4px;
+      height: 8px;
+      border: solid #fff;
+      border-width: 0 2px 2px 0;
+      transform: rotate(45deg);
+    }
+    .print-content .task-text {
+      flex: 1;
+    }
+    .print-content strong {
+      color: #111827;
+      font-weight: 700;
+    }
+    .print-content code {
+      padding: 1px 6px;
+      border: 1px solid #e2e8f0;
+      border-radius: 4px;
+      background: #f8fafc;
+      font-size: 12px;
+      font-family: Consolas, monospace;
+    }
+    .print-content hr {
+      height: 1px;
+      border: none;
+      background: #e2e8f0;
+      margin: 22px 0;
+    }
+    .print-content .table-responsive {
+      overflow: visible;
+      margin: 18px 0;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      break-inside: avoid;
+    }
+    .print-content .markdown-table {
+      width: 100%;
+      table-layout: fixed;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .print-content .markdown-table th {
+      background: #f8fafc;
+      color: #334155;
+      font-weight: 700;
+      padding: 10px 12px;
+      border-bottom: 2px solid #e2e8f0;
+      text-align: left;
+    }
+    .print-content .markdown-table td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #eef2f7;
+      vertical-align: top;
+      word-break: break-word;
+    }
+    .print-content .markdown-table tr:last-child td {
+      border-bottom: none;
+    }
+  </style>
+</head>
+<body>
+  <article class="print-report">
+    <header class="print-header">
+      <h1 class="print-title">${this.escapePrintHtml(printTitle)}</h1>
+      <div class="print-meta">
+        <span class="print-badge">${this.escapePrintHtml(periodLabel)}</span>
+        <span>生成时间：${this.escapePrintHtml(formattedTime)}</span>
+        <span>输出性质：AI 建议草案</span>
+      </div>
+    </header>
+    <section class="print-content">${cleanedContent}</section>
+  </article>
+  <script>
+    window.onload = function () {
+      setTimeout(function () {
+        window.print();
+      }, 80);
+    };
+    window.onafterprint = function () {
+      window.close();
+    };
+  </scr` + `ipt>
+</body>
+</html>`
+    },
+    normalizeText(text) {
+      return (text || '').replace(/\s+/g, '').trim()
+    },
+    escapePrintHtml(text) {
+      return String(text || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
     }
   }
 }
@@ -276,12 +533,12 @@ export default {
 
 .page-header {
   margin-bottom: 24px;
-  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-  padding: 28px 36px;
+  background: #ffffff;
+  padding: 24px 28px;
   border-radius: 16px;
-  color: #ffffff;
-  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.15), 0 8px 10px -6px rgba(15, 23, 42, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: #0f172a;
+  box-shadow: 0 6px 20px -8px rgba(15, 23, 42, 0.08);
+  border: 1px solid #e2e8f0;
 }
 
 .header-left {
@@ -289,44 +546,34 @@ export default {
   align-items: center;
 }
 
-.ai-icon-animate {
-  font-size: 48px;
+.header-icon-shell {
+  width: 60px;
+  height: 60px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #eff6ff 0%, #ecfeff 100%);
+  border: 1px solid #dbeafe;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   margin-right: 20px;
-  color: #06b6d4;
-  animation: pulse 2.5s infinite;
-  filter: drop-shadow(0 0 8px rgba(6, 182, 212, 0.5));
 }
 
-@keyframes pulse {
-  0% {
-    transform: scale(1);
-    opacity: 0.8;
-  }
-  50% {
-    transform: scale(1.08);
-    opacity: 1;
-    filter: drop-shadow(0 0 14px rgba(6, 182, 212, 0.8));
-  }
-  100% {
-    transform: scale(1);
-    opacity: 0.8;
-  }
+.ai-icon {
+  font-size: 28px;
+  color: #2563eb;
 }
 
 .header-text h1 {
   margin: 0 0 6px 0;
   font-size: 26px;
   font-weight: 700;
-  letter-spacing: -0.025em;
-  background: linear-gradient(135deg, #ffffff 0%, #cbd5e1 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: #0f172a;
 }
 
 .header-text p {
   margin: 0;
   font-size: 14px;
-  color: #94a3b8;
+  color: #64748b;
 }
 
 .global-error-panel {
@@ -354,7 +601,6 @@ export default {
 }
 
 .glass-card:hover {
-  transform: translateY(-2px);
   box-shadow: 0 10px 25px -5px rgba(148, 163, 184, 0.15) !important;
 }
 
@@ -407,7 +653,6 @@ export default {
 
 .action-btn:hover {
   opacity: 0.95;
-  transform: translateY(-1px);
   box-shadow: 0 6px 20px rgba(59, 130, 246, 0.35);
 }
 
@@ -433,7 +678,7 @@ export default {
   width: 72px;
   height: 72px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.1) 0%, rgba(6, 182, 212, 0.1) 100%);
+  background: #eff6ff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -442,22 +687,7 @@ export default {
 
 .empty-icon-animate {
   font-size: 32px;
-  background: linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  animation: pulseRotate 4s infinite ease-in-out;
-}
-
-@keyframes pulseRotate {
-  0% {
-    transform: scale(1) rotate(0deg);
-  }
-  50% {
-    transform: scale(1.15) rotate(15deg);
-  }
-  100% {
-    transform: scale(1) rotate(0deg);
-  }
+  color: #3b82f6;
 }
 
 .empty-title {
@@ -576,7 +806,8 @@ export default {
 .report-meta {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 16px;
   border-bottom: 1px solid #f1f5f9;
   padding-bottom: 16px;
   margin-bottom: 20px;
@@ -584,9 +815,27 @@ export default {
 
 .title-bar h3 {
   margin: 0 0 6px 0;
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 700;
   color: #0f172a;
+}
+
+.meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.period-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .title-bar .time {
@@ -601,63 +850,130 @@ export default {
 }
 
 .report-content-box {
-  background-color: #fdfdfd;
-  border: 1px solid #f1f5f9;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 28px 36px;
-  box-shadow: inset 0 2px 8px rgba(15, 23, 42, 0.015);
+  padding: 28px 32px 32px;
+}
+
+.report-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.summary-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 12px 14px;
+}
+
+.summary-label {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.summary-item strong {
+  color: #0f172a;
+  font-size: 14px;
 }
 
 .report-content {
   color: #334155;
   line-height: 1.85;
-  font-size: 14.5px;
+  font-size: 14px;
 }
 
 .report-content >>> h1 {
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
   border-bottom: 2px solid #e2e8f0;
-  padding-bottom: 8px;
-  margin-top: 28px;
-  margin-bottom: 16px;
+  padding-bottom: 10px;
+  margin-top: 0;
+  margin-bottom: 18px;
   color: #0f172a;
+  break-after: avoid;
 }
 
 .report-content >>> h2 {
   font-size: 18px;
   font-weight: 700;
-  margin-top: 24px;
-  margin-bottom: 14px;
+  margin-top: 28px;
+  margin-bottom: 12px;
   color: #1e293b;
+  break-after: avoid;
 }
 
 .report-content >>> h3 {
   font-size: 16px;
   font-weight: 600;
-  margin-top: 20px;
-  margin-bottom: 12px;
+  margin-top: 22px;
+  margin-bottom: 10px;
   color: #334155;
+  break-after: avoid;
+}
+
+.report-content >>> p {
+  margin: 0 0 14px;
+}
+
+.report-content >>> ol,
+.report-content >>> ul {
+  padding-left: 24px;
+  margin: 10px 0 16px;
 }
 
 .report-content >>> strong {
-  color: #ef4444;
-  background-color: #fef2f2;
-  padding: 1px 6px;
-  border-radius: 4px;
+  color: #1e293b;
   font-weight: 600;
-  border: 1px solid #fee2e2;
-}
-
-.report-content >>> ul {
-  padding-left: 24px;
-  margin-top: 8px;
-  margin-bottom: 14px;
 }
 
 .report-content >>> li {
-  list-style-type: disc;
   margin-bottom: 8px;
+}
+
+.report-content >>> .task-list-item {
+  list-style: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-left: -22px;
+}
+
+.report-content >>> .task-checkbox {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 4px;
+  background: #ffffff;
+  flex: 0 0 auto;
+  margin-top: 5px;
+}
+
+.report-content >>> .task-checkbox.is-checked {
+  background: #2563eb;
+  border-color: #2563eb;
+  position: relative;
+}
+
+.report-content >>> .task-checkbox.is-checked::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 0px;
+  width: 4px;
+  height: 8px;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+
+.report-content >>> .task-text {
+  flex: 1;
 }
 
 .report-content >>> code {
@@ -680,6 +996,7 @@ export default {
   margin: 18px 0;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
+  break-inside: avoid;
 }
 
 .report-content >>> .markdown-table {
@@ -717,5 +1034,28 @@ export default {
   height: 1px;
   background-color: #e2e8f0;
   margin: 24px 0;
+}
+
+.print-frame {
+  position: fixed;
+  width: 0;
+  height: 0;
+  border: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (max-width: 1280px) {
+  .control-panel,
+  .report-meta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .report-summary-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

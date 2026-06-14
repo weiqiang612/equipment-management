@@ -25,21 +25,24 @@
           >
             <el-menu-item index="all">
               <i class="el-icon-message"></i>
-              <span slot="title">全部消息</span>
+              <span slot="title" class="category-item-content">
+                <span class="category-item-label">全部消息</span>
+              </span>
             </el-menu-item>
             <el-menu-item index="unread">
               <i class="el-icon-warning-outline"></i>
-              <span slot="title">未读消息</span>
-              <el-badge
-                v-if="unreadCount > 0"
-                :value="unreadCount"
-                :max="99"
-                class="menu-badge"
-              />
+              <span slot="title" class="category-item-content">
+                <span class="category-item-label">未读消息</span>
+                <span v-if="unreadCount > 0" class="message-notification-badge">
+                  {{ formatUnreadCount(unreadCount) }}
+                </span>
+              </span>
             </el-menu-item>
             <el-menu-item index="read">
               <i class="el-icon-circle-check"></i>
-              <span slot="title">已读消息</span>
+              <span slot="title" class="category-item-content">
+                <span class="category-item-label">已读消息</span>
+              </span>
             </el-menu-item>
           </el-menu>
 
@@ -315,6 +318,12 @@ export default {
       if (!val) return ''
       return val.replace('T', ' ').substring(0, 19)
     },
+    formatUnreadCount(count) {
+      if (typeof count !== 'number' || count <= 0) {
+        return ''
+      }
+      return count > 99 ? '99+' : String(count)
+    },
     handleSizeChange(val) {
       this.queryParams.pageSize = val
       this.queryParams.page = 1
@@ -415,8 +424,34 @@ export default {
   margin-right: 10px;
 }
 
-.menu-badge {
-  margin-left: auto;
+.category-item-content {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.category-item-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-notification-badge {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  margin-left: 12px;
+  border-radius: 10px;
+  background: #f56c6c;
+  color: #fff;
+  font-size: 12px;
+  line-height: 20px;
+  text-align: center;
+  box-sizing: border-box;
+  flex-shrink: 0;
 }
 
 .action-btn-wrapper {

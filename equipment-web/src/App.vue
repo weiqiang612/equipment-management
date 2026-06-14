@@ -24,17 +24,17 @@
             </el-menu-item>
             <el-menu-item index="/equipment/claim">
               <i class="el-icon-document"></i>
-              <span slot="title">领用记录</span>
+              <span slot="title">我的领用</span>
             </el-menu-item>
             <el-menu-item index="/equipment/maintenance">
               <i class="el-icon-s-tools"></i>
-              <span slot="title">报修申请</span>
+              <span slot="title">我的报修</span>
             </el-menu-item>
-            <el-menu-item index="/message-center">
+            <el-menu-item index="/message-center" class="message-menu-item">
               <i class="el-icon-bell"></i>
-              <span slot="title" class="menu-title-container">
-                消息中心
-                <el-badge v-if="unreadCount > 0" :value="unreadCount" :max="99" class="menu-badge" />
+              <span slot="title">消息中心</span>
+              <span v-if="unreadCount > 0" class="app-notification-badge menu-item-badge">
+                {{ formatUnreadCount(unreadCount) }}
               </span>
             </el-menu-item>
           </template>
@@ -43,6 +43,13 @@
             <el-menu-item index="/dashboard">
               <i class="el-icon-data-line"></i>
               <span slot="title">数据看板</span>
+            </el-menu-item>
+            <el-menu-item index="/message-center" class="message-menu-item">
+              <i class="el-icon-bell"></i>
+              <span slot="title">消息中心</span>
+              <span v-if="unreadCount > 0" class="app-notification-badge menu-item-badge">
+                {{ formatUnreadCount(unreadCount) }}
+              </span>
             </el-menu-item>
             <el-submenu index="1">
               <template slot="title">
@@ -75,28 +82,21 @@
             <el-menu-item v-if="role === 2 || role === 3" index="/department">
               <i class="el-icon-office-building"></i> <span>单位管理</span>
             </el-menu-item>
-            <el-menu-item v-if="role === 3" index="/user-manage">
-              <i class="el-icon-user-solid"></i>
-              <span>用户权限管理</span>
-            </el-menu-item>
-            <el-menu-item v-if="role === 3" index="/system/backup">
-              <i class="el-icon-receiving"></i>
-              <span>备份与恢复</span>
-            </el-menu-item>
-            <el-menu-item v-if="role === 3" index="/system/log">
-              <i class="el-icon-document"></i>
-              <span>操作审计</span>
-            </el-menu-item>
             <el-menu-item v-if="role === 2 || role === 3" index="/ai-assistant">
               <i class="el-icon-magic-stick"></i>
               <span>AI 辅助决策</span>
             </el-menu-item>
-            <el-menu-item index="/message-center">
-              <i class="el-icon-bell"></i>
-              <span slot="title" class="menu-title-container">
-                消息中心
-                <el-badge v-if="unreadCount > 0" :value="unreadCount" :max="99" class="menu-badge" />
-              </span>
+            <el-menu-item v-if="role === 3" index="/user-manage">
+              <i class="el-icon-user-solid"></i>
+              <span>用户与权限</span>
+            </el-menu-item>
+            <el-menu-item v-if="role === 3" index="/system/backup">
+              <i class="el-icon-receiving"></i>
+              <span>数据备份</span>
+            </el-menu-item>
+            <el-menu-item v-if="role === 3" index="/system/log">
+              <i class="el-icon-document"></i>
+              <span>操作审计</span>
             </el-menu-item>
           </template>
         </el-menu>
@@ -108,9 +108,15 @@
 
           <div v-if="username" class="user-info">
             <div class="header-bell-wrapper" @click="$router.push('/message-center').catch(() => {})">
-              <el-badge :value="unreadCount" :max="99" :hidden="unreadCount === 0" class="bell-badge">
+              <div class="bell-icon-container">
                 <i class="el-icon-bell bell-icon"></i>
-              </el-badge>
+                <span
+                  v-if="unreadCount > 0"
+                  class="app-notification-badge app-notification-badge--floating"
+                >
+                  {{ formatUnreadCount(unreadCount) }}
+                </span>
+              </div>
             </div>
             <el-dropdown trigger="click" @command="handleUserCommand">
               <span class="user-dropdown-trigger">
@@ -353,6 +359,12 @@ export default {
       }
       return tagMap[role] || ''
     },
+    formatUnreadCount(count) {
+      if (typeof count !== 'number' || count <= 0) {
+        return ''
+      }
+      return count > 99 ? '99+' : String(count)
+    },
     async fetchUnreadCount() {
       const token = localStorage.getItem('token')
       if (!token) {
@@ -436,6 +448,7 @@ body,
   margin-right: 22px;
   cursor: pointer;
   height: 40px;
+  width: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -451,15 +464,53 @@ body,
   color: #606266;
 }
 
-.menu-title-container {
+.bell-icon-container {
+  position: relative;
+  width: 24px;
+  height: 24px;
   display: inline-flex;
   align-items: center;
-  justify-content: space-between;
-  width: 120px;
+  justify-content: center;
 }
 
-.menu-badge {
+.message-menu-item {
+  position: relative;
+  padding-right: 52px !important;
+}
+
+.app-notification-badge {
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  margin-left: 12px;
+  border-radius: 10px;
+  background: #f56c6c;
+  color: #fff;
+  font-size: 12px;
+  line-height: 20px;
+  text-align: center;
+  box-sizing: border-box;
+  border: 2px solid #304156;
+  flex-shrink: 0;
+}
+
+.menu-item-badge {
+  position: absolute;
+  top: 50%;
+  right: 18px;
+  transform: translateY(-50%);
+  margin-left: 0;
+}
+
+.app-notification-badge--floating {
+  position: absolute;
+  top: -8px;
+  right: -14px;
   margin-left: auto;
+  border-color: #fff;
+  min-width: 22px;
+  height: 22px;
+  line-height: 18px;
 }
 
 .user-dropdown-trigger {

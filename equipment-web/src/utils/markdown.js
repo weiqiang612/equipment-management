@@ -10,6 +10,40 @@ export function renderMarkdown(text) {
   return blocks.join('')
 }
 
+export function sanitizeReportMarkdown(text, options = {}) {
+  if (!text) return ''
+
+  const normalizedText = String(text)
+    .replace(/\r\n/g, '\n')
+    .replace(/\u200b/g, '')
+
+  const lines = normalizedText.split('\n')
+  const cleanedLines = []
+  const normalizedTitle = normalizeCompareText(options.reportTitle)
+  const normalizedTime = normalizeCompareText(options.generatedTime)
+
+  for (let i = 0; i < lines.length; i += 1) {
+    const rawLine = lines[i]
+    const line = rawLine.replace(/\s+$/g, '')
+    const trimmed = line.trim()
+
+    if (shouldDropNoiseLine(trimmed, normalizedTitle, normalizedTime)) {
+      continue
+    }
+
+    const workflowLines = transformWorkflowBlock(lines, i)
+    if (workflowLines) {
+      cleanedLines.push(...workflowLines.lines)
+      i = workflowLines.nextIndex
+      continue
+    }
+
+    cleanedLines.push(line)
+  }
+
+  return collapseBlankLines(cleanedLines)
+}
+
 function escapeHtml(text) {
   return text
     .replace(/&/g, '&amp;')
@@ -233,4 +267,86 @@ function renderInlineMarkdown(text) {
   })
 
   return normalizedText
+}
+
+function shouldDropNoiseLine(trimmed, normalizedTitle, normalizedTime) {
+  if (!trimmed) {
+    return false
+  }
+
+  if (/^`+$/.test(trimmed) || /^`{3,}/.test(trimmed)) {
+    return true
+  }
+
+  if (/^(localhost|https?:\/\/|about:blank)/i.test(trimmed)) {
+    return true
+  }
+
+  const normalizedLine = normalizeCompareText(trimmed)
+  if (normalizedTitle && normalizedLine === normalizedTitle) {
+    return true
+  }
+
+  if (normalizedTime && (normalizedLine === normalizedTime || normalizedLine.indexOf(normalizedTime) !== -1)) {
+    return true
+  }
+
+  if (/^(生成时间|创建时间|导出时间)\s*[:：]/.test(trimmed)) {
+    return true
+  }
+
+  return false
+}
+
+function transformWorkflowBlock(lines, index) {
+  const currentLine = (lines[index] || '').trim()
+  const nextLine = (lines[index + 1] || '').trim()
+  const stageMatches = currentLine.match(/\[[^\]]+\]/g)
+
+  if (!stageMatches || stageMatches.length < 2 || currentLine.indexOf('->') === -1 || !nextLine) {
+    return null
+  }
+
+  const items = nextLine
+    .split(/\s{2,}/)
+    .map(item => item.trim())
+    .filter(Boolean)
+
+  if (items.length !== stageMatches.length) {
+    return null
+  }
+
+  // Normalize common AI-generated priority chains into stable bullet items.
+  return {
+    lines: stageMatches.map((stage, stageIndex) => `- **${stage}** ${items[stageIndex]}`),
+    nextIndex: index + 1
+  }
+}
+
+function collapseBlankLines(lines) {
+  const normalizedLines = []
+  let previousBlank = false
+
+  lines.forEach(line => {
+    const isBlank = !line.trim()
+    if (isBlank) {
+      if (!previousBlank) {
+        normalizedLines.push('')
+      }
+      previousBlank = true
+      return
+    }
+
+    normalizedLines.push(line)
+    previousBlank = false
+  })
+
+  return normalizedLines.join('\n').trim()
+}
+
+function normalizeCompareText(text) {
+  return String(text || '')
+    .replace(/\s+/g, '')
+    .replace(/[：:]/g, '')
+    .trim()
 }

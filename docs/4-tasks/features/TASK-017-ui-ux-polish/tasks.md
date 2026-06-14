@@ -1,7 +1,7 @@
 # TASK-017: Tasks
 
 **Spec**: `spec.md`
-**Status**: In progress
+**Status**: Complete
 
 ## Key decisions
 - 本任务是前端定稿前的 UI/UX 收尾，不改变后端接口、数据库结构或权限模型。
@@ -17,8 +17,8 @@
 - [x] T5 — 检查并统一至少一个其他关键表格页的首屏可操作性与状态标签表达，优先处理与消息/待办联动最紧密的页面 · covers: AC-001, AC-002, AC-005
 - [x] T6 — 统一关键页面的空状态、提示文案和状态标签颜色映射，消除同义不同色或同色不同义 · covers: AC-004, AC-005
 - [x] T7 — Run `cd equipment-web && npm run lint` — frontend lint must pass
-- [ ] T8 — Verify ACs: update `passes` to `true` in spec.md for each passing criterion
-- [ ] T9 — Update `docs/4-tasks/CURRENT_PLAN.md` — mark this task complete
+- [x] T8 — Verify ACs: update `passes` to `true` in spec.md for each passing criterion
+- [x] T9 — Update `docs/4-tasks/CURRENT_PLAN.md` — mark this task complete
 
 ## Dependencies
 - T2-T6 require T1 design规范先补齐。

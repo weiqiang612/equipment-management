@@ -4,9 +4,7 @@
 
 ## Active feature
 
-`docs/4-tasks/features/TASK-017-ui-ux-polish/`
-- spec.md ✅ Ready
-- tasks.md → In progress
+None currently active.
 
 ## Stages
 
@@ -59,9 +57,13 @@
 - [x] Implementation (14 tasks)
 
 ### TASK-017: 全局 UI/UX 收尾优化
-- [ ] Implementation (9 tasks)
+- [x] Implementation (9 tasks)
 
 ## Completed
+
+`docs/4-tasks/features/TASK-017-ui-ux-polish/`
+- spec.md ✅ Ready
+- tasks.md ✅ 100% Complete
 
 `docs/4-tasks/features/TASK-016-ai-assisted-reporting/`
 - spec.md ✅ Ready
@@ -129,4 +131,4 @@
 
 ## Notes for next session
 
-- `TASK-017-ui-ux-polish` is the current active feature for the next implementation session.
+- No active feature is set. Select the next task before implementation.

@@ -170,7 +170,7 @@
 
 <script>
 import { draftOperationReport } from '@/api/aiAssistant'
-import { renderMarkdown } from '@/utils/markdown'
+import { renderMarkdown, sanitizeReportMarkdown } from '@/utils/markdown'
 
 export default {
   name: 'AiAssistant',
@@ -202,7 +202,7 @@ export default {
       if (!this.currentReport || !this.currentReport.data || !this.currentReport.data.content) {
         return ''
       }
-      return this.renderMarkdown(this.currentReport.data.content)
+      return this.renderMarkdown(this.getSanitizedReportContent(this.currentReport.data))
     },
     globalCredentialError() {
       const wErr = this.reports.weekly.error || ''
@@ -237,6 +237,16 @@ export default {
     renderMarkdown(text) {
       return renderMarkdown(text)
     },
+    getSanitizedReportContent(report) {
+      if (!report || !report.content) {
+        return ''
+      }
+
+      return sanitizeReportMarkdown(report.content, {
+        reportTitle: report.title,
+        generatedTime: this.formatTime(report.generatedTime)
+      })
+    },
     formatTime(timeArray) {
       if (!timeArray) return ''
       // 后端 LocalDateTime 传到前端如果是 array 形式如 [2026, 6, 13, 16, 30] 
@@ -261,7 +271,8 @@ export default {
       }
 
       const printTitle = report.title || this.currentPeriodLabel
-      const cleanedContent = this.buildPrintContentHtml(report)
+      const renderedHtml = this.renderMarkdown(this.getSanitizedReportContent(report))
+      const cleanedContent = this.buildPrintContentHtml(report, renderedHtml)
       const printDocument = this.buildPrintDocument(printTitle, cleanedContent)
       const frameWindow = printFrame.contentWindow
       const frameDocument = frameWindow.document
@@ -270,14 +281,14 @@ export default {
       frameDocument.write(printDocument)
       frameDocument.close()
 
-      frameWindow.focus()
       setTimeout(() => {
+        frameWindow.focus()
         frameWindow.print()
-      }, 120)
+      }, 180)
     },
-    buildPrintContentHtml(report) {
+    buildPrintContentHtml(report, renderedHtml) {
       const parser = new window.DOMParser()
-      const doc = parser.parseFromString(`<div>${this.renderedContent}</div>`, 'text/html')
+      const doc = parser.parseFromString(`<div>${renderedHtml}</div>`, 'text/html')
       const root = doc.body.firstElementChild
       if (!root) {
         return ''
@@ -293,6 +304,12 @@ export default {
       }
 
       root.querySelectorAll('p').forEach(node => {
+        if (!this.normalizeText(node.textContent)) {
+          node.remove()
+        }
+      })
+
+      root.querySelectorAll('li').forEach(node => {
         if (!this.normalizeText(node.textContent)) {
           node.remove()
         }
@@ -318,7 +335,7 @@ export default {
   <style>
     @page {
       size: A4 portrait;
-      margin: 14mm 12mm 16mm;
+      margin: 15mm 14mm 16mm;
     }
     * {
       box-sizing: border-box;
@@ -340,10 +357,11 @@ export default {
       border-bottom: 1px solid #dbe2ea;
       padding-bottom: 14px;
       margin-bottom: 18px;
+      page-break-after: avoid;
     }
     .print-title {
       margin: 0 0 10px;
-      font-size: 26px;
+      font-size: 24px;
       line-height: 1.25;
       font-weight: 700;
       color: #0f172a;
@@ -365,40 +383,47 @@ export default {
       font-weight: 600;
     }
     .print-content {
-      font-size: 14px;
-      line-height: 1.8;
+      font-size: 13.5px;
+      line-height: 1.78;
       color: #1f2937;
     }
     .print-content h1 {
       margin: 0 0 18px;
       padding-bottom: 10px;
       border-bottom: 2px solid #e2e8f0;
-      font-size: 22px;
+      font-size: 21px;
       color: #0f172a;
-      break-after: avoid;
+      page-break-after: avoid;
+      page-break-inside: avoid;
     }
     .print-content h2 {
       margin: 26px 0 12px;
       font-size: 18px;
       color: #111827;
-      break-after: avoid;
+      page-break-after: avoid;
+      page-break-inside: avoid;
     }
     .print-content h3 {
       margin: 20px 0 10px;
       font-size: 16px;
       color: #1f2937;
-      break-after: avoid;
+      page-break-after: avoid;
+      page-break-inside: avoid;
     }
     .print-content p {
       margin: 0 0 14px;
+      orphans: 3;
+      widows: 3;
     }
     .print-content ul,
     .print-content ol {
       margin: 10px 0 16px;
       padding-left: 24px;
+      page-break-inside: avoid;
     }
     .print-content li {
       margin-bottom: 8px;
+      page-break-inside: avoid;
     }
     .print-content .task-list-item {
       list-style: none;
@@ -452,19 +477,26 @@ export default {
       border: none;
       background: #e2e8f0;
       margin: 22px 0;
+      page-break-after: avoid;
     }
     .print-content .table-responsive {
       overflow: visible;
       margin: 18px 0;
       border: 1px solid #e2e8f0;
       border-radius: 8px;
-      break-inside: avoid;
+      page-break-inside: avoid;
     }
     .print-content .markdown-table {
       width: 100%;
       table-layout: fixed;
       border-collapse: collapse;
       font-size: 13px;
+    }
+    .print-content .markdown-table thead {
+      display: table-header-group;
+    }
+    .print-content .markdown-table tr {
+      page-break-inside: avoid;
     }
     .print-content .markdown-table th {
       background: #f8fafc;
@@ -483,6 +515,14 @@ export default {
     .print-content .markdown-table tr:last-child td {
       border-bottom: none;
     }
+    .print-content blockquote {
+      margin: 16px 0;
+      padding: 10px 14px;
+      border-left: 3px solid #94a3b8;
+      background: #f8fafc;
+      color: #334155;
+      page-break-inside: avoid;
+    }
   </style>
 </head>
 <body>
@@ -497,16 +537,6 @@ export default {
     </header>
     <section class="print-content">${cleanedContent}</section>
   </article>
-  <script>
-    window.onload = function () {
-      setTimeout(function () {
-        window.print();
-      }, 80);
-    };
-    window.onafterprint = function () {
-      window.close();
-    };
-  </scr` + `ipt>
 </body>
 </html>`
     },

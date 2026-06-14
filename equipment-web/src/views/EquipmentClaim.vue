@@ -1,15 +1,27 @@
 <template>
   <div class="app-container">
-    <!-- 顶部卡片：介绍与当前角色展示 -->
     <el-card class="box-card header-card" shadow="hover">
       <div class="header-info">
-        <div class="info-title">
-          <i class="el-icon-document" style="color: #409eff; margin-right: 8px;"></i>
-          <span>设备领用与审批工作流</span>
+        <div class="header-copy">
+          <div class="info-title">
+            <i class="el-icon-document" style="color: #409eff; margin-right: 8px;"></i>
+            <span>设备领用与审批工作流</span>
+          </div>
+          <p class="header-subtitle">消息中心跳转到此页后，优先定位目标申请并保持审批动作首屏可见。</p>
         </div>
         <div class="info-tag">
           <span style="font-size: 14px; color: #606266; margin-right: 10px;">当前登录用户：{{ realName || username }}</span>
           <el-tag :type="roleTagType(role)" size="small">{{ formatRole(role) }}</el-tag>
+        </div>
+      </div>
+      <div class="summary-strip">
+        <div class="summary-chip is-primary">
+          <span class="summary-chip-label">当前视图</span>
+          <strong>{{ role === 0 ? '我的领用记录' : activeTabLabel }}</strong>
+        </div>
+        <div class="summary-chip" :class="{ 'is-warning': highlightedClaimId }">
+          <span class="summary-chip-label">目标申请</span>
+          <strong>{{ highlightedClaimId || '未指定' }}</strong>
         </div>
       </div>
     </el-card>
@@ -22,7 +34,16 @@
           <el-button type="primary" size="small" icon="el-icon-refresh" @click="fetchOperatorClaims">刷新</el-button>
         </div>
 
-        <el-table :data="operatorClaims" border v-loading="loading" style="width: 100%" :row-class-name="tableRowClassName">
+        <el-alert
+          v-if="highlightedClaimId && !hasHighlightedOperatorClaim && !loading"
+          title="目标申请不存在或不在当前页，已展示当前账号可见的领用记录。"
+          type="warning"
+          :closable="false"
+          show-icon
+          class="inline-alert"
+        />
+
+        <el-table v-if="displayOperatorClaims.length > 0" :data="displayOperatorClaims" border v-loading="loading" style="width: 100%" :row-class-name="tableRowClassName">
           <el-table-column prop="createTime" label="申请时间" width="160" />
           <el-table-column prop="equipId" label="设备编号" width="120" />
           <el-table-column prop="equipName" label="设备名称">
@@ -59,6 +80,10 @@
           </el-table-column>
         </el-table>
 
+        <div v-else-if="!loading" class="table-empty-state">
+          <el-empty description="当前没有领用申请记录" :image-size="108"></el-empty>
+        </div>
+
         <!-- 分页 -->
         <el-pagination
           background
@@ -84,7 +109,16 @@
             <el-button type="primary" size="small" icon="el-icon-refresh" @click="fetchPendingClaims">刷新</el-button>
           </div>
 
-          <el-table :data="pendingClaims" border v-loading="loading" style="width: 100%" :row-class-name="tableRowClassName">
+          <el-alert
+            v-if="highlightedClaimId && activeTab === 'pending' && !hasHighlightedPendingClaim && !loading"
+            title="目标申请不在待审批列表，可能已处理，已为您切换到更合适的可见视图。"
+            type="warning"
+            :closable="false"
+            show-icon
+            class="inline-alert"
+          />
+
+          <el-table v-if="displayPendingClaims.length > 0" :data="displayPendingClaims" border v-loading="loading" style="width: 100%" :row-class-name="tableRowClassName">
             <el-table-column prop="createTime" label="申请时间" width="160" />
             <el-table-column prop="applicant" label="申请人" width="120" />
             <el-table-column prop="equipId" label="设备编号" width="120" />
@@ -115,6 +149,10 @@
               </template>
             </el-table-column>
           </el-table>
+
+          <div v-else-if="!loading" class="table-empty-state">
+            <el-empty description="当前没有待审批申请" :image-size="108"></el-empty>
+          </div>
 
           <!-- 分页 -->
           <el-pagination
@@ -157,7 +195,7 @@
             </el-form>
           </div>
 
-          <el-table :data="historyClaims" border v-loading="loading" style="width: 100%" :row-class-name="tableRowClassName">
+          <el-table v-if="displayHistoryClaims.length > 0" :data="displayHistoryClaims" border v-loading="loading" style="width: 100%" :row-class-name="tableRowClassName">
             <el-table-column prop="updateTime" label="操作时间" width="160" />
             <el-table-column prop="equipId" label="设备编号" width="120" />
             <el-table-column prop="equipName" label="设备名称" width="150">
@@ -180,6 +218,10 @@
             </el-table-column>
             <el-table-column prop="remark" label="备注/审批意见" show-overflow-tooltip />
           </el-table>
+
+          <div v-else-if="!loading" class="table-empty-state">
+            <el-empty description="当前没有符合条件的历史记录" :image-size="108"></el-empty>
+          </div>
 
           <!-- 分页 -->
           <el-pagination
@@ -233,6 +275,7 @@
 
 <script>
 import { getClaims, cancelClaim, approveClaim } from '@/api/claim'
+import { getClaimStatusMeta } from '@/utils/uiStatus'
 
 export default {
   name: 'EquipmentClaim',
@@ -287,11 +330,46 @@ export default {
       }
     }
   },
+  computed: {
+    highlightedClaimId() {
+      const claimId = this.$route.query.claimId
+      return claimId ? String(claimId) : ''
+    },
+    activeTabLabel() {
+      return this.activeTab === 'pending' ? '待审批列表' : '审计历史记录'
+    },
+    displayOperatorClaims() {
+      return this.sortClaims(this.operatorClaims)
+    },
+    displayPendingClaims() {
+      return this.sortClaims(this.pendingClaims)
+    },
+    displayHistoryClaims() {
+      return this.sortClaims(this.historyClaims)
+    },
+    hasHighlightedOperatorClaim() {
+      return this.operatorClaims.some(row => String(row.claimId) === this.highlightedClaimId)
+    },
+    hasHighlightedPendingClaim() {
+      return this.pendingClaims.some(row => String(row.claimId) === this.highlightedClaimId)
+    },
+    hasHighlightedHistoryClaim() {
+      return this.historyClaims.some(row => String(row.claimId) === this.highlightedClaimId)
+    }
+  },
+  watch: {
+    '$route.query.claimId': {
+      immediate: true,
+      handler() {
+        this.syncTabWithRoute()
+      }
+    }
+  },
   created() {
     this.role = parseInt(localStorage.getItem('role') || '0', 10)
     this.username = localStorage.getItem('username') || ''
     this.realName = localStorage.getItem('realName') || ''
-    
+
     this.initData()
   },
   methods: {
@@ -299,8 +377,48 @@ export default {
       if (this.role === 0) {
         this.fetchOperatorClaims()
       } else {
+        this.syncTabWithRoute()
         this.fetchPendingClaims()
+        this.fetchHistoryClaims()
       }
+    },
+    syncTabWithRoute() {
+      if (!this.highlightedClaimId || this.role === 0) {
+        return
+      }
+      if (this.hasHighlightedPendingClaim) {
+        this.activeTab = 'pending'
+        return
+      }
+      if (this.hasHighlightedHistoryClaim) {
+        this.activeTab = 'history'
+      }
+    },
+    sortClaims(rows) {
+      const claimId = this.highlightedClaimId
+      if (!claimId) {
+        return [...rows]
+      }
+      return [...rows].sort((left, right) => {
+        if (String(left.claimId) === claimId) {
+          return -1
+        }
+        if (String(right.claimId) === claimId) {
+          return 1
+        }
+        return 0
+      })
+    },
+    scrollToHighlightedRow() {
+      this.$nextTick(() => {
+        const highlightedRow = this.$el.querySelector('.el-table__body-wrapper tbody tr.highlight-row')
+        if (highlightedRow && typeof highlightedRow.scrollIntoView === 'function') {
+          highlightedRow.scrollIntoView({
+            behavior: 'smooth',
+            block: 'center'
+          })
+        }
+      })
     },
     // 操作员查询自己的申请
     async fetchOperatorClaims() {
@@ -315,6 +433,9 @@ export default {
         if (res) {
           this.operatorClaims = res.rows || []
           this.total = res.total || 0
+          if (this.hasHighlightedOperatorClaim) {
+            this.scrollToHighlightedRow()
+          }
         }
       } catch (error) {
         console.error('获取领用申请失败', error)
@@ -330,6 +451,10 @@ export default {
         if (res) {
           this.pendingClaims = res.rows || []
           this.pendingTotal = res.total || 0
+          this.syncTabWithRoute()
+          if (this.hasHighlightedPendingClaim && this.activeTab === 'pending') {
+            this.scrollToHighlightedRow()
+          }
         }
       } catch (error) {
         console.error('获取待审批记录失败', error)
@@ -345,6 +470,10 @@ export default {
         if (res) {
           this.historyClaims = res.rows || []
           this.historyTotal = res.total || 0
+          this.syncTabWithRoute()
+          if (this.hasHighlightedHistoryClaim && this.activeTab === 'history') {
+            this.scrollToHighlightedRow()
+          }
         }
       } catch (error) {
         console.error('获取审计历史失败', error)
@@ -464,30 +593,13 @@ export default {
       return tagMap[role] || ''
     },
     formatStatus(status) {
-      const statusMap = {
-        0: '待审批',
-        1: '已同意',
-        2: '已拒绝',
-        3: '已撤回',
-        4: '已退还',
-        5: '直接分配'
-      }
-      return statusMap[status] !== undefined ? statusMap[status] : '未知'
+      return getClaimStatusMeta(status).label
     },
     statusTagType(status) {
-      const tagMap = {
-        0: 'warning',
-        1: 'success',
-        2: 'danger',
-        3: 'info',
-        4: 'info',
-        5: 'primary'
-      }
-      return tagMap[status] || 'info'
+      return getClaimStatusMeta(status).type
     },
     tableRowClassName({ row }) {
-      const claimId = this.$route.query.claimId
-      if (claimId && String(row.claimId) === String(claimId)) {
+      if (this.highlightedClaimId && String(row.claimId) === this.highlightedClaimId) {
         return 'highlight-row'
       }
       return ''
@@ -506,7 +618,14 @@ export default {
 .header-info {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.header-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .info-title {
@@ -515,6 +634,51 @@ export default {
   color: #303133;
   display: flex;
   align-items: center;
+}
+
+.header-subtitle {
+  margin: 0;
+  color: #7a8797;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.summary-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.summary-chip {
+  min-width: 148px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid #e6ebf2;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-chip strong {
+  color: #1f2d3d;
+  font-size: 14px;
+}
+
+.summary-chip.is-primary {
+  border-color: #d9ecff;
+  background: #edf6ff;
+}
+
+.summary-chip.is-warning {
+  border-color: #faecd8;
+  background: #fff8ee;
+}
+
+.summary-chip-label {
+  color: #7a8797;
+  font-size: 12px;
 }
 
 .card-header-flex {
@@ -541,7 +705,29 @@ export default {
   border: 1px dashed #e4e7ed;
 }
 
+.inline-alert {
+  margin-bottom: 15px;
+}
+
+.table-empty-state {
+  border: 1px dashed #dcdfe6;
+  border-radius: 10px;
+  padding: 18px;
+  background: #fafbfd;
+}
+
 ::v-deep .el-table .highlight-row {
   background: #fdf6ec !important;
+}
+
+::v-deep .el-table .highlight-row > td {
+  background: #fdf6ec !important;
+}
+
+@media (max-width: 1280px) {
+  .header-info {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 </style>

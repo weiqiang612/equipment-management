@@ -1,8 +1,10 @@
 <template>
   <div class="equipment-detail-container">
-    <!-- 头部面包屑与返回，包含 AI 诊断按钮 -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-      <el-page-header @back="goBack" content="设备生命周期详情" style="margin-bottom: 0;"></el-page-header>
+    <div class="detail-page-header">
+      <div class="detail-header-copy">
+        <el-page-header @back="goBack" content="设备生命周期详情" style="margin-bottom: 0;"></el-page-header>
+        <p class="detail-header-subtitle">统一查看资产状态、审批轨迹、维保记录和审计时间线。</p>
+      </div>
       <el-button 
         v-if="userRole === 2 || userRole === 3" 
         type="primary" 
@@ -111,8 +113,8 @@
                 </el-table-column>
                 <el-table-column label="维保状态" width="100">
                   <template slot-scope="scope">
-                    <el-tag :type="scope.row.maintStatus === 2 ? 'success' : 'warning'" size="mini">
-                      {{ scope.row.maintStatus === 2 ? '完工' : scope.row.maintStatus === 1 ? '维修中' : '待指派' }}
+                    <el-tag :type="getMaintStatusTag(scope.row.maintStatus)" size="mini">
+                      {{ formatMaintStatus(scope.row.maintStatus) }}
                     </el-tag>
                   </template>
                 </el-table-column>
@@ -239,6 +241,7 @@
 import { getEquipmentDetail } from '@/api/equipment'
 import { getEquipmentAiSummary } from '@/api/aiAssistant'
 import { renderMarkdown } from '@/utils/markdown'
+import { getClaimStatusMeta, getEquipmentStatusMeta, getMaintenanceStatusMeta, getRiskLevelMeta } from '@/utils/uiStatus'
 
 export default {
   name: 'EquipmentDetail',
@@ -313,29 +316,19 @@ export default {
       return roleMap[role] !== undefined ? roleMap[role] : '未知'
     },
     getStatusTagType(status) {
-      const map = {
-        '在用': 'success',
-        '维修中': 'warning',
-        '报废': 'danger',
-        '待指派': 'info'
-      }
-      return map[status] || ''
+      return getEquipmentStatusMeta(status).type
     },
     getClaimStatusTag(status) {
-      const map = {
-        0: 'info',
-        1: 'success',
-        2: 'danger'
-      }
-      return map[status] || ''
+      return getClaimStatusMeta(status).type
     },
     formatClaimStatus(status) {
-      const map = {
-        0: '待审批',
-        1: '同意',
-        2: '拒绝'
-      }
-      return map[status] !== undefined ? map[status] : ''
+      return getClaimStatusMeta(status).label
+    },
+    getMaintStatusTag(status) {
+      return getMaintenanceStatusMeta(status).type
+    },
+    formatMaintStatus(status) {
+      return getMaintenanceStatusMeta(status).label
     },
     async showAiSummary() {
       this.aiDialogVisible = true
@@ -356,20 +349,10 @@ export default {
       }
     },
     getRiskTagType(risk) {
-      const map = {
-        'high': 'danger',
-        'medium': 'warning',
-        'low': 'success'
-      }
-      return map[risk] || 'info'
+      return getRiskLevelMeta(risk).type
     },
     formatRiskLevel(risk) {
-      const map = {
-        'high': '高风险',
-        'medium': '中风险',
-        'low': '低风险'
-      }
-      return map[risk] || '未知'
+      return getRiskLevelMeta(risk).label
     },
     copyAiSummary() {
       if (!this.aiSummaryData || !this.aiSummaryData.summary) return
@@ -420,6 +403,27 @@ export default {
 <style scoped>
 .equipment-detail-container {
   padding: 10px;
+}
+
+.detail-page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.detail-header-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.detail-header-subtitle {
+  margin: 0;
+  color: #7a8797;
+  font-size: 12px;
+  line-height: 1.5;
 }
 .box-card {
   box-shadow: 0 2px 12px 0 rgba(0,0,0,0.1);
@@ -496,5 +500,12 @@ export default {
 .ai-report-content >>> li {
   list-style-type: disc;
   margin-bottom: 4px;
+}
+
+@media (max-width: 1280px) {
+  .detail-page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 </style>

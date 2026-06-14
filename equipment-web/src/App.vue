@@ -5,41 +5,51 @@
     </router-view>
 
     <el-container v-else style="height: 100vh">
-      <el-aside width="200px" style="background-color: #304156">
+      <el-aside width="232px" class="app-aside">
+        <div class="app-brand">
+          <div class="app-brand-text">
+            <strong>设备管理系统</strong>
+          </div>
+        </div>
         <el-menu
           router
           :default-active="$route.path"
+          class="app-menu"
           background-color="#304156"
           text-color="#fff"
+          active-text-color="#ffffff"
           unique-opened
         >
           <template v-if="role === 0">
+            <div class="menu-section-label">工作台</div>
             <el-menu-item index="/dashboard">
               <i class="el-icon-data-line"></i>
               <span slot="title">数据看板</span>
             </el-menu-item>
+            <el-menu-item index="/message-center" class="message-menu-item">
+              <i class="el-icon-bell"></i>
+              <span slot="title">消息中心</span>
+              <span v-if="unreadCount > 0" class="app-notification-badge menu-item-badge">
+                {{ formatUnreadCount(unreadCount) }}
+              </span>
+            </el-menu-item>
+            <div class="menu-section-label">我的处理</div>
             <el-menu-item index="/equipment">
               <i class="el-icon-notebook-2"></i>
               <span slot="title">我的设备</span>
             </el-menu-item>
             <el-menu-item index="/equipment/claim">
               <i class="el-icon-document"></i>
-              <span slot="title">我的领用</span>
+              <span slot="title">领用记录</span>
             </el-menu-item>
             <el-menu-item index="/equipment/maintenance">
               <i class="el-icon-s-tools"></i>
-              <span slot="title">我的报修</span>
-            </el-menu-item>
-            <el-menu-item index="/message-center" class="message-menu-item">
-              <i class="el-icon-bell"></i>
-              <span slot="title">消息中心</span>
-              <span v-if="unreadCount > 0" class="app-notification-badge menu-item-badge">
-                {{ formatUnreadCount(unreadCount) }}
-              </span>
+              <span slot="title">报修记录</span>
             </el-menu-item>
           </template>
 
           <template v-else>
+            <div class="menu-section-label">工作台</div>
             <el-menu-item index="/dashboard">
               <i class="el-icon-data-line"></i>
               <span slot="title">数据看板</span>
@@ -51,10 +61,11 @@
                 {{ formatUnreadCount(unreadCount) }}
               </span>
             </el-menu-item>
-            <el-submenu index="1">
+            <div class="menu-section-label">资产执行</div>
+            <el-submenu index="workbench-assets">
               <template slot="title">
                 <i class="el-icon-monitor"></i>
-                <span>设备资产管理</span>
+                <span>资产与流程</span>
               </template>
               <el-menu-item index="/equipment">
                 <i class="el-icon-notebook-2"></i>设备台账
@@ -76,23 +87,25 @@
               </el-menu-item>
             </el-submenu>
 
+            <div v-if="role === 2 || role === 3" class="menu-section-label">基础资料</div>
             <el-menu-item v-if="role === 2 || role === 3" index="/category">
-              <i class="el-icon-menu"></i> <span>分类管理</span>
+              <i class="el-icon-menu"></i> <span>分类档案</span>
             </el-menu-item>
             <el-menu-item v-if="role === 2 || role === 3" index="/department">
-              <i class="el-icon-office-building"></i> <span>单位管理</span>
+              <i class="el-icon-office-building"></i> <span>单位档案</span>
             </el-menu-item>
             <el-menu-item v-if="role === 2 || role === 3" index="/ai-assistant">
               <i class="el-icon-magic-stick"></i>
-              <span>AI 辅助决策</span>
+              <span>AI 建议草案</span>
             </el-menu-item>
+            <div v-if="role === 3" class="menu-section-label">系统治理</div>
             <el-menu-item v-if="role === 3" index="/user-manage">
               <i class="el-icon-user-solid"></i>
               <span>用户与权限</span>
             </el-menu-item>
             <el-menu-item v-if="role === 3" index="/system/backup">
               <i class="el-icon-receiving"></i>
-              <span>数据备份</span>
+              <span>备份与恢复</span>
             </el-menu-item>
             <el-menu-item v-if="role === 3" index="/system/log">
               <i class="el-icon-document"></i>
@@ -104,10 +117,13 @@
 
       <el-container>
         <el-header class="app-header">
-          <strong style="font-size: 18px">设备管理系统</strong>
+          <div class="header-page-meta">
+            <strong class="header-page-title">{{ currentPageMeta.title }}</strong>
+            <span class="header-page-subtitle">{{ currentPageMeta.subtitle }}</span>
+          </div>
 
           <div v-if="username" class="user-info">
-            <div class="header-bell-wrapper" @click="$router.push('/message-center').catch(() => {})">
+            <div class="header-bell-wrapper" @click="goToMessageCenter">
               <div class="bell-icon-container">
                 <i class="el-icon-bell bell-icon"></i>
                 <span
@@ -197,6 +213,65 @@
 import { changeCurrentPassword } from '@/api/user'
 import { getUnreadCount } from '@/api/message'
 
+const PAGE_META = {
+  '/dashboard': {
+    title: '数据看板',
+    subtitle: '查看当前角色的待办、风险和资产运营概览'
+  },
+  '/message-center': {
+    title: '消息中心',
+    subtitle: '从通知进入待办处理链路，统一跟进审批、检修和风险事项'
+  },
+  '/equipment': {
+    title: '设备台账',
+    subtitle: '管理设备基础档案、生命周期状态和使用归属'
+  },
+  '/equipment/claim': {
+    title: '领用审批',
+    subtitle: '处理设备领用申请，并回看历史审批与在途记录'
+  },
+  '/equipment/maintenance': {
+    title: '检修记录',
+    subtitle: '聚焦待指派、待完工和待复核工单，保持首屏可处理'
+  },
+  '/equipment/transfer': {
+    title: '调拨记录',
+    subtitle: '跟踪资产跨单位流转与交接过程'
+  },
+  '/equipment/scrap': {
+    title: '报废记录',
+    subtitle: '维护设备退出使用链路与处置记录'
+  },
+  '/governance': {
+    title: '数据治理',
+    subtitle: '识别高风险资产、数据质量问题与运营异常'
+  },
+  '/category': {
+    title: '分类档案',
+    subtitle: '维护设备分类、折旧年限和残值率基线'
+  },
+  '/department': {
+    title: '单位档案',
+    subtitle: '维护组织结构与设备归属边界'
+  },
+  '/ai-assistant': {
+    title: 'AI 建议草案',
+    subtitle: '生成报告和摘要草案，仅作解释与建议，不自动执行'
+  },
+  '/user-manage': {
+    title: '用户与权限',
+    subtitle: '维护账号、角色与单位归属，保持权限边界清晰'
+  },
+  '/system/backup': {
+    title: '备份与恢复',
+    subtitle: '查看备份状态并管理系统恢复入口'
+  },
+  '/system/log': {
+    title: '操作审计',
+    subtitle: '审查关键操作日志与系统治理记录'
+  }
+}
+
 export default {
   name: 'App',
   data() {
@@ -242,6 +317,22 @@ export default {
     isFullScreen() {
       const fullScreenPaths = ['/login', '/register', '/403']
       return fullScreenPaths.includes(this.$route.path)
+    },
+    currentPageMeta() {
+      const path = this.$route.path
+      if (PAGE_META[path]) {
+        return PAGE_META[path]
+      }
+      if (path.indexOf('/equipment/detail/') === 0) {
+        return {
+          title: '设备生命周期详情',
+          subtitle: '查看资产全链路记录、审计轨迹和 AI 建议草案'
+        }
+      }
+      return {
+        title: '设备管理系统',
+        subtitle: '统一管理设备台账、流程审批、风险治理与系统运维'
+      }
     }
   },
   watch: {
@@ -359,6 +450,9 @@ export default {
       }
       return tagMap[role] || ''
     },
+    goToMessageCenter() {
+      this.$router.push('/message-center').catch(() => {})
+    },
     formatUnreadCount(count) {
       if (typeof count !== 'number' || count <= 0) {
         return ''
@@ -405,36 +499,96 @@ body,
 </style>
 
 <style scoped>
-.el-header {
-  padding: 0 20px;
-  background-color: #fff;
-  display: flex;
-  align-items: center;
-}
-
-.el-aside {
-  background-color: #304156;
-  color: #333;
-  height: 100vh;
-}
-
-.el-menu {
-  border-right: none;
-}
-
 .el-main {
   background-color: #f0f2f5;
   padding: 20px;
 }
 
+.app-aside {
+  background: #304156;
+  color: #dce6f2;
+  height: 100vh;
+  overflow-y: auto;
+}
+
+.app-brand {
+  padding: 14px 18px 12px;
+  background: transparent;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.app-brand-text {
+  display: block;
+}
+
+.app-brand-text strong {
+  display: block;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 16px;
+  line-height: 1.2;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+
+.app-menu {
+  border-right: none;
+  padding: 10px 10px 18px;
+}
+
+.menu-section-label {
+  padding: 14px 12px 8px;
+  color: rgba(220, 230, 242, 0.58);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+.app-menu /deep/ .el-menu-item,
+.app-menu /deep/ .el-submenu__title {
+  height: 44px;
+  line-height: 44px;
+  border-radius: 10px;
+  margin-bottom: 6px;
+}
+
+.app-menu /deep/ .el-menu-item.is-active {
+  background: linear-gradient(90deg, rgba(64, 158, 255, 0.42) 0%, rgba(64, 158, 255, 0.22) 100%) !important;
+}
+
+.app-menu /deep/ .el-submenu .el-menu-item {
+  min-width: auto;
+}
+
+.app-menu /deep/ .el-submenu .el-menu {
+  background-color: transparent !important;
+}
+
 .app-header {
-  border-bottom: 1px solid #ddd;
-  line-height: 60px;
+  border-bottom: 1px solid #e8edf3;
   background-color: #fff;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0 20px;
+  padding: 0 24px;
+  min-height: 72px;
+}
+
+.header-page-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.header-page-title {
+  font-size: 20px;
+  color: #1f2d3d;
+  line-height: 1.2;
+}
+
+.header-page-subtitle {
+  color: #7a8797;
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .user-info {
@@ -538,5 +692,19 @@ body,
 .user-dropdown-trigger:hover .user-name,
 .user-dropdown-trigger:hover .el-icon-arrow-down {
   color: #66b1ff;
+}
+
+@media (max-width: 1280px) {
+  .app-aside {
+    width: 208px !important;
+  }
+
+  .app-header {
+    padding: 0 18px;
+  }
+
+  .header-page-subtitle {
+    max-width: 360px;
+  }
 }
 </style>

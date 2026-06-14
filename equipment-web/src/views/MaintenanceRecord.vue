@@ -1,21 +1,60 @@
 <template>
   <div class="maintenance-container">
-    <el-card shadow="never" style="margin-top: 20px">
-      <div slot="header" class="clearfix">
-        <span style="font-weight: bold">设备检修记录管理</span>
-        <el-button
-          v-if="role === 2"
-          type="primary"
-          icon="el-icon-plus"
-          size="small"
-          @click="openAddDialog"
-          style="float: right"
-          >新增检修补录</el-button
-        >
+    <el-card shadow="never" class="maintenance-card">
+      <div slot="header" class="page-header">
+        <div class="page-header-main">
+          <div class="page-title-block">
+            <span class="page-title">设备检修记录管理</span>
+            <span class="page-subtitle">聚焦待指派、待完工和待复核工单，消息跳转后优先展示目标记录。</span>
+          </div>
+          <el-button
+            v-if="role === 2"
+            type="primary"
+            icon="el-icon-plus"
+            size="small"
+            @click="openAddDialog"
+          >
+            新增检修补录
+          </el-button>
+        </div>
+
+        <div v-if="showQuickFilters" class="quick-filter-bar">
+          <button
+            type="button"
+            class="quick-filter-chip"
+            :class="{ 'is-active': activeQuickFilter === 'all' }"
+            @click="setQuickFilter('all')"
+          >
+            <span class="chip-label">全部工单</span>
+            <span class="chip-count">{{ filteredCounts.all }}</span>
+          </button>
+          <button
+            v-for="item in quickFilterOptions"
+            :key="item.key"
+            type="button"
+            class="quick-filter-chip"
+            :class="[`is-${item.tone}`, { 'is-active': activeQuickFilter === item.key }]"
+            @click="setQuickFilter(item.key)"
+          >
+            <span class="chip-label">{{ item.label }}</span>
+            <span class="chip-count">{{ filteredCounts[item.key] }}</span>
+          </button>
+        </div>
+
+        <el-alert
+          v-if="highlightedMaintId && !hasHighlightedRow && !loading"
+          title="目标工单不存在或已不在当前列表，已为您保留当前视图以继续处理其他工单。"
+          type="warning"
+          :closable="false"
+          show-icon
+          class="inline-alert"
+        />
       </div>
 
       <el-table
-        :data="tableData"
+        v-if="displayTableData.length > 0"
+        ref="maintenanceTable"
+        :data="displayTableData"
         border
         v-loading="loading"
         size="small"
@@ -99,36 +138,48 @@
             {{ scope.row.reviewComments || "-" }}
           </template>
         </el-table-column>
-        <el-table-column v-if="role !== 3" label="操作" align="center" width="200">
+        <el-table-column v-if="role !== 3" label="操作" align="center" width="240" fixed="right">
           <template slot-scope="scope">
-            <!-- 维修工(1)只能登记名下负责工单，资产管理员(2)可以派工指派或登记完工 -->
-            <el-button
-              v-if="canEdit(scope.row)"
-              size="mini"
-              :type="scope.row.maintStatus === 0 ? 'primary' : 'success'"
-              @click="handleEdit(scope.row)"
+            <div
+              class="action-cell"
+              :class="{ 'is-highlighted': isHighlightedRow(scope.row) }"
             >
-              {{ scope.row.maintStatus === 0 ? '派工指派' : '登记完工' }}
-            </el-button>
-            <!-- 复核按钮：对于状态为 2 且登录用户是资产管理员 (role=2) 展示 -->
-            <el-button
-              v-if="scope.row.maintStatus === 2 && role === 2"
-              size="mini"
-              type="warning"
-              @click="handleReview(scope.row)"
-              >复核</el-button
-            >
-            <!-- 只有资产管理员(2)可以删除 -->
-            <el-button
-              v-if="canDelete(scope.row)"
-              size="mini"
-              type="danger"
-              @click="confirmDelete(scope.row)"
-              >删除</el-button
-            >
+              <el-button
+                v-if="canEdit(scope.row)"
+                size="mini"
+                :type="scope.row.maintStatus === 0 ? 'primary' : 'success'"
+                @click="handleEdit(scope.row)"
+              >
+                {{ scope.row.maintStatus === 0 ? '派工指派' : '登记完工' }}
+              </el-button>
+              <el-button
+                v-if="scope.row.maintStatus === 2 && role === 2"
+                size="mini"
+                type="warning"
+                @click="handleReview(scope.row)"
+              >
+                复核
+              </el-button>
+              <el-button
+                v-if="canDelete(scope.row)"
+                size="mini"
+                type="danger"
+                @click="confirmDelete(scope.row)"
+              >
+                删除
+              </el-button>
+            </div>
           </template>
         </el-table-column>
       </el-table>
+
+      <div v-else-if="!loading" class="table-empty-state">
+        <el-empty :description="emptyStateDescription" :image-size="108" />
+        <div class="table-empty-actions">
+          <el-button size="small" @click="setQuickFilter('all')">查看全部工单</el-button>
+          <el-button v-if="role === 2" type="primary" size="small" plain @click="openAddDialog">新增检修补录</el-button>
+        </div>
+      </div>
     </el-card>
 
     <el-dialog
@@ -284,8 +335,10 @@ import {
 } from "@/api/MaintenanceRecord";
 import { getEquipments } from "@/api/equipment";
 import { getMaintainers } from "@/api/user";
+import { getMaintenanceStatusMeta } from "@/utils/uiStatus";
 
 export default {
+  name: "MaintenanceRecord",
   data() {
     return {
       role: null,
@@ -295,6 +348,10 @@ export default {
       submitLoading: false,
       tableData: [],
       equipOptions: [],
+      activeQuickFilter: "all",
+      tableReady: false,
+      autoScrolledMaintId: null,
+      pendingScrollMaintId: null,
       dialogVisible: false,
       isEdit: false,
       form: {
@@ -374,38 +431,160 @@ export default {
       return val ? `￥${Number(val).toFixed(2)}` : "￥0.00";
     },
   },
+  computed: {
+    highlightedMaintId() {
+      const maintId = this.$route.query.maintId;
+      return maintId ? String(maintId) : "";
+    },
+    showQuickFilters() {
+      return this.role === 1 || this.role === 2;
+    },
+    quickFilterOptions() {
+      if (this.role === 1) {
+        return [
+          { key: "pending-complete", label: "待完工", tone: "success" },
+        ];
+      }
+      if (this.role === 2) {
+        return [
+          { key: "pending-assign", label: "待指派", tone: "primary" },
+          { key: "pending-complete", label: "待完工", tone: "success" },
+          { key: "pending-review", label: "待复核", tone: "warning" },
+        ];
+      }
+      return [];
+    },
+    filteredCounts() {
+      return {
+        all: this.tableData.length,
+        "pending-assign": this.tableData.filter(row => row.maintStatus === 0).length,
+        "pending-complete": this.tableData.filter(row => this.isPendingComplete(row)).length,
+        "pending-review": this.tableData.filter(row => row.maintStatus === 2).length,
+      };
+    },
+    displayTableData() {
+      let rows = [...this.tableData];
+      if (this.activeQuickFilter === "pending-assign") {
+        rows = rows.filter(row => row.maintStatus === 0);
+      } else if (this.activeQuickFilter === "pending-complete") {
+        rows = rows.filter(row => this.isPendingComplete(row));
+      } else if (this.activeQuickFilter === "pending-review") {
+        rows = rows.filter(row => row.maintStatus === 2);
+      }
+      rows.sort((left, right) => this.sortRows(left, right));
+      return rows;
+    },
+    hasHighlightedRow() {
+      if (!this.highlightedMaintId) {
+        return false;
+      }
+      return this.tableData.some(row => String(row.maintId) === this.highlightedMaintId);
+    },
+    emptyStateDescription() {
+      if (this.activeQuickFilter === "pending-assign") {
+        return "当前没有待指派工单";
+      }
+      if (this.activeQuickFilter === "pending-complete") {
+        return "当前没有待完工工单";
+      }
+      if (this.activeQuickFilter === "pending-review") {
+        return "当前没有待复核工单";
+      }
+      return "当前没有检修工单记录";
+    },
+  },
+  watch: {
+    '$route.query.maintId': {
+      immediate: true,
+      handler() {
+        this.syncQuickFilterWithRoute();
+      },
+    },
+    displayTableData() {
+      this.scheduleScrollToHighlightedRow();
+    },
+  },
   created() {
     const roleStr = localStorage.getItem("role");
     this.role = roleStr !== null ? parseInt(roleStr, 10) : null;
     this.realName = localStorage.getItem("realName") || "";
+    this.syncQuickFilterWithRoute();
     this.loadList();
     this.fetchMaintainers();
   },
   methods: {
+    setQuickFilter(filterKey) {
+      this.activeQuickFilter = filterKey;
+      this.scheduleScrollToHighlightedRow();
+    },
+    syncQuickFilterWithRoute() {
+      const highlightedRow = this.tableData.find(
+        row => String(row.maintId) === this.highlightedMaintId
+      );
+      if (highlightedRow) {
+        if (highlightedRow.maintStatus === 0 && this.role === 2) {
+          this.activeQuickFilter = "pending-assign";
+        } else if (this.isPendingComplete(highlightedRow) && (this.role === 1 || this.role === 2)) {
+          this.activeQuickFilter = "pending-complete";
+        } else if (highlightedRow.maintStatus === 2 && this.role === 2) {
+          this.activeQuickFilter = "pending-review";
+        } else {
+          this.activeQuickFilter = "all";
+        }
+      } else if (!this.showQuickFilters || this.activeQuickFilter === "all") {
+        this.activeQuickFilter = "all";
+      }
+      this.pendingScrollMaintId = this.highlightedMaintId || null;
+    },
     formatDateTime(dateTimeStr) {
       if (!dateTimeStr) return "-";
       // 将 "2026-06-13T15:21:40" 转换为 "2026-06-13 15:21"
       return dateTimeStr.replace("T", " ").substring(0, 16);
     },
     formatStatusLabel(status) {
-      const statusMap = {
-        0: "待指派",
-        1: "维修中",
-        2: "待复核",
-        3: "已复核可用",
-        4: "转报废",
-      };
-      return statusMap[status] || "未知";
+      return getMaintenanceStatusMeta(status).label;
     },
     formatStatusType(status) {
-      const statusMap = {
-        0: "info",
-        1: "warning",
-        2: "primary",
-        3: "success",
-        4: "danger",
+      return getMaintenanceStatusMeta(status).type;
+    },
+    isPendingComplete(row) {
+      if (row.maintStatus !== 1) {
+        return false;
+      }
+      if (this.role === 1) {
+        return this.canEdit(row);
+      }
+      return true;
+    },
+    sortRows(left, right) {
+      const highlightedId = this.highlightedMaintId;
+      if (highlightedId) {
+        if (String(left.maintId) === highlightedId) {
+          return -1;
+        }
+        if (String(right.maintId) === highlightedId) {
+          return 1;
+        }
+      }
+      const leftPriority = this.getRowPriority(left);
+      const rightPriority = this.getRowPriority(right);
+      if (leftPriority !== rightPriority) {
+        return leftPriority - rightPriority;
+      }
+      return String(right.maintDate || "").localeCompare(String(left.maintDate || ""));
+    },
+    getRowPriority(row) {
+      const statusPriorityMap = {
+        0: 1,
+        2: 2,
+        1: 3,
+        4: 4,
+        3: 5,
       };
-      return statusMap[status] || "info";
+      return statusPriorityMap[row.maintStatus] || 99;
+    },
+    isHighlightedRow(row) {
+      return this.highlightedMaintId && String(row.maintId) === this.highlightedMaintId;
     },
     canEdit(row) {
       if (row.maintStatus >= 2) {
@@ -440,6 +619,15 @@ export default {
       this.loading = true;
       try {
         this.tableData = await getMaintenanceList();
+        this.syncQuickFilterWithRoute();
+        if (this.highlightedMaintId) {
+          const hasHighlightedRow = this.tableData.some(
+            row => String(row.maintId) === this.highlightedMaintId
+          );
+          if (!hasHighlightedRow) {
+            this.$message.warning("目标工单不存在或已不在当前列表");
+          }
+        }
       } finally {
         this.loading = false;
       }
@@ -552,11 +740,29 @@ export default {
       };
     },
     tableRowClassName({ row }) {
-      const maintId = this.$route.query.maintId;
-      if (maintId && String(row.maintId) === String(maintId)) {
+      if (this.isHighlightedRow(row)) {
         return 'highlight-row';
       }
       return '';
+    },
+    scheduleScrollToHighlightedRow() {
+      if (!this.highlightedMaintId || this.autoScrolledMaintId === this.highlightedMaintId) {
+        return;
+      }
+      this.$nextTick(() => {
+        this.scrollToHighlightedRow();
+      });
+    },
+    scrollToHighlightedRow() {
+      const highlightedRow = this.$el.querySelector(".el-table__body-wrapper tbody tr.highlight-row");
+      if (!highlightedRow) {
+        return;
+      }
+      highlightedRow.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+      this.autoScrolledMaintId = this.highlightedMaintId;
     },
   },
 };
@@ -598,7 +804,163 @@ export default {
 </style>
 
 <style scoped>
+.maintenance-card {
+  margin-top: 20px;
+}
+
+.page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.page-header-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.page-title-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.page-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1f2d3d;
+}
+
+.page-subtitle {
+  font-size: 12px;
+  line-height: 1.5;
+  color: #7a8797;
+}
+
+.inline-alert {
+  margin-top: 4px;
+}
+
+.quick-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.quick-filter-chip {
+  border: 1px solid #dcdfe6;
+  background: #fff;
+  border-radius: 12px;
+  min-width: 120px;
+  padding: 12px 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.quick-filter-chip:hover {
+  border-color: #409eff;
+  box-shadow: 0 6px 18px rgba(64, 158, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.quick-filter-chip.is-active {
+  border-color: #409eff;
+  background: #ecf5ff;
+}
+
+.quick-filter-chip.is-success.is-active {
+  border-color: #67c23a;
+  background: #f0f9eb;
+}
+
+.quick-filter-chip.is-warning.is-active {
+  border-color: #e6a23c;
+  background: #fdf6ec;
+}
+
+.chip-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.chip-count {
+  min-width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  background: #f4f4f5;
+  color: #606266;
+  font-size: 12px;
+  line-height: 24px;
+  text-align: center;
+  padding: 0 8px;
+  box-sizing: border-box;
+}
+
+.quick-filter-chip.is-active .chip-count {
+  background: #409eff;
+  color: #fff;
+}
+
+.quick-filter-chip.is-success.is-active .chip-count {
+  background: #67c23a;
+}
+
+.quick-filter-chip.is-warning.is-active .chip-count {
+  background: #e6a23c;
+}
+
+.action-cell {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 4px 6px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.action-cell.is-highlighted {
+  background: rgba(64, 158, 255, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(64, 158, 255, 0.18);
+}
+
+.table-empty-state {
+  border: 1px dashed #dcdfe6;
+  border-radius: 10px;
+  padding: 18px;
+  background: #fafbfd;
+}
+
+.table-empty-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+}
+
 ::v-deep .el-table .highlight-row {
   background: #fdf6ec !important;
+}
+
+::v-deep .el-table .highlight-row > td {
+  background: #fdf6ec !important;
+}
+
+@media (max-width: 1280px) {
+  .page-header-main {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .quick-filter-chip {
+    min-width: 0;
+    flex: 1 1 180px;
+  }
 }
 </style>

@@ -1,11 +1,30 @@
 <template>
   <div class="message-center-container" v-loading="loading">
     <div class="page-header">
-      <div class="title-area">
-        <i class="el-icon-bell header-icon"></i>
-        <div>
-          <h2 class="page-title">消息中心</h2>
-          <p class="page-subtitle">查看系统生成的关键设备风险预警、领用审批待办以及超时维保工单通知。</p>
+      <div class="page-header-main">
+        <div class="title-area">
+          <i class="el-icon-bell header-icon"></i>
+          <div>
+            <h2 class="page-title">消息中心</h2>
+            <p class="page-subtitle">从通知直接进入审批、检修和风险处理入口，避免消息与待办割裂。</p>
+          </div>
+        </div>
+        <el-button type="primary" size="small" icon="el-icon-refresh" @click="loadMessages">
+          刷新消息
+        </el-button>
+      </div>
+
+      <div class="summary-strip">
+        <div class="summary-chip is-primary">
+          <span class="summary-chip-label">当前视图</span>
+          <strong>{{ getCategoryTitle(activeCategory) }}</strong>
+        </div>
+        <div class="summary-chip" :class="{ 'is-warning': unreadCount > 0 }">
+          <span class="summary-chip-label">未读待处理</span>
+          <strong>{{ unreadCount }}</strong>
+        </div>
+        <div class="summary-tip">
+          已读消息保留为历史线索，未读消息默认优先展示。
         </div>
       </div>
     </div>
@@ -16,7 +35,7 @@
         <el-card class="menu-card" shadow="hover">
           <div class="menu-header">
             <i class="el-icon-chat-dot-round"></i>
-            <span>消息筛选</span>
+            <span>视图筛选</span>
           </div>
           <el-menu
             :default-active="activeCategory"
@@ -68,23 +87,21 @@
             <span class="list-title">
               {{ getCategoryTitle(activeCategory) }}
             </span>
-            <el-button
-              type="text"
-              icon="el-icon-refresh"
-              size="small"
-              @click="loadMessages"
-            >
-              刷新
-            </el-button>
+            <span class="list-subtitle">点击“去处理”后进入对应业务页面并保留当前消息语境</span>
           </div>
 
           <div class="message-list-wrapper">
             <!-- 空状态 -->
-            <el-empty
-              v-if="messageList.length === 0"
-              description="暂无相关通知消息"
-              :image-size="120"
-            />
+            <div v-if="messageList.length === 0" class="empty-state-card">
+              <el-empty
+                :description="getEmptyDescription(activeCategory)"
+                :image-size="110"
+              />
+              <div class="empty-state-actions">
+                <el-button size="small" @click="handleCategorySelect('all')">查看全部消息</el-button>
+                <el-button type="primary" size="small" plain @click="loadMessages">重新刷新</el-button>
+              </div>
+            </div>
 
             <!-- 消息项 -->
             <div
@@ -121,6 +138,10 @@
                   <i class="el-icon-link"></i>
                   <span>关联对象ID: {{ msg.refId }}</span>
                 </div>
+                <div class="ref-info" v-else>
+                  <i class="el-icon-info"></i>
+                  <span>该消息仅供提示，无直接关联对象。</span>
+                </div>
                 <div class="msg-actions">
                   <el-button
                     v-if="msg.status === 0"
@@ -137,9 +158,10 @@
                     size="mini"
                     icon="el-icon-right"
                     class="process-btn"
+                    :disabled="!hasProcessEntry(msg)"
                     @click="handleProcess(msg)"
                   >
-                    去处理
+                    {{ hasProcessEntry(msg) ? '去处理' : '仅查看通知' }}
                   </el-button>
                 </div>
               </div>
@@ -292,11 +314,19 @@ export default {
     // 辅助转换
     getCategoryTitle(key) {
       const titles = {
-        all: '全部通知消息列表',
-        unread: '未读通知消息列表',
-        read: '已读历史消息列表'
+        all: '全部通知消息',
+        unread: '未读待处理消息',
+        read: '已读历史消息'
       }
       return titles[key] || '消息列表'
+    },
+    getEmptyDescription(key) {
+      const descriptions = {
+        all: '当前没有可展示的通知消息',
+        unread: '当前没有未读待处理消息，可以返回全部消息查看历史线索',
+        read: '当前没有已读历史消息'
+      }
+      return descriptions[key] || '暂无相关消息'
     },
     getEventLabel(refType) {
       const labels = {
@@ -313,6 +343,12 @@ export default {
         maintenance: 'warning'
       }
       return types[refType] || 'info'
+    },
+    hasProcessEntry(msg) {
+      if (!msg || !msg.refId) {
+        return false
+      }
+      return ['equipment', 'claim', 'maintenance'].includes(msg.refType)
     },
     formatTime(val) {
       if (!val) return ''
@@ -344,10 +380,17 @@ export default {
 
 .page-header {
   background: #fff;
-  padding: 15px 20px;
+  padding: 18px 20px;
   border-radius: 8px;
   border: 1px solid #e4e7ed;
   margin-bottom: 20px;
+}
+
+.page-header-main {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .title-area {
@@ -372,6 +415,50 @@ export default {
   margin: 5px 0 0 0;
   font-size: 13px;
   color: #909399;
+}
+
+.summary-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.summary-chip {
+  min-width: 148px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid #e6ebf2;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.summary-chip strong {
+  color: #1f2d3d;
+  font-size: 14px;
+}
+
+.summary-chip.is-primary {
+  border-color: #d9ecff;
+  background: #edf6ff;
+}
+
+.summary-chip.is-warning {
+  border-color: #faecd8;
+  background: #fff8ee;
+}
+
+.summary-chip-label {
+  color: #7a8797;
+  font-size: 12px;
+}
+
+.summary-tip {
+  color: #7a8797;
+  font-size: 12px;
 }
 
 .content-row {
@@ -474,6 +561,7 @@ export default {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
 }
 
 .list-title {
@@ -482,8 +570,27 @@ export default {
   color: #303133;
 }
 
+.list-subtitle {
+  color: #909399;
+  font-size: 12px;
+  text-align: right;
+}
+
 .message-list-wrapper {
   padding: 5px 0;
+}
+
+.empty-state-card {
+  border: 1px dashed #dcdfe6;
+  border-radius: 8px;
+  background: #fafbfd;
+  padding: 18px;
+}
+
+.empty-state-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
 }
 
 .message-item-card {
@@ -625,5 +732,21 @@ export default {
 .pagination-container {
   margin-top: 25px;
   text-align: right;
+}
+
+@media (max-width: 1280px) {
+  .page-header-main {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .list-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .list-subtitle {
+    text-align: left;
+  }
 }
 </style>

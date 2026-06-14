@@ -317,6 +317,7 @@ import * as echarts from 'echarts'
 import { getGovernanceSummary, getEquipmentRisks } from '@/api/governance'
 import { getDepts } from '@/api/department'
 import { getCategories } from '@/api/category'
+import { getRiskLevelMeta } from '@/utils/uiStatus'
 
 export default {
   name: 'DataGovernance',
@@ -810,18 +811,10 @@ export default {
     },
     // 状态和样式格式化辅助
     formatRiskLevel(lvl) {
-      const map = { 
-        high: '高风险', medium: '中风险', low: '低风险',
-        '高风险': '高风险', '中风险': '中风险', '低风险': '低风险'
-      }
-      return map[lvl] || lvl
+      return getRiskLevelMeta(lvl).label
     },
     getRiskTagType(lvl) {
-      const map = { 
-        high: 'danger', medium: 'warning', low: 'success',
-        '高风险': 'danger', '中风险': 'warning', '低风险': 'success'
-      }
-      return map[lvl] || 'info'
+      return getRiskLevelMeta(lvl).type
     },
     getHealthColor(score) {
       if (score >= 85) return '#67C23A' // 成功色

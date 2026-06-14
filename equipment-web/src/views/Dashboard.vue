@@ -1,22 +1,22 @@
 <template>
   <div class="dashboard-container" v-loading="loading">
-    <!-- 头部欢迎区域 -->
     <div class="welcome-banner">
       <div class="welcome-text">
         <i class="el-icon-odometer welcome-icon"></i>
         <div>
-          <h2 class="welcome-title">
-            您好，{{ realName || username }}！欢迎回来
-          </h2>
+          <h2 class="welcome-title">数据看板</h2>
           <p class="welcome-subtitle">
-            当前身份：<span class="role-badge">{{ formatRole(role) }}</span> | 
-            所属单位：<span>{{ getDeptName(unitCode) }}</span>
+            您好，{{ realName || username }}。当前身份为 <span class="role-badge">{{ formatRole(role) }}</span>，
+            所属单位 <span>{{ getDeptName(unitCode) }}</span>。
           </p>
         </div>
       </div>
-      <div class="welcome-date">
-        <i class="el-icon-time"></i>
-        <span>{{ currentDate }}</span>
+      <div class="welcome-side">
+        <div class="welcome-date">
+          <i class="el-icon-time"></i>
+          <span>{{ currentDate }}</span>
+        </div>
+        <div class="welcome-tip">待办入口保留在首屏，优先处理需要动作的事项。</div>
       </div>
     </div>
 
@@ -115,7 +115,7 @@
                     <el-table-column prop="faultDescription" label="故障描述" min-width="180" show-overflow-tooltip />
                     <el-table-column label="状态" width="100">
                       <template slot-scope="scope">
-                        <el-tag size="mini" type="danger">{{ formatMaintStatus(scope.row.maintStatus) }}</el-tag>
+                        <el-tag size="mini" :type="formatMaintTagType(scope.row.maintStatus)">{{ formatMaintStatus(scope.row.maintStatus) }}</el-tag>
                       </template>
                     </el-table-column>
                   </el-table>
@@ -304,7 +304,7 @@
                 </el-table-column>
                 <el-table-column label="状态" width="80" align="center">
                   <template slot-scope="scope">
-                    <el-tag size="mini" :type="scope.row.status === '在用' ? 'success' : 'warning'">
+                    <el-tag size="mini" :type="getEquipmentTagType(scope.row.status)">
                       {{ scope.row.status }}
                     </el-tag>
                   </template>
@@ -355,7 +355,7 @@
                     <el-table-column prop="equipId" label="设备编号" width="100" />
                     <el-table-column label="状态" width="100" align="center">
                       <template slot-scope="scope">
-                        <el-tag size="mini" :type="scope.row.maintStatus === 1 ? 'warning' : 'success'">
+                        <el-tag size="mini" :type="formatMaintTagType(scope.row.maintStatus)">
                           {{ formatMaintStatus(scope.row.maintStatus) }}
                         </el-tag>
                       </template>
@@ -376,6 +376,7 @@
 import * as echarts from 'echarts'
 import { getDashboardSummary } from '@/api/dashboard'
 import { getDepts } from '@/api/department'
+import { getClaimStatusMeta, getMaintenanceStatusMeta, getEquipmentStatusMeta } from '@/utils/uiStatus'
 
 export default {
   name: 'UserDashboard',
@@ -1010,32 +1011,19 @@ export default {
       return roleMap[role] !== undefined ? roleMap[role] : '未知角色'
     },
     formatMaintStatus(status) {
-      // 0-待指派, 1-维修中, 2-待复核, 3-已复核可用, 4-转报废
-      const statusMap = {
-        0: '待指派',
-        1: '维修中',
-        2: '待复核',
-        3: '已复核可用',
-        4: '转报废'
-      }
-      return statusMap[status] !== undefined ? statusMap[status] : '未知'
+      return getMaintenanceStatusMeta(status).label
     },
     formatClaimStatus(status) {
-      // 0-待审批, 1-已同意, 2-已拒绝
-      const statusMap = {
-        0: '待审批',
-        1: '已同意',
-        2: '已拒绝'
-      }
-      return statusMap[status] !== undefined ? statusMap[status] : '未知'
+      return getClaimStatusMeta(status).label
     },
     formatClaimTagType(status) {
-      const tagMap = {
-        0: 'warning',
-        1: 'success',
-        2: 'danger'
-      }
-      return tagMap[status] || 'info'
+      return getClaimStatusMeta(status).type
+    },
+    formatMaintTagType(status) {
+      return getMaintenanceStatusMeta(status).type
+    },
+    getEquipmentTagType(status) {
+      return getEquipmentStatusMeta(status).type
     },
     goToPage(path) {
       if (this.$route.path !== path) {
@@ -1067,6 +1055,13 @@ export default {
 .welcome-text {
   display: flex;
   align-items: center;
+}
+
+.welcome-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
 }
 
 .welcome-icon {
@@ -1103,6 +1098,11 @@ export default {
 .welcome-date i {
   margin-right: 6px;
   font-size: 16px;
+}
+
+.welcome-tip {
+  color: #7a8797;
+  font-size: 12px;
 }
 
 /* KPI 指标卡片 */

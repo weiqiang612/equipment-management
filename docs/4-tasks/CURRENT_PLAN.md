@@ -4,7 +4,9 @@
 
 ## Active feature
 
-None (All 16 stages successfully completed! 🎉)
+`docs/4-tasks/features/TASK-017-ui-ux-polish/`
+- spec.md ✅ Ready
+- tasks.md → In progress
 
 ## Stages
 
@@ -55,6 +57,9 @@ None (All 16 stages successfully completed! 🎉)
 
 ### TASK-016: AI 辅助报告与建议草案
 - [x] Implementation (14 tasks)
+
+### TASK-017: 全局 UI/UX 收尾优化
+- [ ] Implementation (9 tasks)
 
 ## Completed
 
@@ -124,5 +129,4 @@ None (All 16 stages successfully completed! 🎉)
 
 ## Notes for next session
 
-- TASK-014 confirmed complete after all acceptance criteria passed.
-- Active moves to `docs/4-tasks/features/TASK-015-event-notification-mvp/`
+- `TASK-017-ui-ux-polish` is the current active feature for the next implementation session.

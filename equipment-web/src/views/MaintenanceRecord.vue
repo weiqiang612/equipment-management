@@ -138,36 +138,41 @@
             {{ scope.row.reviewComments || "-" }}
           </template>
         </el-table-column>
-        <el-table-column v-if="role !== 3" label="操作" align="center" width="240" fixed="right">
+        <el-table-column v-if="role !== 3" label="处理" align="center" width="196" fixed="right">
           <template slot-scope="scope">
             <div
               class="action-cell"
               :class="{ 'is-highlighted': isHighlightedRow(scope.row) }"
             >
-              <el-button
-                v-if="canEdit(scope.row)"
-                size="mini"
-                :type="scope.row.maintStatus === 0 ? 'primary' : 'success'"
-                @click="handleEdit(scope.row)"
-              >
-                {{ scope.row.maintStatus === 0 ? '派工指派' : '登记完工' }}
-              </el-button>
-              <el-button
-                v-if="scope.row.maintStatus === 2 && role === 2"
-                size="mini"
-                type="warning"
-                @click="handleReview(scope.row)"
-              >
-                复核
-              </el-button>
-              <el-button
-                v-if="canDelete(scope.row)"
-                size="mini"
-                type="danger"
-                @click="confirmDelete(scope.row)"
-              >
-                删除
-              </el-button>
+              <template v-if="hasRowActions(scope.row)">
+                <el-button
+                  v-if="canEdit(scope.row)"
+                  size="mini"
+                  :type="scope.row.maintStatus === 0 ? 'primary' : 'success'"
+                  @click="handleEdit(scope.row)"
+                >
+                  {{ scope.row.maintStatus === 0 ? '派工' : '完工' }}
+                </el-button>
+                <el-button
+                  v-if="scope.row.maintStatus === 2 && role === 2"
+                  size="mini"
+                  type="warning"
+                  @click="handleReview(scope.row)"
+                >
+                  复核
+                </el-button>
+                <el-button
+                  v-if="canDelete(scope.row)"
+                  size="mini"
+                  type="danger"
+                  @click="confirmDelete(scope.row)"
+                >
+                  删除
+                </el-button>
+              </template>
+              <span v-else class="action-empty-tip">
+                {{ getActionHint(scope.row) }}
+              </span>
             </div>
           </template>
         </el-table-column>
@@ -598,6 +603,24 @@ export default {
     canDelete(row) {
       return this.role === 2 && row.maintStatus === 0;
     },
+    hasRowActions(row) {
+      return this.canEdit(row) || (row.maintStatus === 2 && this.role === 2) || this.canDelete(row);
+    },
+    getActionHint(row) {
+      if (row.maintStatus === 3 || row.maintStatus === 4) {
+        return "已处理完成";
+      }
+      if (row.maintStatus === 2) {
+        return this.role === 1 ? "等待管理员复核" : "当前阶段无需处理";
+      }
+      if (row.maintStatus === 1) {
+        return this.role === 1 ? "等待本人登记完工" : "等待检修登记完工";
+      }
+      if (row.maintStatus === 0) {
+        return this.role === 1 ? "等待管理员派工" : "当前阶段无需处理";
+      }
+      return "当前阶段无需处理";
+    },
     async fetchMaintainers() {
       try {
         const res = await getMaintainers();
@@ -919,9 +942,10 @@ export default {
   display: flex;
   justify-content: center;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
-  min-height: 36px;
-  padding: 4px 6px;
+  min-height: 44px;
+  padding: 6px 8px;
   border-radius: 8px;
   transition: background-color 0.2s ease, box-shadow 0.2s ease;
 }
@@ -929,6 +953,24 @@ export default {
 .action-cell.is-highlighted {
   background: rgba(64, 158, 255, 0.08);
   box-shadow: inset 0 0 0 1px rgba(64, 158, 255, 0.18);
+}
+
+.action-cell ::v-deep .el-button + .el-button {
+  margin-left: 0;
+}
+
+.action-empty-tip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #f4f6f8;
+  color: #7a8797;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: nowrap;
 }
 
 .table-empty-state {

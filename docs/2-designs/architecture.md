@@ -105,3 +105,34 @@ Web 浏览器 (SPA) ➔ 控制层 (Controller) ➔ 业务逻辑层 (Service) ➔
 ### 4.2 前端单页应用 (SPA) 鉴权机制
 1.  **路由守卫与白名单拦截**：在 `router/index.js` 中使用全局守卫 `router.beforeEach`，根据目标路由的 `meta.roles` 配置，检查当前 LocalStorage 中缓存用户的 `role`。若用户试图越权进入，强制拦截并重定向回主页或错误页。
 2.  **细粒度前端操作隔离**：通过 Vue 指令或条件渲染（`v-if`），结合当前用户的 `role` 与单据本身的归属字段（如 `custodian`），实现“设备台账”与“检修记录”操作按钮的动态显隐和只读切换。
+
+---
+
+## 5. 当前代码对齐架构说明
+
+### 5.1 后端实际分层
+当前后端代码以 `com.weiqiang` 为根包，实际分层如下：
+- `controller/`：HTTP 入口，统一返回 `Result`，只做参数接收和接口编排。
+- `service/` 与 `service/impl/`：业务规则、事务、越权校验和跨 DAO 编排的主要位置。
+- `dao/`：基于 `JdbcTemplate` 和 `BasicDao` 的 SQL 访问层，不使用 JPA/Hibernate。
+- `pojo/`：实体、请求对象和 VO，如 `EquipmentDetailVO`、`GovernanceSummaryVO`、`SysMessage`、`AiReportDraftVO`。
+- `interceptor/`、`aop/`、`anno/`、`exception/`：JWT 登录态、角色注解、越权异常和统一异常处理。
+- `config/`、`utils/`：Web 拦截器配置、数据库备份配置、JWT 和上下文工具。
+
+### 5.2 前端实际分层
+当前前端代码以 Vue 2 Options API 为主：
+- `router/index.js`：声明登录、注册、403、数据看板、设备台账、领用审批、检修、调拨、报废、分类、单位、用户管理、设备详情、审计日志、数据治理、消息中心和 AI 助手路由。
+- `api/`：按业务模块封装 Axios 请求，路径与后端 Controller 对齐。
+- `views/`：业务页面实现，主要包括 `Dashboard.vue`、`Equipment.vue`、`MaintenanceRecord.vue`、`MessageCenter.vue`、`AiAssistant.vue` 等。
+- `utils/request.js`：统一 Axios 实例、请求头 token 注入、响应处理和登录失效处理。
+
+### 5.3 运行时安全链路
+- 登录与注册之外的请求进入 `LoginCheckInterceptor`，从 Header `token` 解析 JWT。
+- 拦截器基于用户名实时查询数据库最新 `unitCode`，并写入 `BaseContext`，用于后续水平隔离。
+- 方法或类上带 `@RequiresRoles` 的接口由 `SecurityAspect` 在进入 Controller/Service 前进行角色匹配。
+- 业务层继续执行单位、保管人、状态和工单归属校验，避免只靠前端路由或按钮显隐。
+
+### 5.4 报告写作边界
+- 可以在课程设计报告中描述“前端路由守卫 + 后端 JWT 拦截器 + AOP 角色校验 + Service 单位隔离”的组合防护。
+- 可以描述消息中心为规则驱动、拉取式通知，不应描述为 WebSocket 实时推送。
+- 可以描述 AI 为报告草案和设备摘要生成，不应描述为自动审批、自动报废或自动恢复数据库。

@@ -138,7 +138,7 @@ function buildBlocks(lines) {
     if (headingLevel > 0) {
       flushParagraph()
       flushList()
-      const content = renderInlineMarkdown(trimmed.replace(/^#{1,3}\s+/, ''))
+      const content = renderInlineMarkdown(trimmed.replace(/^#{1,6}\s+/, ''))
       blocks.push(`<h${headingLevel}>${content}</h${headingLevel}>`)
       continue
     }
@@ -187,6 +187,15 @@ function buildBlocks(lines) {
 }
 
 function getHeadingLevel(line) {
+  if (/^######\s+/.test(line)) {
+    return 6
+  }
+  if (/^#####\s+/.test(line)) {
+    return 5
+  }
+  if (/^####\s+/.test(line)) {
+    return 4
+  }
   if (/^###\s+/.test(line)) {
     return 3
   }

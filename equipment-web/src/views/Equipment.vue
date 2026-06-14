@@ -183,14 +183,25 @@
           </el-popover>
         </template>
       </el-table-column>
-      <el-table-column label="操作" align="center" width="220">
+      <el-table-column label="操作" align="center" width="236">
         <template slot-scope="scope">
-          <el-button size="small" type="text" icon="el-icon-view" @click="handleDetail(scope.row)">详情</el-button>
+          <div class="table-action-group">
+            <el-button
+              size="mini"
+              plain
+              class="action-btn action-btn-detail"
+              @click="handleDetail(scope.row)"
+            >详情</el-button>
           <!-- 资产管理员(2) 或 系统管理员(3) 可见完整的编辑和下拉菜单 -->
           <template v-if="role === 2 || role === 3">
-            <el-button size="small" type="text" icon="el-icon-edit" style="margin-left: 10px" @click="handleEdit(scope.row)">编辑</el-button>
-            <el-dropdown style="margin-left: 10px" trigger="click">
-              <el-button size="small" type="text" icon="el-icon-more" class="more-btn">
+            <el-button
+              size="mini"
+              plain
+              class="action-btn"
+              @click="handleEdit(scope.row)"
+            >编辑</el-button>
+            <el-dropdown trigger="click">
+              <el-button size="mini" plain class="action-btn more-btn">
                 更多<i class="el-icon-arrow-down el-icon--right"></i>
               </el-button>
               <el-dropdown-menu slot="dropdown">
@@ -223,32 +234,30 @@
           <template v-else-if="role === 0 || role === 1">
             <el-button
               v-if="role === 0 && !scope.row.custodian && scope.row.status === '在用'"
-              size="small"
-              type="text"
-              icon="el-icon-shopping-cart-2"
-              style="margin-left: 10px"
+              size="mini"
+              plain
+              class="action-btn"
               @click="handleClaimApply(scope.row)"
               >申请领用</el-button
             >
             <el-button
               v-if="role === 0 && scope.row.custodian === username"
-              size="small"
-              type="text"
-              icon="el-icon-back"
-              style="margin-left: 10px; color: #f56c6c;"
+              size="mini"
+              plain
+              class="action-btn action-btn-danger"
               @click="handleClaimReturn(scope.row)"
               >退还</el-button
             >
             <el-button
-              size="small"
-              type="text"
-              icon="el-icon-setting"
+              size="mini"
+              plain
               :disabled="scope.row.status !== '在用'"
-              style="margin-left: 10px"
+              class="action-btn action-btn-report"
               @click="handleMaintenance(scope.row)"
-              >维修</el-button
+              >报修</el-button
             >
           </template>
+          </div>
         </template>
       </el-table-column>
     </el-table>
@@ -1116,13 +1125,52 @@ export default {
   align-items: center;
 }
 
-/* 按钮微调 */
-.el-button--text {
-  font-weight: 500;
+.table-action-group {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.action-btn {
+  min-width: 64px;
+  margin-left: 0 !important;
+  border-radius: 999px;
+  font-weight: 600;
+  padding: 7px 12px;
+}
+
+.action-btn-detail {
+  color: #409eff;
+  border-color: #bfdcff;
+  background: #f0f7ff;
+}
+
+.action-btn-report {
+  color: #409eff;
+  border-color: #bfdcff;
+  background: #f0f7ff;
+}
+
+.action-btn-danger {
+  color: #f56c6c;
+  border-color: #f7c4c4;
+  background: #fff3f3;
+}
+
+.action-btn.is-disabled,
+.action-btn.is-disabled:hover,
+.action-btn.is-disabled:focus {
+  background: #f5f7fa;
+  border-color: #e4e7ed;
+  color: #c0c4cc;
 }
 
 .more-btn {
   color: #909399;
+  border-color: #dcdfe6;
+  background: #ffffff;
 }
 .more-btn:hover {
   color: #409eff;

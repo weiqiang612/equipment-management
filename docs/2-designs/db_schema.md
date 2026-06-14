@@ -45,6 +45,11 @@
         *   `equip_id` 逻辑参照设备表 `equipment.equip_id`
         *   `applicant` 逻辑参照用户表 `sys_user.username` (申请人/原保管人)
         *   `approver` 逻辑参照用户表 `sys_user.username` (审批人/指派人)
+*   **系统消息表 (sys_message)**
+    *   关系模式：消息(<u>id</u>, title, content, event_type, target_user, status, is_valid, ref_type, ref_id, create_time, update_time)
+    *   *外键说明*：
+        *   `target_user` 逻辑参照用户表 `sys_user.username`
+        *   `ref_type + ref_id` 逻辑关联设备、领用或检修业务对象
 
 ---
 
@@ -73,6 +78,8 @@
     *   `idx_transfer_equip` / `idx_transfer_date`：加速调拨流水的检索与排序。
     *   `idx_maint_equip` / `idx_scrap_equip`：优化维保记录和报废单的读取性能。
     *   `idx_claim_equip` / `idx_claim_applicant` / `idx_claim_status`：加速设备领用申请记录的匹配和查询。
+    *   `idx_target_user_status`：加速消息中心按接收人和未读状态查询。
+    *   `idx_ref_type_ref_id`：加速消息跳转或失效时定位关联业务对象。
 
 ---
 
@@ -223,4 +230,31 @@ CREATE TABLE `operation_log` (
   KEY `idx_op_log_op_time` (`op_time`),
   KEY `idx_op_log_target` (`target_type`, `target_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='操作审计日志表';
+
+-- 10. 系统消息表
+CREATE TABLE IF NOT EXISTS `sys_message` (
+  `id` INT AUTO_INCREMENT PRIMARY KEY COMMENT '主键ID',
+  `title` VARCHAR(255) NOT NULL COMMENT '消息标题',
+  `content` TEXT COMMENT '消息内容',
+  `event_type` VARCHAR(50) NOT NULL COMMENT '事件类型: high_risk_equipment, pending_claim, overdue_maintenance',
+  `target_user` VARCHAR(100) NOT NULL COMMENT '目标接收用户',
+  `status` INT NOT NULL DEFAULT 0 COMMENT '读取状态: 0-未读, 1-已读',
+  `is_valid` INT NOT NULL DEFAULT 1 COMMENT '是否有效: 1-有效, 0-已失效',
+  `ref_type` VARCHAR(50) COMMENT '关联业务类型: equipment, claim, maintenance',
+  `ref_id` VARCHAR(100) COMMENT '关联业务ID',
+  `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  INDEX `idx_target_user_status` (`target_user`, `status`),
+  INDEX `idx_ref_type_ref_id` (`ref_type`, `ref_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统消息表';
 ```
+
+## 6. 当前迁移脚本对齐说明
+- `user_schema.sql` 初始化 `sys_user` 四级角色样例账号。
+- `update_schema.sql` 补充设备保管人和基础检修报修字段。
+- `upgrade_v2.sql` 补充用户所属单位和检修工用户 ID 关联。
+- `upgrade_v3.sql` 新增 `t_equipment_claim` 领用审批流水表。
+- `upgrade_v5.sql` 新增 `operation_log` 操作审计日志表。
+- `upgrade_v6.sql` / `upgrade_v7.sql` 补充检修复核人、复核意见、复核时间、指派时间和完工时间。
+- `upgrade_v8.sql` 新增 `sys_message` 消息中心表。
+- 当前代码未新增 AI 输出持久化表；AI 报告草案和设备摘要通过接口即时返回。

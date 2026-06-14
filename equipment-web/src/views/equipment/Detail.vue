@@ -214,33 +214,56 @@
 
         <!-- 生成报告成功 -->
         <div v-else-if="aiSummaryData">
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #ebeef5; padding-bottom: 12px; margin-bottom: 15px;">
-            <el-tag :type="getRiskTagType(aiSummaryData.riskLevel)" size="small" effect="dark">
-              评估风险等级：{{ formatRiskLevel(aiSummaryData.riskLevel) }}
-            </el-tag>
+          <div class="ai-report-meta">
+            <div class="ai-report-title-bar">
+              <h3>{{ aiReportTitle }}</h3>
+              <div class="ai-meta-row">
+                <span class="period-badge">设备生命周期诊断</span>
+                <span class="time"><i class="el-icon-time"></i> 生成时间：{{ formatTime(aiSummaryData.generatedTime) }}</span>
+              </div>
+            </div>
             <el-button 
-              type="text" 
-              icon="el-icon-document-copy" 
-              size="small"
-              @click="copyAiSummary"
+              class="report-action-button"
+              type="primary"
+              size="mini"
+              icon="el-icon-download"
+              @click="exportAiSummaryPdf"
             >
-              复制 Markdown 原文
+              导出 PDF
             </el-button>
           </div>
-          <div class="ai-report-content" v-html="renderedAiSummary"></div>
+          <article class="report-content-box report-print-surface">
+            <div class="report-summary-grid">
+              <div class="summary-item">
+                <span class="summary-label">风险等级</span>
+                <strong>{{ formatRiskLevel(aiSummaryData.riskLevel) }}</strong>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">输出对象</span>
+                <strong>{{ detailData.equipName || '-' }} ({{ detailData.equipId || '-' }})</strong>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">输出性质</span>
+                <strong>AI 辅助诊断</strong>
+              </div>
+            </div>
+            <div class="ai-report-content report-content" v-html="renderedAiSummary"></div>
+          </article>
         </div>
       </div>
       <span slot="footer" class="dialog-footer">
         <el-button size="small" @click="aiDialogVisible = false">关 闭</el-button>
       </span>
     </el-dialog>
+
+    <iframe ref="printFrame" class="print-frame"></iframe>
   </div>
 </template>
 
 <script>
 import { getEquipmentDetail } from '@/api/equipment'
 import { getEquipmentAiSummary } from '@/api/aiAssistant'
-import { renderMarkdown } from '@/utils/markdown'
+import { buildAiReportHtml, formatReportTime, printAiReportFromFrame } from '@/utils/aiReportPrint'
 import { getClaimStatusMeta, getEquipmentStatusMeta, getMaintenanceStatusMeta, getRiskLevelMeta } from '@/utils/uiStatus'
 
 export default {
@@ -354,47 +377,42 @@ export default {
     formatRiskLevel(risk) {
       return getRiskLevelMeta(risk).label
     },
-    copyAiSummary() {
+    formatTime(timeValue) {
+      return formatReportTime(timeValue)
+    },
+    exportAiSummaryPdf() {
       if (!this.aiSummaryData || !this.aiSummaryData.summary) return
-      
-      const copyText = this.aiSummaryData.summary
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(copyText)
-          .then(() => {
-            this.$message.success('已复制到剪贴板')
-          })
-          .catch(() => {
-            this.fallbackCopy(copyText)
-          })
-      } else {
-        this.fallbackCopy(copyText)
-      }
-    },
-    fallbackCopy(text) {
-      const textArea = document.createElement('textarea')
-      textArea.value = text
-      textArea.style.position = 'fixed'
-      document.body.appendChild(textArea)
-      textArea.focus()
-      textArea.select()
+
       try {
-        document.execCommand('copy')
-        this.$message.success('已复制到剪贴板')
-      } catch (err) {
-        this.$message.error('复制失败，请手动选择复制')
+        printAiReportFromFrame(this.$refs.printFrame, {
+          title: this.aiReportTitle,
+          badge: '设备生命周期诊断',
+          content: this.aiSummaryData.summary,
+          generatedTime: this.formatTime(this.aiSummaryData.generatedTime),
+          metaItems: [
+            { label: '生成时间', value: this.formatTime(this.aiSummaryData.generatedTime) },
+            { label: '风险等级', value: this.formatRiskLevel(this.aiSummaryData.riskLevel) },
+            { label: '输出对象', value: `${this.detailData.equipName || '-'} (${this.detailData.equipId || '-'})` }
+          ]
+        })
+      } catch (error) {
+        this.$message.error(error.message || '打印容器初始化失败，请刷新页面后重试')
       }
-      document.body.removeChild(textArea)
-    },
-    renderMarkdown(text) {
-      return renderMarkdown(text)
     }
   },
   computed: {
+    aiReportTitle() {
+      return '设备生命周期 AI 诊断报告'
+    },
     renderedAiSummary() {
       if (!this.aiSummaryData || !this.aiSummaryData.summary) {
         return ''
       }
-      return this.renderMarkdown(this.aiSummaryData.summary)
+      return buildAiReportHtml({
+        content: this.aiSummaryData.summary,
+        title: this.aiReportTitle,
+        generatedTime: this.formatTime(this.aiSummaryData.generatedTime)
+      })
     }
   }
 }
@@ -468,44 +486,247 @@ export default {
 .scrap-info-pane {
   padding: 10px 0;
 }
-.ai-report-content {
-  line-height: 1.8;
-  color: #2c3e50;
+.ai-report-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+}
+.ai-report-title-bar h3 {
+  margin: 0 0 6px 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: #0f172a;
+}
+.ai-meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.period-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: #eff6ff;
+  color: #2563eb;
+  font-size: 12px;
+  font-weight: 600;
+}
+.time {
+  font-size: 12.5px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+}
+.time i {
+  margin-right: 4px;
+}
+.report-action-button {
+  flex-shrink: 0;
+}
+.report-content-box {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 28px 32px 32px;
+}
+.report-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 24px;
+}
+.summary-item {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 12px 14px;
+}
+.summary-label {
+  display: block;
+  color: #64748b;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+.summary-item strong {
+  color: #0f172a;
   font-size: 14px;
 }
-.ai-report-content >>> h3 {
-  font-size: 15px;
-  margin-top: 15px;
-  margin-bottom: 8px;
-  color: #1a202c;
-  font-weight: bold;
+.ai-report-content {
+  color: #334155;
+  line-height: 1.85;
+  font-size: 14px;
 }
-.ai-report-content >>> h2 {
-  font-size: 17px;
-  margin-top: 20px;
+.report-content >>> h1 {
+  font-size: 24px;
+  font-weight: 700;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 10px;
+  margin-top: 0;
+  margin-bottom: 18px;
+  color: #0f172a;
+}
+.report-content >>> h2 {
+  font-size: 18px;
+  font-weight: 700;
+  margin-top: 28px;
   margin-bottom: 12px;
-  color: #2d3748;
-  font-weight: bold;
+  color: #1e293b;
 }
-.ai-report-content >>> strong {
-  color: #e53e3e;
-  background-color: #fff5f5;
-  padding: 1px 4px;
-  border-radius: 3px;
+.report-content >>> h3 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-top: 22px;
+  margin-bottom: 10px;
+  color: #334155;
 }
-.ai-report-content >>> ul {
-  padding-left: 20px;
-  margin: 5px 0;
+.report-content >>> h4 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-top: 18px;
+  margin-bottom: 10px;
+  color: #334155;
 }
-.ai-report-content >>> li {
-  list-style-type: disc;
-  margin-bottom: 4px;
+.report-content >>> h5 {
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 16px;
+  margin-bottom: 8px;
+  color: #475569;
+}
+.report-content >>> h6 {
+  font-size: 13px;
+  font-weight: 600;
+  margin-top: 14px;
+  margin-bottom: 8px;
+  color: #64748b;
+}
+.report-content >>> p {
+  margin: 0 0 14px;
+}
+.report-content >>> ol,
+.report-content >>> ul {
+  padding-left: 24px;
+  margin: 10px 0 16px;
+}
+.report-content >>> strong {
+  color: #1e293b;
+  font-weight: 600;
+}
+.report-content >>> li {
+  margin-bottom: 8px;
+}
+.report-content >>> .task-list-item {
+  list-style: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-left: -22px;
+}
+.report-content >>> .task-checkbox {
+  width: 14px;
+  height: 14px;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 4px;
+  background: #ffffff;
+  flex: 0 0 auto;
+  margin-top: 5px;
+}
+.report-content >>> .task-checkbox.is-checked {
+  background: #2563eb;
+  border-color: #2563eb;
+  position: relative;
+}
+.report-content >>> .task-checkbox.is-checked::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 0px;
+  width: 4px;
+  height: 8px;
+  border: solid #ffffff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg);
+}
+.report-content >>> .task-text {
+  flex: 1;
+}
+.report-content >>> code {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #0f172a;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-family: SFMono-Regular, Consolas, Monaco, monospace;
+  font-size: 85%;
+}
+.report-content >>> .table-responsive {
+  width: 100%;
+  overflow-x: auto;
+  margin: 18px 0;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+.report-content >>> .markdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 13.5px;
+}
+.report-content >>> .markdown-table th {
+  background-color: #f8fafc;
+  color: #475569;
+  font-weight: 600;
+  padding: 10px 14px;
+  border-bottom: 2px solid #e2e8f0;
+}
+.report-content >>> .markdown-table td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  line-height: 1.5;
+}
+.report-content >>> .markdown-table tr:last-child td {
+  border-bottom: none;
+}
+.report-content >>> .markdown-table tr:hover td {
+  background-color: #f8fafc;
+}
+.report-content >>> hr {
+  border: none;
+  height: 1px;
+  background-color: #e2e8f0;
+  margin: 24px 0;
+}
+.print-frame {
+  position: fixed;
+  width: 0;
+  height: 0;
+  border: 0;
+  right: 0;
+  bottom: 0;
+  opacity: 0;
+  pointer-events: none;
 }
 
 @media (max-width: 1280px) {
   .detail-page-header {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .ai-report-meta {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .report-summary-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>

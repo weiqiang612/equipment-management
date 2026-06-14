@@ -59,6 +59,9 @@ None currently active.
 ### TASK-017: 全局 UI/UX 收尾优化
 - [x] Implementation (9 tasks)
 
+### TASK-018: WEB 课程设计报告计划书
+- [x] Implementation (18 tasks)
+
 ## Completed
 
 `docs/4-tasks/features/TASK-017-ui-ux-polish/`
@@ -131,4 +134,4 @@ None currently active.
 
 ## Notes for next session
 
-- No active feature is set. Select the next task before implementation.
+- No active feature is set. TASK-018 is complete; select the next task before implementation.

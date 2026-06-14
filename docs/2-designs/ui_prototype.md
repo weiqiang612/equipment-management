@@ -158,3 +158,34 @@
     - 待办型表格页允许使用轻量摘要条作为视图筛选器，默认优先服务“待处理”任务，不替代详细筛选表单。
     - 无未读、无待办、无匹配记录、目标记录失效四类场景都必须展示统一空状态，不得出现整页空白。
     - 目标记录不存在时允许 toast 提示，但还需保留页内说明文案，避免用户只能依赖瞬时消息理解状态。
+
+---
+
+## 11. 当前前端路由与页面对齐
+
+| 路由 | 页面组件 | 入口/权限 | 当前用途 |
+| :--- | :--- | :--- | :--- |
+| `/login` | `UserLogin.vue` | 白名单 | 用户登录，成功后保存 token、role、username、realName 等本地状态。 |
+| `/register` | `UserRegister.vue` | 白名单 | 操作员注册，加载单位下拉并提交真实姓名、账号、密码、所属单位。 |
+| `/dashboard` | `Dashboard.vue` | 已登录 | 登录后默认首屏，按角色展示不同 KPI、图表和待办。 |
+| `/equipment` | `Equipment.vue` | 已登录，按钮按角色/归属控制 | 设备台账、搜索、导出、领用/报修/调拨/报废入口。 |
+| `/equipment/detail/:equipId` | `equipment/Detail.vue` | 已登录 | 单设备生命周期详情、折旧、领用、维修、调拨、报废和审计时间线。 |
+| `/equipment/claim` | `EquipmentClaim.vue` | Role 0/2/3 | 领用申请、审批、撤回、退还和直接分配记录。 |
+| `/equipment/maintenance` | `MaintenanceRecord.vue` | 已登录 | 报修、指派、完工登记和资产管理员复核。 |
+| `/equipment/transfer` | `TransferRecord.vue` | Role 2/3 | 调拨记录查看、登记、修改、删除。 |
+| `/equipment/scrap` | `ScrapRecord.vue` | Role 2/3 | 报废记录查看、登记、修改、删除。 |
+| `/category` | `Category.vue` | Role 2/3 | 设备分类、折旧年限和残值率维护。 |
+| `/department` | `Department.vue` | Role 2/3 | 使用单位维护。 |
+| `/user-manage` | `UserManage.vue` | Role 3 | 用户资料、角色、单位、密码重置和账号删除。 |
+| `/system/backup` | `DataBackup.vue` | Role 3 | 数据库备份、备份文件列表、恢复和配置查看。 |
+| `/system/log` | `system/AuditLog.vue` | Role 3 | 操作审计日志查询。 |
+| `/governance` | `DataGovernance.vue` | Role 2/3 | 数据质量、风险设备、异常维修成本和治理评分。 |
+| `/message-center` | `MessageCenter.vue` | 已登录，内容按用户过滤 | 未读消息、事件详情、标记已读和去处理跳转。 |
+| `/ai-assistant` | `AiAssistant.vue` | Role 2/3 | 资产运营周/月报草案和设备生命周期摘要。 |
+| `/403` | `Unauthorized403.vue` | 白名单 | 前端路由越权后的无权限提示页。 |
+
+### 11.1 交互口径补充
+- 侧边栏菜单和路由守卫都使用角色判断，但后端仍是最终权限边界。
+- 消息中心是拉取式页面，不承诺实时 WebSocket 推送。
+- AI 助手页面只展示草案、复制、导出/打印类辅助能力，不提供自动审批、自动报废、自动恢复数据库等高风险按钮。
+- 设备“可领用”在 UI 上应解释为“在用且暂无保管人”，避免与数据库不存在的“闲置”状态混用。

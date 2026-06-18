@@ -4,20 +4,20 @@ import com.weiqiang.dao.EquipmentDao;
 import com.weiqiang.exception.BusinessException;
 import com.weiqiang.exception.ForbiddenException;
 import com.weiqiang.utils.BaseContext;
-import com.weiqiang.pojo.Equipment;
-import com.weiqiang.pojo.EquipmentDepreciationVO;
-import com.weiqiang.pojo.PageBean;
+import com.weiqiang.entity.Equipment;
+import com.weiqiang.vo.EquipmentDepreciationVO;
+import com.weiqiang.common.PageBean;
 import com.weiqiang.service.EquipmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import com.weiqiang.service.OperationLogService;
-import com.weiqiang.pojo.EquipmentDetailVO;
-import com.weiqiang.pojo.EquipmentClaim;
-import com.weiqiang.pojo.MaintenanceRecord;
-import com.weiqiang.pojo.TransferRecord;
-import com.weiqiang.pojo.ScrapRecord;
-import com.weiqiang.pojo.OperationLogVO;
-import com.weiqiang.pojo.User;
+import com.weiqiang.vo.EquipmentDetailVO;
+import com.weiqiang.entity.EquipmentClaim;
+import com.weiqiang.entity.MaintenanceRecord;
+import com.weiqiang.entity.TransferRecord;
+import com.weiqiang.entity.ScrapRecord;
+import com.weiqiang.vo.OperationLogVO;
+import com.weiqiang.entity.User;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -122,22 +122,22 @@ public class EquipmentServiceImpl implements EquipmentService {
 
             if (!oldIsEmpty && newIsEmpty) {
                 // 有主 -> NULL: 写入 status=4 (已退还) 审计日志
-                com.weiqiang.pojo.EquipmentClaim audit = new com.weiqiang.pojo.EquipmentClaim();
+                EquipmentClaim audit = new EquipmentClaim();
                 audit.setEquipId(equipment.getEquipId());
                 audit.setApplicant(oldCustodian);
                 audit.setApprover(com.weiqiang.utils.BaseContext.getCurrentName());
-                audit.setStatus(com.weiqiang.pojo.EquipmentClaim.STATUS_RETURNED);
+                audit.setStatus(EquipmentClaim.STATUS_RETURNED);
                 audit.setRemark("管理员取消分配");
                 equipmentClaimDao.addClaim(audit);
                 operationLogService.record("设备退还", "equipment", equipment.getEquipId(), 
                     "管理员取消用户 " + oldCustodian + " 对设备 " + equipment.getEquipId() + " 的保管分配", 1, null);
             } else if (newCustodian != null && !newCustodian.trim().isEmpty() && !newCustodian.equals(oldCustodian)) {
                 // 无主 -> 有人，或者换人: 写入 status=5 (直接分配) 审计日志
-                com.weiqiang.pojo.EquipmentClaim audit = new com.weiqiang.pojo.EquipmentClaim();
+                EquipmentClaim audit = new EquipmentClaim();
                 audit.setEquipId(equipment.getEquipId());
                 audit.setApplicant(newCustodian);
                 audit.setApprover(com.weiqiang.utils.BaseContext.getCurrentName());
-                audit.setStatus(com.weiqiang.pojo.EquipmentClaim.STATUS_DIRECT);
+                audit.setStatus(EquipmentClaim.STATUS_DIRECT);
                 audit.setRemark("管理员直接分配");
                 equipmentClaimDao.addClaim(audit);
                 operationLogService.record("直接分配", "equipment", equipment.getEquipId(), 

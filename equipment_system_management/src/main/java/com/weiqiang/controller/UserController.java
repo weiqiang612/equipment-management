@@ -1,12 +1,12 @@
 package com.weiqiang.controller;
 
 import com.weiqiang.anno.RequiresRoles;
-import com.weiqiang.pojo.AdminResetPasswordRequest;
-import com.weiqiang.pojo.ChangePasswordRequest;
-import com.weiqiang.pojo.Result;
-import com.weiqiang.pojo.User;
-import com.weiqiang.pojo.UserProfileUpdateRequest;
-import com.weiqiang.pojo.UserVO;
+import com.weiqiang.dto.AdminResetPasswordRequest;
+import com.weiqiang.dto.ChangePasswordRequest;
+import com.weiqiang.common.Result;
+import com.weiqiang.entity.User;
+import com.weiqiang.dto.UserProfileUpdateRequest;
+import com.weiqiang.vo.UserVO;
 import com.weiqiang.service.UserService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

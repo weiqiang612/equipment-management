@@ -1,6 +1,10 @@
 package com.weiqiang.dao;
 
-import com.weiqiang.pojo.*;
+import com.weiqiang.entity.Equipment;
+import com.weiqiang.entity.EquipmentClaim;
+import com.weiqiang.entity.MaintenanceRecord;
+import com.weiqiang.vo.DashboardChartData;
+import com.weiqiang.vo.DashboardMaintTrend;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;

@@ -1,6 +1,6 @@
 package com.weiqiang.dao;
 
-import com.weiqiang.pojo.Equipment;
+import com.weiqiang.entity.Equipment;
 import com.weiqiang.utils.BaseContext;
 import org.springframework.stereotype.Repository;
 

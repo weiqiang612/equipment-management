@@ -1,6 +1,6 @@
 package com.weiqiang.exception;
 
-import com.weiqiang.pojo.Result;
+import com.weiqiang.common.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;

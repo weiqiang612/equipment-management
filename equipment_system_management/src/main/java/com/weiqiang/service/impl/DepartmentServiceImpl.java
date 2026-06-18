@@ -3,9 +3,8 @@ package com.weiqiang.service.impl;
 import com.weiqiang.dao.DepartmentDao;
 import com.weiqiang.dao.EquipmentDao;
 import com.weiqiang.exception.BusinessException;
-import com.weiqiang.pojo.Department;
+import com.weiqiang.entity.Department;
 import com.weiqiang.service.DepartmentService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

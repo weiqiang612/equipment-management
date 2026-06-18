@@ -2,13 +2,14 @@ package com.weiqiang.service.impl;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.weiqiang.entity.MaintenanceRecord;
 import com.weiqiang.exception.BusinessException;
 import com.weiqiang.exception.ForbiddenException;
-import com.weiqiang.pojo.*;
 import com.weiqiang.service.AiAssistantService;
 import com.weiqiang.service.DashboardService;
 import com.weiqiang.service.EquipmentService;
 import com.weiqiang.service.GovernanceService;
+import com.weiqiang.vo.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

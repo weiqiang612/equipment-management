@@ -1,9 +1,12 @@
 package com.weiqiang.controller;
 
+import com.weiqiang.common.Result;
+import com.weiqiang.dto.AiDraftReportRequest;
 import com.weiqiang.exception.ForbiddenException;
-import com.weiqiang.pojo.*;
 import com.weiqiang.service.AiAssistantService;
 import com.weiqiang.utils.BaseContext;
+import com.weiqiang.vo.AiEquipmentSummaryVO;
+import com.weiqiang.vo.AiReportDraftVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;

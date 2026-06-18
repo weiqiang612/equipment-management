@@ -1,8 +1,8 @@
 package com.weiqiang.service;
 
-import com.weiqiang.pojo.EquipmentRiskVO;
-import com.weiqiang.pojo.GovernanceSummaryVO;
-import com.weiqiang.pojo.PageBean;
+import com.weiqiang.vo.EquipmentRiskVO;
+import com.weiqiang.vo.GovernanceSummaryVO;
+import com.weiqiang.common.PageBean;
 
 /**
  * 数据治理服务接口

@@ -1,8 +1,8 @@
 package com.weiqiang.dao;
 
-import com.weiqiang.pojo.EquipmentRiskVO;
-import com.weiqiang.pojo.DepartmentRiskDistributionVO;
-import com.weiqiang.pojo.CategoryRiskDistributionVO;
+import com.weiqiang.vo.EquipmentRiskVO;
+import com.weiqiang.vo.DepartmentRiskDistributionVO;
+import com.weiqiang.vo.CategoryRiskDistributionVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.jdbc.core.BeanPropertyRowMapper;
 import org.springframework.jdbc.core.JdbcTemplate;

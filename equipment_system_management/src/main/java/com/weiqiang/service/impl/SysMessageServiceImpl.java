@@ -1,8 +1,8 @@
 package com.weiqiang.service.impl;
 
 import com.weiqiang.dao.SysMessageDao;
-import com.weiqiang.pojo.SysMessage;
-import com.weiqiang.pojo.PageBean;
+import com.weiqiang.entity.SysMessage;
+import com.weiqiang.common.PageBean;
 import com.weiqiang.service.SysMessageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,6 +1,6 @@
 package com.weiqiang.service;
 
-import com.weiqiang.pojo.DashboardSummaryVO;
+import com.weiqiang.vo.DashboardSummaryVO;
 
 /**
  * 看板业务接口

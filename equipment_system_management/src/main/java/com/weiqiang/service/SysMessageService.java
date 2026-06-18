@@ -1,8 +1,7 @@
 package com.weiqiang.service;
 
-import com.weiqiang.pojo.PageBean;
-import com.weiqiang.pojo.SysMessage;
-import java.util.List;
+import com.weiqiang.common.PageBean;
+import com.weiqiang.entity.SysMessage;
 
 /**
  * 系统消息核心业务接口

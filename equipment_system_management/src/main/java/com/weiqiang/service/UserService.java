@@ -1,8 +1,8 @@
 package com.weiqiang.service;
 
-import com.weiqiang.pojo.Result;
-import com.weiqiang.pojo.User;
-import com.weiqiang.pojo.UserProfileUpdateRequest;
+import com.weiqiang.common.Result;
+import com.weiqiang.entity.User;
+import com.weiqiang.dto.UserProfileUpdateRequest;
 
 import java.util.List;
 

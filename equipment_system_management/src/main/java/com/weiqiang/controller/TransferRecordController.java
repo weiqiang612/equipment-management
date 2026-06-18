@@ -1,8 +1,8 @@
 package com.weiqiang.controller;
 
 import com.weiqiang.anno.RequiresRoles;
-import com.weiqiang.pojo.Result;
-import com.weiqiang.pojo.TransferRecord;
+import com.weiqiang.common.Result;
+import com.weiqiang.entity.TransferRecord;
 import com.weiqiang.service.TransferRecordService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

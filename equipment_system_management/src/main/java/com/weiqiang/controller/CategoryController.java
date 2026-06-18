@@ -1,8 +1,8 @@
 package com.weiqiang.controller;
 
 import com.weiqiang.anno.RequiresRoles;
-import com.weiqiang.pojo.Category;
-import com.weiqiang.pojo.Result;
+import com.weiqiang.entity.Category;
+import com.weiqiang.common.Result;
 import com.weiqiang.service.CategoryService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

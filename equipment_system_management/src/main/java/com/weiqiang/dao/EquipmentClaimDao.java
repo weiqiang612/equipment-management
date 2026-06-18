@@ -1,6 +1,6 @@
 package com.weiqiang.dao;
 
-import com.weiqiang.pojo.EquipmentClaim;
+import com.weiqiang.entity.EquipmentClaim;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;

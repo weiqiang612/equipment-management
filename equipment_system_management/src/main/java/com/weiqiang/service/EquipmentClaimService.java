@@ -1,7 +1,7 @@
 package com.weiqiang.service;
 
-import com.weiqiang.pojo.EquipmentClaim;
-import com.weiqiang.pojo.PageBean;
+import com.weiqiang.entity.EquipmentClaim;
+import com.weiqiang.common.PageBean;
 
 /**
  * 设备领用与审批服务接口

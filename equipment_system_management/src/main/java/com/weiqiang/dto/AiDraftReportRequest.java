@@ -1,4 +1,4 @@
-package com.weiqiang.pojo;
+package com.weiqiang.dto;
 
 import lombok.Data;
 

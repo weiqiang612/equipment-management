@@ -1,10 +1,12 @@
 package com.weiqiang.service.impl;
 
 import com.weiqiang.dao.OperationLogDao;
-import com.weiqiang.pojo.OperationLog;
-import com.weiqiang.pojo.PageBean;
+import com.weiqiang.entity.OperationLog;
+import com.weiqiang.entity.User;
+import com.weiqiang.common.PageBean;
 import com.weiqiang.service.OperationLogService;
 import com.weiqiang.utils.BaseContext;
+import com.weiqiang.vo.OperationLogVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -55,10 +57,10 @@ public class OperationLogServiceImpl implements OperationLogService {
         long total = operationLogDao.count(operator, opType, targetType, status);
         List<OperationLog> rows = operationLogDao.select(operator, opType, targetType, status, page, pageSize);
         
-        List<com.weiqiang.pojo.OperationLogVO> voRows = new java.util.ArrayList<>();
+        List<OperationLogVO> voRows = new java.util.ArrayList<>();
         if (rows != null) {
             for (OperationLog logEntity : rows) {
-                com.weiqiang.pojo.OperationLogVO vo = new com.weiqiang.pojo.OperationLogVO();
+                OperationLogVO vo = new OperationLogVO();
                 vo.setId(logEntity.getId());
                 vo.setOperator(logEntity.getOperator());
                 vo.setOperatorRole(logEntity.getOperatorRole());
@@ -71,7 +73,7 @@ public class OperationLogServiceImpl implements OperationLogService {
                 vo.setErrorMsg(logEntity.getErrorMsg());
                 
                 if (logEntity.getOperator() != null) {
-                    com.weiqiang.pojo.User user = userDao.getByUsername(logEntity.getOperator());
+                    User user = userDao.getByUsername(logEntity.getOperator());
                     if (user != null) {
                         vo.setOperatorRealName(user.getRealName());
                     }

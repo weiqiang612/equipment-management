@@ -2,10 +2,11 @@ package com.weiqiang.service.impl;
 
 import com.weiqiang.config.DBBackupProperties;
 import com.weiqiang.dao.DashboardDao;
+import com.weiqiang.entity.Equipment;
 import com.weiqiang.exception.BusinessException;
-import com.weiqiang.pojo.*;
 import com.weiqiang.service.DashboardService;
 import com.weiqiang.utils.BaseContext;
+import com.weiqiang.vo.DashboardSummaryVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

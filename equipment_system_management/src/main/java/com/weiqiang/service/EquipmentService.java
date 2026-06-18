@@ -1,9 +1,9 @@
 package com.weiqiang.service;
 
 
-import com.weiqiang.pojo.Equipment;
-import com.weiqiang.pojo.EquipmentDepreciationVO;
-import com.weiqiang.pojo.PageBean;
+import com.weiqiang.entity.Equipment;
+import com.weiqiang.vo.EquipmentDepreciationVO;
+import com.weiqiang.common.PageBean;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -14,7 +14,7 @@ import java.util.List;
  */
 
 
-import com.weiqiang.pojo.EquipmentDetailVO;
+import com.weiqiang.vo.EquipmentDetailVO;
 
 public interface EquipmentService {
     EquipmentDetailVO getEquipmentDetail(String equipId);

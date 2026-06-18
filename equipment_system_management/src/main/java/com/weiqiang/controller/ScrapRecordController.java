@@ -1,9 +1,8 @@
 package com.weiqiang.controller;
 
 import com.weiqiang.anno.RequiresRoles;
-import com.weiqiang.pojo.MaintenanceRecord;
-import com.weiqiang.pojo.Result;
-import com.weiqiang.pojo.ScrapRecord;
+import com.weiqiang.common.Result;
+import com.weiqiang.entity.ScrapRecord;
 import com.weiqiang.service.ScrapRecordService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;

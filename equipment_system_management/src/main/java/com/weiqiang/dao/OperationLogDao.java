@@ -1,6 +1,6 @@
 package com.weiqiang.dao;
 
-import com.weiqiang.pojo.OperationLog;
+import com.weiqiang.entity.OperationLog;
 import org.springframework.stereotype.Repository;
 import java.util.ArrayList;
 import java.util.List;

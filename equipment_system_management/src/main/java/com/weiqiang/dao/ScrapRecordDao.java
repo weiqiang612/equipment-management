@@ -1,7 +1,7 @@
 package com.weiqiang.dao;
 
 
-import com.weiqiang.pojo.ScrapRecord;
+import com.weiqiang.entity.ScrapRecord;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;

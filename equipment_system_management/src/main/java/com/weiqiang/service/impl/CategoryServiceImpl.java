@@ -3,9 +3,8 @@ package com.weiqiang.service.impl;
 import com.weiqiang.dao.CategoryDao;
 import com.weiqiang.dao.EquipmentDao;
 import com.weiqiang.exception.BusinessException;
-import com.weiqiang.pojo.Category;
+import com.weiqiang.entity.Category;
 import com.weiqiang.service.CategoryService;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;

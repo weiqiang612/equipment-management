@@ -1,6 +1,6 @@
 package com.weiqiang.service;
 
-import com.weiqiang.pojo.MaintenanceRecord;
+import com.weiqiang.entity.MaintenanceRecord;
 
 import java.util.List;
 

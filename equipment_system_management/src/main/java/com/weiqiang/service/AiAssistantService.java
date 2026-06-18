@@ -1,7 +1,7 @@
 package com.weiqiang.service;
 
-import com.weiqiang.pojo.AiReportDraftVO;
-import com.weiqiang.pojo.AiEquipmentSummaryVO;
+import com.weiqiang.vo.AiReportDraftVO;
+import com.weiqiang.vo.AiEquipmentSummaryVO;
 
 /**
  * AI 辅助服务接口

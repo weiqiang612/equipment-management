@@ -1,4 +1,4 @@
-package com.weiqiang.pojo;
+package com.weiqiang.vo;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

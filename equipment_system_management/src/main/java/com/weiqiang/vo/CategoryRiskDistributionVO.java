@@ -1,4 +1,4 @@
-package com.weiqiang.pojo;
+package com.weiqiang.vo;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,9 +9,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class DepartmentRiskDistributionVO {
-    private String unitCode;
-    private String unitName;
+public class CategoryRiskDistributionVO {
+    private String categoryId;
+    private String categoryName;
     private Integer highCount;
     private Integer mediumCount;
     private Integer lowCount;

@@ -2,12 +2,11 @@ package com.weiqiang.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.weiqiang.dao.UserDao;
-import com.weiqiang.pojo.Equipment;
-import com.weiqiang.pojo.MaintenanceRecord;
-import com.weiqiang.pojo.Result;
-import com.weiqiang.pojo.User;
-import com.weiqiang.pojo.TransferRecord;
-import com.weiqiang.pojo.ScrapRecord;
+import com.weiqiang.entity.Equipment;
+import com.weiqiang.entity.MaintenanceRecord;
+import com.weiqiang.common.Result;
+import com.weiqiang.entity.User;
+import com.weiqiang.entity.ScrapRecord;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,7 +18,6 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.util.List;
 
 import static org.hamcrest.Matchers.hasItem;
 import static org.junit.jupiter.api.Assertions.*;

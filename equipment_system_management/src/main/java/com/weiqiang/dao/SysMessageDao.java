@@ -1,6 +1,6 @@
 package com.weiqiang.dao;
 
-import com.weiqiang.pojo.SysMessage;
+import com.weiqiang.entity.SysMessage;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;

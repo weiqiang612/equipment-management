@@ -1,6 +1,6 @@
 package com.weiqiang.dao;
 
-import com.weiqiang.pojo.TransferRecord;
+import com.weiqiang.entity.TransferRecord;
 import org.springframework.stereotype.Repository;
 
 import java.util.ArrayList;

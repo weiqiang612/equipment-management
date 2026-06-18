@@ -1,7 +1,7 @@
 package com.weiqiang.controller;
 
-import com.weiqiang.pojo.DashboardSummaryVO;
-import com.weiqiang.pojo.Result;
+import com.weiqiang.vo.DashboardSummaryVO;
+import com.weiqiang.common.Result;
 import com.weiqiang.service.DashboardService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

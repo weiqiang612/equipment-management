@@ -2,9 +2,10 @@ package com.weiqiang.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.weiqiang.dao.UserDao;
-import com.weiqiang.pojo.Equipment;
-import com.weiqiang.pojo.Result;
-import com.weiqiang.pojo.User;
+import com.weiqiang.entity.Equipment;
+import com.weiqiang.entity.OperationLog;
+import com.weiqiang.common.Result;
+import com.weiqiang.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -178,10 +179,10 @@ public class OperationLogAndDetailTests {
         Long afterCount = (Long) userDao.singleSelect("SELECT COUNT(*) FROM operation_log");
         assertEquals(1L, afterCount);
 
-        List<com.weiqiang.pojo.OperationLog> logs = userDao.mutiSelect(
-                "SELECT id, operator, operator_role AS operatorRole, op_type AS opType, target_type AS targetType, target_id AS targetId, op_time AS opTime, summary, status, error_msg AS errorMsg FROM operation_log", com.weiqiang.pojo.OperationLog.class, (Object[]) null);
+        List<OperationLog> logs = userDao.mutiSelect(
+                "SELECT id, operator, operator_role AS operatorRole, op_type AS opType, target_type AS targetType, target_id AS targetId, op_time AS opTime, summary, status, error_msg AS errorMsg FROM operation_log", OperationLog.class, (Object[]) null);
         assertFalse(logs.isEmpty());
-        com.weiqiang.pojo.OperationLog log = logs.get(0);
+        OperationLog log = logs.get(0);
         assertEquals("audit_mgr_d98", log.getOperator());
         assertEquals(2, log.getOperatorRole());
         assertEquals("设备新增", log.getOpType());

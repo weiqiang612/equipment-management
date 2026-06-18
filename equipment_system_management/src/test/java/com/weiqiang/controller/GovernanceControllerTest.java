@@ -2,9 +2,8 @@ package com.weiqiang.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.weiqiang.dao.UserDao;
-import com.weiqiang.pojo.Equipment;
-import com.weiqiang.pojo.Result;
-import com.weiqiang.pojo.User;
+import com.weiqiang.common.Result;
+import com.weiqiang.entity.User;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -14,9 +13,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-
-import java.math.BigDecimal;
-import java.time.LocalDate;
 
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.junit.jupiter.api.Assertions.assertEquals;

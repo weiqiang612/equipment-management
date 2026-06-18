@@ -1,9 +1,9 @@
 package com.weiqiang.controller;
 
 import com.weiqiang.exception.ForbiddenException;
-import com.weiqiang.pojo.PageBean;
-import com.weiqiang.pojo.Result;
-import com.weiqiang.pojo.SysMessage;
+import com.weiqiang.common.PageBean;
+import com.weiqiang.common.Result;
+import com.weiqiang.entity.SysMessage;
 import com.weiqiang.service.SysMessageService;
 import com.weiqiang.utils.BaseContext;
 import lombok.RequiredArgsConstructor;

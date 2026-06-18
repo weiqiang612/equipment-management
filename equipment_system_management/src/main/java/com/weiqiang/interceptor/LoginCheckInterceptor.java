@@ -2,8 +2,8 @@ package com.weiqiang.interceptor;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.weiqiang.dao.UserDao;
-import com.weiqiang.pojo.Result;
-import com.weiqiang.pojo.User;
+import com.weiqiang.common.Result;
+import com.weiqiang.entity.User;
 import com.weiqiang.utils.BaseContext;
 import com.weiqiang.utils.JwtUtils;
 import io.jsonwebtoken.Claims;

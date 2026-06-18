@@ -2,9 +2,9 @@ package com.weiqiang.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.weiqiang.dao.UserDao;
-import com.weiqiang.pojo.Equipment;
-import com.weiqiang.pojo.Result;
-import com.weiqiang.pojo.User;
+import com.weiqiang.entity.Equipment;
+import com.weiqiang.common.Result;
+import com.weiqiang.entity.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

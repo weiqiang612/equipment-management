@@ -1,6 +1,6 @@
 package com.weiqiang.service;
 
-import com.weiqiang.pojo.TransferRecord;
+import com.weiqiang.entity.TransferRecord;
 
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package com.weiqiang.pojo;
+package com.weiqiang.entity;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class OperationLogVO {
+public class OperationLog {
     private Integer id;
     private String operator;
     private Integer operatorRole;
@@ -19,5 +19,4 @@ public class OperationLogVO {
     private String summary;
     private Integer status;
     private String errorMsg;
-    private String operatorRealName;
 }

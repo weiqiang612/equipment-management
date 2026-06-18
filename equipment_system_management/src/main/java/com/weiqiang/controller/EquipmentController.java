@@ -1,17 +1,22 @@
 package com.weiqiang.controller;
 
 import com.weiqiang.anno.RequiresRoles;
-import com.weiqiang.pojo.*;
+import com.weiqiang.common.PageBean;
+import com.weiqiang.common.Result;
+import com.weiqiang.entity.Equipment;
+import com.weiqiang.entity.MaintenanceRecord;
+import com.weiqiang.entity.ScrapRecord;
+import com.weiqiang.entity.TransferRecord;
 import com.weiqiang.service.EquipmentService;
 import com.weiqiang.service.MaintenanceRecordService;
 import com.weiqiang.service.ScrapRecordService;
 import com.weiqiang.service.TransferRecordService;
+import com.weiqiang.vo.EquipmentDepreciationVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import com.weiqiang.pojo.EquipmentDetailVO;
+import com.weiqiang.vo.EquipmentDetailVO;
 import com.weiqiang.exception.ForbiddenException;
 import com.weiqiang.utils.BaseContext;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 

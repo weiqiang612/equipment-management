@@ -1,10 +1,12 @@
 package com.weiqiang.service.impl;
 
 import com.weiqiang.dao.UserDao;
+import com.weiqiang.entity.Equipment;
+import com.weiqiang.entity.EquipmentClaim;
 import com.weiqiang.exception.BusinessException;
-import com.weiqiang.pojo.UserProfileUpdateRequest;
-import com.weiqiang.pojo.Result;
-import com.weiqiang.pojo.User;
+import com.weiqiang.dto.UserProfileUpdateRequest;
+import com.weiqiang.common.Result;
+import com.weiqiang.entity.User;
 import com.weiqiang.service.UserService;
 import com.weiqiang.utils.JwtUtils;
 import com.weiqiang.utils.BaseContext;
@@ -248,14 +250,14 @@ public class UserServiceImpl implements UserService {
         }
 
         // 1. 级联清退保管的设备并写审计日志（去除保管阻断）
-        List<com.weiqiang.pojo.Equipment> equipmentList = equipmentDao.mutiSelect(
+        List<Equipment> equipmentList = equipmentDao.mutiSelect(
                 "SELECT equip_id equipId, custodian FROM equipment WHERE custodian = ?",
-                com.weiqiang.pojo.Equipment.class, user.getUsername());
+                Equipment.class, user.getUsername());
 
         if (equipmentList != null && !equipmentList.isEmpty()) {
             userDao.update("UPDATE equipment SET custodian = NULL WHERE custodian = ?", user.getUsername());
-            for (com.weiqiang.pojo.Equipment eq : equipmentList) {
-                com.weiqiang.pojo.EquipmentClaim claim = new com.weiqiang.pojo.EquipmentClaim();
+            for (Equipment eq : equipmentList) {
+                EquipmentClaim claim = new EquipmentClaim();
                 claim.setEquipId(eq.getEquipId());
                 claim.setApplicant(user.getUsername());
                 claim.setApprover(null);

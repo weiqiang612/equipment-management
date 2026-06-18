@@ -2,11 +2,11 @@ package com.weiqiang.service.impl;
 
 import com.weiqiang.dao.GovernanceDao;
 import com.weiqiang.exception.ForbiddenException;
-import com.weiqiang.pojo.EquipmentRiskVO;
-import com.weiqiang.pojo.GovernanceSummaryVO;
-import com.weiqiang.pojo.DepartmentRiskDistributionVO;
-import com.weiqiang.pojo.CategoryRiskDistributionVO;
-import com.weiqiang.pojo.PageBean;
+import com.weiqiang.vo.EquipmentRiskVO;
+import com.weiqiang.vo.GovernanceSummaryVO;
+import com.weiqiang.vo.DepartmentRiskDistributionVO;
+import com.weiqiang.vo.CategoryRiskDistributionVO;
+import com.weiqiang.common.PageBean;
 import com.weiqiang.service.GovernanceService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

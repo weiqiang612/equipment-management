@@ -1,6 +1,6 @@
 package com.weiqiang.service;
 
-import com.weiqiang.pojo.ScrapRecord;
+import com.weiqiang.entity.ScrapRecord;
 
 import java.util.List;
 

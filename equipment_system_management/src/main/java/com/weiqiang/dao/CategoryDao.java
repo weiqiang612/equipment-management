@@ -1,6 +1,6 @@
 package com.weiqiang.dao;
 
-import com.weiqiang.pojo.Category;
+import com.weiqiang.entity.Category;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;

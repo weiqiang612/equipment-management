@@ -1,6 +1,6 @@
 package com.weiqiang.service;
 
-import com.weiqiang.pojo.Department;
+import com.weiqiang.entity.Department;
 
 import java.util.List;
 

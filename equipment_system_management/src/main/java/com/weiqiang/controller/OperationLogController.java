@@ -1,7 +1,7 @@
 package com.weiqiang.controller;
 
-import com.weiqiang.pojo.PageBean;
-import com.weiqiang.pojo.Result;
+import com.weiqiang.common.PageBean;
+import com.weiqiang.common.Result;
 import com.weiqiang.service.OperationLogService;
 import com.weiqiang.anno.RequiresRoles;
 import lombok.RequiredArgsConstructor;

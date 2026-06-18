@@ -1,9 +1,9 @@
 package com.weiqiang.controller;
 
 import com.weiqiang.anno.RequiresRoles;
-import com.weiqiang.pojo.EquipmentClaim;
-import com.weiqiang.pojo.PageBean;
-import com.weiqiang.pojo.Result;
+import com.weiqiang.entity.EquipmentClaim;
+import com.weiqiang.common.PageBean;
+import com.weiqiang.common.Result;
 import com.weiqiang.service.EquipmentClaimService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -1,6 +1,6 @@
 package com.weiqiang.dao;
 
-import com.weiqiang.pojo.MaintenanceRecord;
+import com.weiqiang.entity.MaintenanceRecord;
 import com.weiqiang.utils.BaseContext;
 import org.springframework.stereotype.Repository;
 

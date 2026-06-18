@@ -1,10 +1,10 @@
 package com.weiqiang.controller;
 
 import com.weiqiang.anno.RequiresRoles;
-import com.weiqiang.pojo.EquipmentRiskVO;
-import com.weiqiang.pojo.GovernanceSummaryVO;
-import com.weiqiang.pojo.PageBean;
-import com.weiqiang.pojo.Result;
+import com.weiqiang.vo.EquipmentRiskVO;
+import com.weiqiang.vo.GovernanceSummaryVO;
+import com.weiqiang.common.PageBean;
+import com.weiqiang.common.Result;
 import com.weiqiang.service.GovernanceService;
 import com.weiqiang.utils.BaseContext;
 import lombok.RequiredArgsConstructor;

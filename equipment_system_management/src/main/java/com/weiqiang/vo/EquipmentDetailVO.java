@@ -1,5 +1,9 @@
-package com.weiqiang.pojo;
+package com.weiqiang.vo;
 
+import com.weiqiang.entity.EquipmentClaim;
+import com.weiqiang.entity.MaintenanceRecord;
+import com.weiqiang.entity.ScrapRecord;
+import com.weiqiang.entity.TransferRecord;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

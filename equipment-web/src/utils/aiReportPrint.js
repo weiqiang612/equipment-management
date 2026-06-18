@@ -118,9 +118,14 @@ function buildPrintDocument(options) {
     .print-content h4 { margin: 18px 0 10px; font-size: 15px; color: #1f2937; page-break-after: avoid; page-break-inside: avoid; }
     .print-content h5 { margin: 16px 0 8px; font-size: 14px; color: #334155; page-break-after: avoid; page-break-inside: avoid; }
     .print-content h6 { margin: 14px 0 8px; font-size: 13px; color: #475569; page-break-after: avoid; page-break-inside: avoid; }
-    .print-content h4 { margin: 18px 0 10px; font-size: 15px; color: #1f2937; page-break-after: avoid; page-break-inside: avoid; }
-    .print-content h5 { margin: 16px 0 8px; font-size: 14px; color: #334155; page-break-after: avoid; page-break-inside: avoid; }
-    .print-content h6 { margin: 14px 0 8px; font-size: 13px; color: #475569; page-break-after: avoid; page-break-inside: avoid; }
+    .print-content .table-caption {
+      padding: 10px 12px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      color: #0f172a;
+      font-weight: 700;
+      font-size: 13px;
+    }
     .print-content p { margin: 0 0 14px; orphans: 3; widows: 3; }
     .print-content ul, .print-content ol { margin: 10px 0 16px; padding-left: 24px; page-break-inside: avoid; }
     .print-content li { margin-bottom: 8px; page-break-inside: avoid; }
@@ -133,6 +138,14 @@ function buildPrintDocument(options) {
     .print-content code { padding: 1px 6px; border: 1px solid #e2e8f0; border-radius: 4px; background: #f8fafc; font-size: 12px; font-family: Consolas, monospace; }
     .print-content hr { height: 1px; border: none; background: #e2e8f0; margin: 22px 0; page-break-after: avoid; }
     .print-content .table-responsive { overflow: visible; margin: 18px 0; border: 1px solid #e2e8f0; border-radius: 8px; page-break-inside: avoid; }
+    .print-content .table-caption {
+      padding: 10px 12px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+      color: #0f172a;
+      font-weight: 700;
+      font-size: 13px;
+    }
     .print-content .markdown-table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 13px; }
     .print-content .markdown-table thead { display: table-header-group; }
     .print-content .markdown-table tr { page-break-inside: avoid; }

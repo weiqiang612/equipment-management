@@ -692,6 +692,17 @@ export default {
   break-after: avoid;
 }
 
+.report-content >>> .table-caption {
+  padding: 10px 12px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-bottom: none;
+  border-radius: 8px 8px 0 0;
+  color: #0f172a;
+  font-weight: 700;
+  font-size: 13px;
+}
+
 .report-content >>> p {
   margin: 0 0 14px;
 }
@@ -769,8 +780,8 @@ export default {
   width: 100%;
   overflow-x: auto;
   margin: 18px 0;
-  border-radius: 8px;
   border: 1px solid #e2e8f0;
+  border-radius: 8px;
   break-inside: avoid;
 }
 

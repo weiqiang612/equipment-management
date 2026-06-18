@@ -53,41 +53,31 @@ function escapeHtml(text) {
 
 function parseTables(text) {
   const lines = text.split('\n')
-  let inTable = false
-  let tableHeader = []
-  let tableRows = []
   const parsedLines = []
+  let tableBuffer = []
+
+  const flushTableBuffer = () => {
+    if (!tableBuffer.length) {
+      return
+    }
+    parsedLines.push(buildTableHtmlFromLines(tableBuffer))
+    tableBuffer = []
+  }
 
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i]
     const trimmed = line.trim()
 
-    if (trimmed.startsWith('|') && trimmed.endsWith('|')) {
-      const cells = trimmed.split('|').map(cell => cell.trim()).slice(1, -1)
-      if (!inTable) {
-        inTable = true
-        tableHeader = cells
-      } else if (cells.every(cell => /^:?-+:?$/.test(cell))) {
-        continue
-      } else {
-        tableRows.push(cells)
-      }
+    if (isTableCandidate(trimmed)) {
+      tableBuffer.push(line)
       continue
     }
 
-    if (inTable) {
-      parsedLines.push(buildTableHtml(tableHeader, tableRows))
-      inTable = false
-      tableHeader = []
-      tableRows = []
-    }
-
+    flushTableBuffer()
     parsedLines.push(line)
   }
 
-  if (inTable) {
-    parsedLines.push(buildTableHtml(tableHeader, tableRows))
-  }
+  flushTableBuffer()
 
   return parsedLines
 }
@@ -208,24 +198,106 @@ function getHeadingLevel(line) {
   return 0
 }
 
-function buildTableHtml(headers, rows) {
-  let html = '<div class="table-responsive"><table class="markdown-table">'
-  html += '<thead><tr>'
-  headers.forEach(header => {
-    html += `<th>${renderInlineMarkdown(header)}</th>`
-  })
-  html += '</tr></thead><tbody>'
+function buildTableHtmlFromLines(lines) {
+  const rows = []
+  let caption = ''
 
-  rows.forEach(row => {
+  lines.forEach(line => {
+    const trimmed = line.trim()
+    if (isTableSeparatorRow(trimmed)) {
+      return
+    }
+
+    const cells = parseTableRow(trimmed)
+    if (!cells.length) {
+      return
+    }
+    rows.push(cells)
+  })
+
+  if (!rows.length) {
+    return lines.join('\n')
+  }
+
+  if (rows.length > 1 && rows[0].length === 1 && rows.slice(1).some(row => row.length > 1)) {
+    caption = rows.shift()[0]
+  }
+
+  const columnCount = rows.reduce((max, row) => Math.max(max, row.length), 0)
+  const normalizedRows = rows.map(row => padTableRow(row, columnCount))
+  const useHeader = normalizedRows.length > 1 && normalizedRows.every(row => row.length === columnCount) && columnCount > 1 && !caption
+
+  let html = '<div class="table-responsive">'
+  if (caption) {
+    html += `<div class="table-caption">${renderInlineMarkdown(caption)}</div>`
+  }
+  html += '<table class="markdown-table">'
+
+  if (useHeader) {
+    const header = normalizedRows.shift()
+    html += '<thead><tr>'
+    header.forEach(cell => {
+      html += `<th>${renderInlineMarkdown(cell)}</th>`
+    })
+    html += '</tr></thead>'
+  }
+
+  html += '<tbody>'
+  normalizedRows.forEach(row => {
     html += '<tr>'
     row.forEach(cell => {
       html += `<td>${renderInlineMarkdown(cell)}</td>`
     })
     html += '</tr>'
   })
-
   html += '</tbody></table></div>'
+
   return html
+}
+
+function isTableCandidate(line) {
+  if (!line) return false
+  if (isTableSeparatorRow(line)) return true
+  if (!line.includes('|')) return false
+  const cells = parseTableRow(line)
+  return cells.length > 0
+}
+
+function isTableSeparatorRow(line) {
+  if (!line) return false
+  const compact = line.replace(/\s+/g, '')
+  return /^\|?[:=-]+(\|[:=-]+)+\|?$/.test(compact) || /^\|?[:=-]+\|?$/.test(compact)
+}
+
+function parseTableRow(line) {
+  const trimmed = line.trim()
+  if (!trimmed.includes('|')) {
+    return []
+  }
+
+  const rawCells = trimmed.split('|')
+  const cells = rawCells
+    .map(cell => cell.trim())
+    .filter((cell, index, arr) => {
+      if (!cell && (index === 0 || index === arr.length - 1)) {
+        return false
+      }
+      return true
+    })
+
+  return cells.filter(cell => !isTableSeparatorCell(cell))
+}
+
+function isTableSeparatorCell(cell) {
+  return /^:?-+:?$/.test(cell) || /^=+$/.test(cell)
+}
+
+function padTableRow(row, columnCount) {
+  const padded = row.slice()
+  while (padded.length < columnCount) {
+    padded.push('')
+  }
+  return padded
 }
 
 function parseListItem(text) {

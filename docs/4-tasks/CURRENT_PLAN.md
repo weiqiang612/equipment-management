@@ -4,7 +4,7 @@
 
 ## Active feature
 
-None currently active.
+None. All scheduled features and documentation reports have been completed successfully.
 
 ## Stages
 
@@ -62,7 +62,18 @@ None currently active.
 ### TASK-018: WEB 课程设计报告计划书
 - [x] Implementation (18 tasks)
 
+### TASK-019: WEB 课程设计正式报告撰写
+- [x] Implementation (16 tasks)
+
 ## Completed
+
+`docs/4-tasks/features/TASK-019-write-web-course-report/`
+- spec.md ✅ Ready
+- tasks.md ✅ 100% Complete
+
+`docs/4-tasks/features/TASK-018-web-course-report/`
+- spec.md ✅ Ready
+- tasks.md ✅ 100% Complete
 
 `docs/4-tasks/features/TASK-017-ui-ux-polish/`
 - spec.md ✅ Ready
@@ -134,4 +145,4 @@ None currently active.
 
 ## Notes for next session
 
-- No active feature is set. TASK-018 is complete; select the next task before implementation.
+- All development stages and course report generation are complete. No further actions needed.
